@@ -1,10 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { getServerDir } from './paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const BUNDLED_SKILL = path.join(__dirname, 'prompts', 'cross-cultural-research-SKILL.md');
+const BUNDLED_SKILL = path.join(getServerDir(), 'prompts', 'cross-cultural-research-SKILL.md');
 const DESKTOP_SKILL = path.join(
   process.env.USERPROFILE || '',
   'Desktop',
