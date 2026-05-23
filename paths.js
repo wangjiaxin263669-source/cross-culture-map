@@ -4,29 +4,39 @@ import { fileURLToPath } from 'url';
 
 let cachedServerDir = null;
 
+function isServerlessRuntime() {
+  return Boolean(
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.NETLIFY
+  );
+}
+
 /**
- * 解析 server/ 目录（兼容 Netlify Functions 打包后 import.meta.url 失效）
+ * 解析 server/ 目录（Netlify 打包后不用 import.meta.url，避免 502）
  */
 export function getServerDir() {
   if (cachedServerDir) return cachedServerDir;
 
-  const metaUrl = typeof import.meta !== 'undefined' ? import.meta.url : undefined;
-  if (metaUrl) {
+  if (!isServerlessRuntime()) {
     try {
-      const fromMeta = path.dirname(fileURLToPath(metaUrl));
-      if (fs.existsSync(path.join(fromMeta, 'data', 'knowledge-chunks.json'))) {
-        cachedServerDir = fromMeta;
-        return cachedServerDir;
+      const metaUrl = import.meta?.url;
+      if (metaUrl) {
+        const fromMeta = path.dirname(fileURLToPath(metaUrl));
+        if (fs.existsSync(path.join(fromMeta, 'data', 'knowledge-chunks.json'))) {
+          cachedServerDir = fromMeta;
+          return cachedServerDir;
+        }
       }
     } catch {
-      /* 打包后 fileURLToPath 可能失败 */
+      /* 本地 ESM 解析失败时走下方候选路径 */
     }
   }
 
   const candidates = [
     process.env.SERVER_ROOT,
     path.join(process.cwd(), 'server'),
-    path.join('/var/task', 'server'),
+    '/var/task/server',
     path.join(process.env.LAMBDA_TASK_ROOT || '', 'server'),
   ].filter(Boolean);
 
