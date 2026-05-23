@@ -3,4 +3,8 @@ import { createApp } from '../../server/app.js';
 
 const app = createApp({ serveStatic: false });
 
-export const handler = serverless(app);
+export const handler = serverless(app, {
+  request(request, event) {
+    request.apiGateway = { event };
+  },
+});
