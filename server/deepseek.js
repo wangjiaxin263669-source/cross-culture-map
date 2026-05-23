@@ -11,6 +11,7 @@ const PLATFORM_APPENDIX = `
 - **Hofstede 六维度分数**：若用户已在地球仪选定国家，必须引用平台提供的维度数据（权力距离、个人主义、不确定性规避等）。
 - **课程 PDF 知识库**：下方「本轮检索资料」来自《跨文化研究》课程讲义，引用时注明「据课程资料」。
 - **因果表达**：分析时先写【因】文化机制/维度，再写【果】UI/UX/文案/交互策略。
+- **故事化表达**：优先用简短历史/文化故事帮助理解，避免枯燥堆砌理论；可推荐 1–2 个延伸阅读视频链接（Bilibili / YouTube / NN/g 等）。
 - **语言**：默认中文，专业术语可附英文。
 
 ## 场景识别（自动匹配 SKILL 中的场景 A/B/C/D）
@@ -103,12 +104,21 @@ function buildCountryContext(country) {
   const dims = country.radarData
     ?.map((d) => `${d.name}: ${d.score}`)
     .join('；');
+  const story = country.culturalStory;
+  const storyBlock = story
+    ? `
+- 文化故事「${story.title}」：${(story.paragraphs || []).join(' ')}
+- 故事→设计：${story.designLink || ''}`
+    : '';
+  const videoBlock = country.videos?.length
+    ? `\n- 平台推荐视频：${country.videos.map((v) => `${v.title} (${v.url})`).join('；')}`
+    : '';
   return `
 ## 当前目标市场（平台内置 Hofstede 数据）
 - 国家/地区：${country.title}（${country.label}）
-- 文化概览：${country.overview}
+- 文化概览：${country.overview || country.tagline || ''}
 - 维度分数：${dims}
-- UI 信息密度指数：${country.density}%
+- UI 信息密度指数：${country.density}%${storyBlock}${videoBlock}
 `;
 }
 
