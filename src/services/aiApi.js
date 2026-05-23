@@ -34,6 +34,8 @@ export function serializeCountry(country) {
     density: country.density,
     radarData: country.radarData,
     culturalStory: country.culturalStory,
+    methodology: country.methodology,
+    references: country.references,
     videos: country.videos,
   };
 }
