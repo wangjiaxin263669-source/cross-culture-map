@@ -9,6 +9,7 @@ import {
   normalizeMarket,
   getMarketDisplayTitle,
   getRegionsByParentId,
+  getCountryById,
 } from './data/markets';
 import { sendChatMessage, generateReport, checkAiHealth } from './services/aiApi';
 import './App.css';
@@ -40,11 +41,21 @@ function App() {
     [selectedMarket],
   );
 
-  const siblingRegions = useMemo(() => {
-    const parentId = selectedMarket?.parentId;
-    if (!parentId) return null;
-    const list = getRegionsByParentId(parentId);
-    return list.length ? list : null;
+  /** 有下属地区的国家：展示全国概览 + 地区切换 */
+  const regionContext = useMemo(() => {
+    if (!selectedMarket) return null;
+    let parentId;
+    if (selectedMarket.marketType === 'country' && selectedMarket.hasRegions) {
+      parentId = selectedMarket.id;
+    } else if (selectedMarket.marketType === 'region' && selectedMarket.parentId) {
+      parentId = selectedMarket.parentId;
+    } else {
+      return null;
+    }
+    const parentCountry = getCountryById(parentId);
+    const regions = getRegionsByParentId(parentId);
+    if (!parentCountry || !regions.length) return null;
+    return { parentCountry, regions };
   }, [selectedMarket]);
 
   useEffect(() => {
@@ -93,13 +104,13 @@ function App() {
     }
   };
 
-  const focusParentRegion = (parentId, lat, lng, altitude = 1.5) => {
-    const regions = getRegionsByParentId(parentId);
+  const focusParentCountry = (parentId, lat, lng, altitude = 1.7) => {
+    const country = getCountryById(parentId);
     if (globeEl.current) {
       globeEl.current.pointOfView({ lat, lng, altitude }, 1000);
     }
-    if (regions.length) {
-      handleLabelClick(regions[0]);
+    if (country) {
+      handleLabelClick(country);
     }
   };
 
@@ -194,12 +205,12 @@ function App() {
           <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> Live
         </div>
         <h1>跨文化<br/><span className="highlight">研究设计</span></h1>
-        <p>按国家或地区探索文化故事——中国省、美国州、日本县、巴西/德国/印度等地区均已支持长故事与视频。</p>
+        <p>白色标签为国家整体介绍；青色标签为省/州/县等地方故事。两者并存，可先看全国再看地区。</p>
         <div className="action-buttons">
           <button className="btn-outline" onClick={handleExploreMap}>Explore the Map ➔</button>
-          <button className="btn-outline" onClick={() => focusParentRegion('china', 35, 105)}>中国各省 ➔</button>
-          <button className="btn-outline" onClick={() => focusParentRegion('usa', 37, -95, 1.7)}>美国各州 ➔</button>
-          <button className="btn-outline" onClick={() => focusParentRegion('japan', 36, 138, 1.6)}>日本各县 ➔</button>
+          <button className="btn-outline" onClick={() => focusParentCountry('china', 35, 105)}>中国 ➔</button>
+          <button className="btn-outline" onClick={() => focusParentCountry('usa', 37, -95)}>美国 ➔</button>
+          <button className="btn-outline" onClick={() => focusParentCountry('japan', 36, 138, 1.6)}>日本 ➔</button>
           <button className="btn-outline" onClick={handleToggleChat}>Chat with AI ➔</button>
         </div>
       </div>
@@ -249,9 +260,9 @@ function App() {
           labelLat={(d) => d.lat}
           labelLng={(d) => d.lng}
           labelText={(d) => d.label}
-          labelSize={(d) => (d.marketType === 'region' ? 1.35 : 1.8)}
-          labelDotRadius={(d) => (d.marketType === 'region' ? 0.45 : 0.6)}
-          labelColor={(d) => (d.marketType === 'region' ? '#7ee8fa' : 'white')}
+          labelSize={(d) => (d.marketType === 'region' ? 1.35 : d.hasRegions ? 2 : 1.8)}
+          labelDotRadius={(d) => (d.marketType === 'region' ? 0.45 : d.hasRegions ? 0.75 : 0.6)}
+          labelColor={(d) => (d.marketType === 'region' ? '#7ee8fa' : d.hasRegions ? '#ffd966' : 'white')}
           labelResolution={2}
           onLabelClick={handleLabelClick}
         />
@@ -268,17 +279,23 @@ function App() {
               <span className="market-breadcrumb-region">{selectedMarket.title}</span>
             </div>
           )}
+          {selectedMarket.marketType === 'country' && selectedMarket.hasRegions && (
+            <div className="market-level-badge market-level-badge-country">全国整体 · 国家级文化介绍</div>
+          )}
 
           <h2>{displayTitle}</h2>
+          {selectedMarket.tagline && (
+            <p className="country-tagline">{selectedMarket.tagline}</p>
+          )}
           <p className="country-overview">{selectedMarket.overview}</p>
 
-          {siblingRegions && selectedMarket.parentId && (
+          {regionContext && (
             <RegionPicker
-              parentId={selectedMarket.parentId}
-              parentTitle={selectedMarket.parentTitle}
-              regions={siblingRegions}
+              parentCountry={regionContext.parentCountry}
+              regions={regionContext.regions}
               activeId={selectedMarket.id}
-              onSelect={(r) => handleLabelClick(r)}
+              onSelectCountry={(c) => handleLabelClick(c)}
+              onSelectRegion={(r) => handleLabelClick(r)}
             />
           )}
 
