@@ -5,12 +5,19 @@ function providerIcon(provider) {
   if (p.includes('bilibili')) return '📺';
   if (p.includes('youtube')) return '▶️';
   if (p.includes('nng') || p.includes('nn/g')) return '📖';
+  if (p.includes('hofstede')) return '📊';
   return '🔗';
 }
 
 export default function CulturalStoryPanel({ country }) {
   if (!country) return null;
-  const { culturalStory, videos = [], designInsights = [] } = country;
+  const {
+    culturalStory,
+    methodology,
+    references = [],
+    videos = [],
+    designInsights = [],
+  } = country;
 
   return (
     <div className="culture-panel">
@@ -34,11 +41,56 @@ export default function CulturalStoryPanel({ country }) {
         </section>
       )}
 
+      {methodology && (
+        <section className="methodology-card">
+          <h3 className="section-heading">
+            <span className="section-icon">🔬</span>
+            结论从何而来？
+          </h3>
+          <p className="methodology-intro">{methodology.intro}</p>
+          <ol className="methodology-steps">
+            {methodology.steps?.map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {references.length > 0 && (
+        <section className="references-section">
+          <h3 className="section-heading">
+            <span className="section-icon">📚</span>
+            文献与数据来源
+          </h3>
+          <p className="section-hint">点击标题可在新标签页打开原文</p>
+          <div className="references-grid">
+            {references.map((ref, i) => (
+              <a
+                key={i}
+                href={ref.url}
+                target="_blank"
+                rel="noreferrer"
+                className="reference-card"
+              >
+                <span className="reference-tag">{ref.tag}</span>
+                <span className="reference-title">{ref.title}</span>
+                <span className="reference-meta">
+                  {ref.source}
+                  {ref.year && ref.year !== '—' ? ` · ${ref.year}` : ''}
+                </span>
+                {ref.note && <span className="reference-note">{ref.note}</span>}
+                <span className="reference-open">打开文献 ↗</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {videos.length > 0 && (
         <section className="video-section">
           <h3 className="section-heading">
             <span className="section-icon">🎬</span>
-            延伸阅读 · 视频
+            视频讲解 · 点击观看
           </h3>
           <div className="video-grid">
             {videos.map((v, i) => (
@@ -53,7 +105,7 @@ export default function CulturalStoryPanel({ country }) {
                 <div className="video-card-body">
                   <span className="video-card-tag">{v.tag || v.provider}</span>
                   <span className="video-card-title">{v.title}</span>
-                  <span className="video-card-provider">{v.provider}</span>
+                  <span className="video-card-provider">{v.provider} · 点击播放 ↗</span>
                 </div>
                 <span className="video-card-arrow">↗</span>
               </a>
