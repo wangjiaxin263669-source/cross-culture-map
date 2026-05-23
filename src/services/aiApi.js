@@ -14,7 +14,11 @@ async function request(path, body) {
     /* 非 JSON 响应 */
   }
   if (!res.ok) {
-    throw new Error(data.error || `请求失败 (${res.status})，请确认已运行 npm run dev`);
+    const hint =
+      res.status === 502
+        ? '后端服务异常（502）。线上站请检查 Netlify 函数日志；本地请用 npm run dev 并打开终端里显示的端口（如 http://localhost:5174）'
+        : `请求失败 (${res.status})，请确认已运行 npm run dev`;
+    throw new Error(data.error || hint);
   }
   return data;
 }
