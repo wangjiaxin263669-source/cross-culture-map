@@ -39,15 +39,22 @@ export function getRegionUnitLabel(parentId) {
   return c?.regionUnit || '地区';
 }
 
-/** 地球仪上可点击的全部标签 */
+/** 按 id 获取国家级市场（含完整全国故事） */
+export function getCountryById(id) {
+  return countryMap[id] || null;
+}
+
+/** 从当前选中项解析所属国家（国家本身或地区的父国） */
+export function getParentCountryForMarket(market) {
+  if (!market) return null;
+  if (market.marketType === 'country') return market;
+  if (market.parentId) return getCountryById(market.parentId);
+  return null;
+}
+
+/** 地球仪上可点击的全部标签：国家 + 下属地区（有地区的国家仍保留国家标签） */
 export function getGlobeLabels() {
-  const labels = [];
-  for (const c of countries) {
-    if (c.hasRegions) continue;
-    labels.push(c);
-  }
-  labels.push(...allRegions);
-  return labels;
+  return [...countries, ...allRegions];
 }
 
 export const globeLabelsData = getGlobeLabels();
