@@ -1,0 +1,18 @@
+# Render 一键部署：https://render.com
+# 在 Dashboard 选择 Blueprint 或手动 Web Service 并参考本文件
+
+services:
+  - type: web
+    name: cross-culture-map
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat

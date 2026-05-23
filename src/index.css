@@ -1,0 +1,5 @@
+/* 基础重置（与 App.css 配合） */
+#root {
+  width: 100%;
+  height: 100%;
+}

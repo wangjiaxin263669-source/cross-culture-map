@@ -1,0 +1,415 @@
+/* --- 1. 全局重置与深邃宇宙背景 --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+body, html, #root { 
+  margin: 0 !important; 
+  padding: 0 !important; 
+  width: 100vw; 
+  height: 100vh; 
+  overflow: hidden; 
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: radial-gradient(circle at 60% 50%, #111424 0%, #000000 100%) !important; 
+}
+
+.app-container { 
+  position: relative; 
+  width: 100vw; 
+  height: 100vh; 
+  overflow: hidden;
+}
+
+/* 3D 地球置于底层，避免黑色 canvas 挡住左侧标题和顶栏 */
+.globe-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: auto;
+}
+
+/* 为了让左侧文字在地球转动时始终清晰，加一层左侧暗色渐变遮罩 */
+.bg-gradient-mask {
+  position: absolute;
+  top: 0; left: 0;
+  width: 45%; height: 100%;
+  background: linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* --- 2. 顶部胶囊导航栏 (复刻图二) --- */
+.top-bar {
+  position: absolute;
+  top: 25px; left: 40px; right: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 15;
+  pointer-events: none; /* 让鼠标穿透，不阻挡地球拖拽 */
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: white;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+.brand-text h2 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 1px;}
+.brand-text p { margin: 0; font-size: 10px; color: #8da4c4; letter-spacing: 0.5px;}
+
+.center-nav {
+  display: flex;
+  gap: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 12px 50px;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: auto; /* 恢复鼠标交互 */
+}
+.nav-item {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.nav-item.active, .nav-item:hover { color: #ffffff; }
+
+.right-profile {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 16px 6px 6px;
+  border-radius: 30px;
+  pointer-events: auto;
+}
+.avatar {
+  width: 28px; height: 28px;
+  background: #cba276;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: #000;
+}
+.user-info span { color: white; font-size: 12px; font-weight: 600; display: block;}
+.user-info small { color: #888; font-size: 10px;}
+
+/* --- 3. 左侧巨型视觉锚点 (复刻图二 Hero 区域) --- */
+.hero-section { 
+  position: absolute; 
+  top: 50%; 
+  left: 60px; 
+  transform: translateY(-50%);
+  z-index: 10; 
+  pointer-events: none; 
+}
+.live-tag {
+  color: #e2e8f0;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.dot {
+  width: 6px; height: 6px;
+  background: #00f0ff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00f0ff;
+}
+
+.hero-section h1 { 
+  margin: 0; 
+  font-size: 58px; 
+  font-weight: 800; 
+  line-height: 1.15;      /* 稍微调大行高，让两行中文上下有呼吸感 */
+  letter-spacing: 2px;    /* 去掉英文的负间距，改为 2px，中文字体更显大气 */
+  color: #ffffff;
+  text-align: left;       /* 强制绝对左对齐，完美贴合你的红线参考位置 */
+}
+.hero-section h1 .highlight { color: #8da4c4; }
+.hero-section p { 
+  margin-top: 24px; 
+  font-size: 14px; 
+  color: rgba(255, 255, 255, 0.5); 
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.action-buttons {
+  margin-top: 40px;
+  display: flex;
+  gap: 15px;
+  pointer-events: auto;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+}
+
+/* --- 4. 右侧悬浮毛玻璃卡片 (保持 AI 交互逻辑) --- */
+.info-panel {
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%) translateX(120%);
+  width: 400px;
+  max-height: 85vh;
+  background: rgba(15, 15, 20, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px; 
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  color: white;
+  padding: 35px;
+  box-sizing: border-box;
+  animation: slideInPremium 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 20;
+  overflow-y: auto; 
+  overflow-x: hidden;
+}
+
+.info-panel::-webkit-scrollbar { width: 4px; }
+.info-panel::-webkit-scrollbar-track { background: transparent; }
+.info-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+@keyframes slideInPremium {
+  to { transform: translateY(-50%) translateX(0); }
+}
+
+.info-panel h2 {
+  margin-top: 0; font-size: 32px; font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 15px;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 20px;
+  float: right;
+  font-size: 11px;
+  transition: all 0.3s;
+}
+.close-btn:hover { background: white; color: black; }
+
+/* --- 5. 新增：全局交互悬浮聊天框 --- */
+.global-chat-modal {
+  position: absolute;
+  left: 60px;
+  bottom: 40px;
+  width: 380px;
+  height: 480px;
+  background: rgba(15, 15, 20, 0.85);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+  pointer-events: auto;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chat-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #fff;
+  font-weight: 600;
+}
+.close-chat-btn {
+  background: transparent;
+  border: none;
+  color: #8da4c4;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.3s;
+}
+.close-chat-btn:hover { color: #fff; }
+
+.chat-messages {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.chat-bubble.ai {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  align-self: flex-start;
+  border-top-left-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.chat-bubble.user {
+  background: #e2e8f0;
+  color: #000;
+  align-self: flex-end;
+  border-top-right-radius: 4px;
+  font-weight: 500;
+}
+
+.chat-input-area {
+  padding: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 10px;
+}
+.chat-input-area input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  color: white;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.3s;
+}
+.chat-input-area input:focus {
+  border-color: #8da4c4;
+}
+.chat-input-area button {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.chat-input-area button:hover {
+  background: #e2e8f0;
+}
+
+/* --- 6. 新增：方向三的扩展图表样式 --- */
+.density-track {
+  width: 100%; height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px; 
+  overflow: hidden;
+}
+.density-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f0ff, #8da4c4);
+  border-radius: 3px;
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- 7. AI 状态与报告样式 --- */
+.ai-status-banner {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+.ai-status-banner.ok {
+  color: #6ee7b7;
+  background: rgba(110, 231, 183, 0.06);
+  border-color: rgba(110, 231, 183, 0.2);
+}
+.ai-error {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.chat-bubble.loading {
+  color: #8da4c4;
+  font-style: italic;
+}
+.chat-input-area button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ai-report-box {
+  margin-top: 15px;
+  padding: 16px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 8px;
+}
+.ai-report-box::-webkit-scrollbar { width: 4px; }
+.ai-report-box::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 4px; }
+.ai-report-body { font-size: 12px; line-height: 1.65; color: #e2e8f0; }
+.report-h2 { font-size: 15px; font-weight: 700; color: #00f0ff; margin: 0 0 12px; }
+.report-h3 { font-size: 13px; font-weight: 600; color: #fff; margin: 16px 0 8px; border-left: 3px solid #00f0ff; padding-left: 8px; }
+.report-h4 { font-size: 12px; font-weight: 600; color: #cbd5e1; margin: 12px 0 6px; }
+.report-p { margin: 0 0 8px; }
+.report-li { margin: 0 0 6px 16px; color: #cbd5e1; }
+.report-spacer { height: 6px; }
+.knowledge-tag {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #6ee7b7;
+  opacity: 0.85;
+}
