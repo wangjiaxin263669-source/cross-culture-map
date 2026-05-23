@@ -680,3 +680,54 @@ body, html, #root {
   font-style: italic;
   color: #8da4c4;
 }
+
+/* --- 9. 地区选择器 --- */
+.market-breadcrumb {
+  font-size: 12px;
+  color: #8da4c4;
+  margin-bottom: 8px;
+}
+.market-breadcrumb-parent { color: #00f0ff; }
+.market-breadcrumb-sep { margin: 0 6px; opacity: 0.5; }
+.market-breadcrumb-region { color: #fff; font-weight: 600; }
+.region-picker {
+  margin: 12px 0 20px;
+  padding: 12px 14px;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 10px;
+}
+.region-picker-hint {
+  font-size: 11px;
+  color: #8da4c4;
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.region-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.region-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.region-chip:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #fff;
+}
+.region-chip.active {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  font-weight: 600;
+}
