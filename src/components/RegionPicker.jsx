@@ -1,15 +1,18 @@
 import React from 'react';
+import { getRegionUnitLabel } from '../data/markets';
 
 /**
- * 当某国家有多个地区时，在面板内快速切换（地球仪已可点省份，此为辅助）
+ * 同一国家/地区下的子区域快捷切换
  */
-export default function RegionPicker({ parent, regions, activeId, onSelect }) {
+export default function RegionPicker({ parentId, parentTitle, regions, activeId, onSelect }) {
   if (!regions?.length) return null;
+
+  const unit = getRegionUnitLabel(parentId);
 
   return (
     <div className="region-picker">
       <p className="region-picker-hint">
-        📍 {parent.title} 下辖 {regions.length} 个省级地区 · 也可在地球上直接点击省份标签
+        📍 {parentTitle} 下辖 {regions.length} 个{unit}级地区 · 也可在地球上直接点击标签
       </p>
       <div className="region-chips">
         {regions.map((r) => (
