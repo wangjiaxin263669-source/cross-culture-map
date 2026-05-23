@@ -119,9 +119,15 @@ function buildCountryContext(country) {
   const videoBlock = country.videos?.length
     ? `\n- 推荐视频：${country.videos.map((v) => `${v.title} (${v.url})`).join('；')}`
     : '';
+  const regionLabel =
+    country.displayTitle ||
+    (country.parentTitle && country.marketType === 'region'
+      ? `${country.parentTitle} · ${country.title}`
+      : country.title);
   return `
 ## 当前目标市场（平台内置 Hofstede 数据）
-- 国家/地区：${country.title}（${country.label}）
+- 国家/地区：${regionLabel}（${country.label}）
+- 单元类型：${country.marketType === 'region' ? `地区（${country.parentTitle || '下属行政区'}）` : '国家'}
 - 文化概览：${country.overview || country.tagline || ''}
 - 维度分数：${dims}
 - UI 信息密度指数：${country.density}%${storyBlock}${methodBlock}${refBlock}${videoBlock}
