@@ -110,15 +110,21 @@ function buildCountryContext(country) {
 - 文化故事「${story.title}」：${(story.paragraphs || []).join(' ')}
 - 故事→设计：${story.designLink || ''}`
     : '';
+  const methodBlock = country.methodology?.steps?.length
+    ? `\n- 结论依据：${country.methodology.steps.join('；')}`
+    : '';
+  const refBlock = country.references?.length
+    ? `\n- 文献：${country.references.map((r) => `${r.title} (${r.url})`).join('；')}`
+    : '';
   const videoBlock = country.videos?.length
-    ? `\n- 平台推荐视频：${country.videos.map((v) => `${v.title} (${v.url})`).join('；')}`
+    ? `\n- 推荐视频：${country.videos.map((v) => `${v.title} (${v.url})`).join('；')}`
     : '';
   return `
 ## 当前目标市场（平台内置 Hofstede 数据）
 - 国家/地区：${country.title}（${country.label}）
 - 文化概览：${country.overview || country.tagline || ''}
 - 维度分数：${dims}
-- UI 信息密度指数：${country.density}%${storyBlock}${videoBlock}
+- UI 信息密度指数：${country.density}%${storyBlock}${methodBlock}${refBlock}${videoBlock}
 `;
 }
 
