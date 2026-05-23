@@ -31,6 +31,38 @@ export function createApp(options = {}) {
   app.use(cors());
   app.use(express.json({ limit: '2mb' }));
 
+  // Netlify Functions：部分环境下 express.json 解析不到 body，从 Lambda event 补读
+  app.use((req, _res, next) => {
+    const hasFields = (b) =>
+      b &&
+      typeof b === 'object' &&
+      !Buffer.isBuffer(b) &&
+      (b.message?.trim?.() || b.productIdea?.trim?.() || Object.keys(b).length > 0);
+
+    if (hasFields(req.body)) return next();
+
+    const event = req.apiGateway?.event;
+    let raw = null;
+    if (event?.body) {
+      raw = event.isBase64Encoded
+        ? Buffer.from(event.body, 'base64').toString('utf8')
+        : event.body;
+    } else if (typeof req.body === 'string' && req.body.trim()) {
+      raw = req.body;
+    } else if (Buffer.isBuffer(req.body)) {
+      raw = req.body.toString('utf8');
+    }
+
+    if (raw) {
+      try {
+        req.body = JSON.parse(raw);
+      } catch {
+        /* 非 JSON 时保持原样 */
+      }
+    }
+    next();
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({
       ok: true,
