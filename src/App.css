@@ -483,6 +483,89 @@ body, html, #root {
   margin-bottom: 4px;
   color: #6ee7b7;
 }
+.methodology-card {
+  background: rgba(141, 164, 196, 0.06);
+  border: 1px solid rgba(141, 164, 196, 0.2);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.methodology-intro {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+.methodology-steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #cbd5e1;
+}
+.methodology-steps li { margin-bottom: 8px; }
+.methodology-steps li:last-child { margin-bottom: 0; }
+.section-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin: -8px 0 12px;
+}
+.references-section { margin-bottom: 20px; }
+.references-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reference-card {
+  display: block;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.25s ease;
+}
+.reference-card:hover {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.reference-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  margin-bottom: 6px;
+}
+.reference-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.reference-meta {
+  display: block;
+  font-size: 11px;
+  color: #8da4c4;
+}
+.reference-note {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.reference-open {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #fbbf24;
+  font-weight: 500;
+}
 .video-section { margin-bottom: 20px; }
 .video-grid {
   display: flex;
