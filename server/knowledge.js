@@ -1,9 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { getServerDir } from './paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const KNOWLEDGE_PATH = path.join(__dirname, 'data', 'knowledge-chunks.json');
+const KNOWLEDGE_PATH = path.join(getServerDir(), 'data', 'knowledge-chunks.json');
 
 let knowledgeBase = null;
 
