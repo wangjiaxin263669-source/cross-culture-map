@@ -53,6 +53,8 @@ export const countriesData = [
   },
   {
     id: 'usa',
+    hasRegions: true,
+    regionUnit: '州',
     lat: 37.09, lng: -95.71, label: 'USA', title: '美国',
     tagline: '「Only YOU」——一个人也能拯救森林',
     overview: '极端个人主义：留白、专注、掌控感比热闹更重要。',
@@ -99,6 +101,8 @@ export const countriesData = [
   },
   {
     id: 'japan',
+    hasRegions: true,
+    regionUnit: '县',
     lat: 36.2, lng: 138.25, label: 'Japan', title: '日本',
     tagline: '一枚饭团包装上的字数，比你想的多十倍',
     overview: '极高不确定性规避：细节、说明、口碑缺一不可。',
@@ -145,6 +149,8 @@ export const countriesData = [
   },
   {
     id: 'germany',
+    hasRegions: true,
+    regionUnit: '州',
     lat: 51.16, lng: 10.45, label: 'Germany', title: '德国',
     tagline: '工程师文化：先读说明书，再按同意键',
     overview: '低权力距离 + 逻辑至上：隐私与参数必须透明。',
@@ -190,6 +196,8 @@ export const countriesData = [
   },
   {
     id: 'brazil',
+    hasRegions: true,
+    regionUnit: '州',
     lat: -14.23, lng: -51.92, label: 'Brazil', title: '巴西',
     tagline: '桑巴、嘉年华，和手机里跳动的 WhatsApp 绿点',
     overview: '集体主义 + 高宽容度：要热闹、要人、要现在开心。',
@@ -282,6 +290,8 @@ export const countriesData = [
   },
   {
     id: 'india',
+    hasRegions: true,
+    regionUnit: '邦',
     lat: 20.59, lng: 78.96, label: 'India', title: '印度',
     tagline: '一张屏上的十二种语言与「先比价」',
     overview: '多元、价格敏感、高密度：包容复杂才是本地化。',
