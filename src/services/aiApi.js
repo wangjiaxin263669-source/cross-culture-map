@@ -26,9 +26,18 @@ async function request(path, body) {
 /** 将选中国家对象精简后传给后端（避免过大 payload） */
 export function serializeCountry(country) {
   if (!country) return null;
+  const displayTitle =
+    country.displayTitle ||
+    (country.parentTitle && country.marketType === 'region'
+      ? `${country.parentTitle} · ${country.title}`
+      : country.title);
   return {
     label: country.label,
     title: country.title,
+    displayTitle,
+    marketType: country.marketType || 'country',
+    parentId: country.parentId,
+    parentTitle: country.parentTitle,
     tagline: country.tagline,
     overview: country.overview,
     density: country.density,
