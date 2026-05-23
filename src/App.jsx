@@ -6,9 +6,9 @@ import CulturalStoryPanel from './components/CulturalStoryPanel';
 import RegionPicker from './components/RegionPicker';
 import {
   globeLabelsData,
-  chinaProvinces,
   normalizeMarket,
   getMarketDisplayTitle,
+  getRegionsByParentId,
 } from './data/markets';
 import { sendChatMessage, generateReport, checkAiHealth } from './services/aiApi';
 import './App.css';
@@ -30,7 +30,7 @@ function App() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'ai',
-      text: '您好！我是跨文化研究设计专家。点击地球上的国家或中国各省标签，阅读当地文化故事与文献；再告诉我您的产品构想，我会结合地区文化为您分析。',
+      text: '您好！我是跨文化研究设计专家。点击地球上的国家标签，或中国省、美国州、日本县等地区标签，阅读文化故事与视频；再告诉我您的产品构想，我会结合当地文化为您分析。',
     },
   ]);
   const [aiHealth, setAiHealth] = useState(null);
@@ -40,10 +40,12 @@ function App() {
     [selectedMarket],
   );
 
-  const chinaRegionList = useMemo(
-    () => (selectedMarket?.parentId === 'china' ? chinaProvinces : null),
-    [selectedMarket],
-  );
+  const siblingRegions = useMemo(() => {
+    const parentId = selectedMarket?.parentId;
+    if (!parentId) return null;
+    const list = getRegionsByParentId(parentId);
+    return list.length ? list : null;
+  }, [selectedMarket]);
 
   useEffect(() => {
     if (globeEl.current) {
@@ -91,12 +93,13 @@ function App() {
     }
   };
 
-  const focusChina = () => {
+  const focusParentRegion = (parentId, lat, lng, altitude = 1.5) => {
+    const regions = getRegionsByParentId(parentId);
     if (globeEl.current) {
-      globeEl.current.pointOfView({ lat: 35, lng: 105, altitude: 1.5 }, 1000);
+      globeEl.current.pointOfView({ lat, lng, altitude }, 1000);
     }
-    if (chinaProvinces.length) {
-      handleLabelClick(chinaProvinces[0]);
+    if (regions.length) {
+      handleLabelClick(regions[0]);
     }
   };
 
@@ -191,10 +194,12 @@ function App() {
           <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> Live
         </div>
         <h1>跨文化<br/><span className="highlight">研究设计</span></h1>
-        <p>按国家或地区探索文化故事——中国已支持省级单元，其他国家保持国家级。</p>
+        <p>按国家或地区探索文化故事——中国省、美国州、日本县、巴西/德国/印度等地区均已支持长故事与视频。</p>
         <div className="action-buttons">
           <button className="btn-outline" onClick={handleExploreMap}>Explore the Map ➔</button>
-          <button className="btn-outline" onClick={focusChina}>探索中国各省 ➔</button>
+          <button className="btn-outline" onClick={() => focusParentRegion('china', 35, 105)}>中国各省 ➔</button>
+          <button className="btn-outline" onClick={() => focusParentRegion('usa', 37, -95, 1.7)}>美国各州 ➔</button>
+          <button className="btn-outline" onClick={() => focusParentRegion('japan', 36, 138, 1.6)}>日本各县 ➔</button>
           <button className="btn-outline" onClick={handleToggleChat}>Chat with AI ➔</button>
         </div>
       </div>
@@ -267,10 +272,11 @@ function App() {
           <h2>{displayTitle}</h2>
           <p className="country-overview">{selectedMarket.overview}</p>
 
-          {chinaRegionList && (
+          {siblingRegions && selectedMarket.parentId && (
             <RegionPicker
-              parent={{ title: '中国' }}
-              regions={chinaProvinces}
+              parentId={selectedMarket.parentId}
+              parentTitle={selectedMarket.parentTitle}
+              regions={siblingRegions}
               activeId={selectedMarket.id}
               onSelect={(r) => handleLabelClick(r)}
             />
