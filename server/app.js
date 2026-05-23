@@ -1,15 +1,15 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import { generateChatReply, generateLocalizationReport, getModelName, isConfigured } from './deepseek.js';
 import { getKnowledgeMeta } from './knowledge.js';
 import { getSkillMeta } from './loadSkill.js';
+import { getServerDir } from './paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const serverDir = getServerDir();
+dotenv.config({ path: path.join(serverDir, '..', '.env') });
 
 /**
  * @param {{ serveStatic?: boolean }} options
@@ -19,7 +19,7 @@ export function createApp(options = {}) {
   const { serveStatic = true } = options;
   const app = express();
   const isProd = process.env.NODE_ENV === 'production';
-  const distPath = path.join(__dirname, '..', 'dist');
+  const distPath = path.join(serverDir, '..', 'dist');
   const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
   const isServerless = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
   const shouldServeWeb = serveStatic && !isServerless && (isProd || hasDist);
