@@ -29,9 +29,12 @@ export function serializeCountry(country) {
   return {
     label: country.label,
     title: country.title,
+    tagline: country.tagline,
     overview: country.overview,
     density: country.density,
     radarData: country.radarData,
+    culturalStory: country.culturalStory,
+    videos: country.videos,
   };
 }
 
