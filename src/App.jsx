@@ -1,15 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import ReportMarkdown from './components/ReportMarkdown';
 import CulturalStoryPanel from './components/CulturalStoryPanel';
-import { countriesData } from './data/countries';
+import RegionPicker from './components/RegionPicker';
+import {
+  globeLabelsData,
+  chinaProvinces,
+  normalizeMarket,
+  getMarketDisplayTitle,
+} from './data/markets';
 import { sendChatMessage, generateReport, checkAiHealth } from './services/aiApi';
 import './App.css';
 
 function App() {
   const globeEl = useRef();
-  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedMarket, setSelectedMarket] = useState(null);
 
   const [userIdea, setUserIdea] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,10 +30,20 @@ function App() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'ai',
-      text: '您好！我是跨文化研究设计专家。先点击地球上的国家，读一读那里的文化故事与视频，再告诉我您的产品构想——我会结合历史叙事与 Hofstede 数据为您分析。',
+      text: '您好！我是跨文化研究设计专家。点击地球上的国家或中国各省标签，阅读当地文化故事与文献；再告诉我您的产品构想，我会结合地区文化为您分析。',
     },
   ]);
   const [aiHealth, setAiHealth] = useState(null);
+
+  const displayTitle = useMemo(
+    () => getMarketDisplayTitle(selectedMarket),
+    [selectedMarket],
+  );
+
+  const chinaRegionList = useMemo(
+    () => (selectedMarket?.parentId === 'china' ? chinaProvinces : null),
+    [selectedMarket],
+  );
 
   useEffect(() => {
     if (globeEl.current) {
@@ -47,16 +63,26 @@ function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatLoading]);
 
-  const handleLabelClick = (country) => {
-    setSelectedCountry(country);
+  const handleLabelClick = (raw) => {
+    const market = normalizeMarket(raw);
+    setSelectedMarket(market);
     setAiResult('');
     setAiError('');
+    if (globeEl.current && market?.lat != null && market?.lng != null) {
+      globeEl.current.pointOfView(
+        { lat: market.lat, lng: market.lng, altitude: market.marketType === 'region' ? 1.6 : 1.9 },
+        800,
+      );
+    }
   };
 
   const closePanel = () => {
-    setSelectedCountry(null);
+    setSelectedMarket(null);
     setAiResult('');
     setAiError('');
+    if (globeEl.current) {
+      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
+    }
   };
 
   const handleExploreMap = () => {
@@ -65,15 +91,24 @@ function App() {
     }
   };
 
+  const focusChina = () => {
+    if (globeEl.current) {
+      globeEl.current.pointOfView({ lat: 35, lng: 105, altitude: 1.5 }, 1000);
+    }
+    if (chinaProvinces.length) {
+      handleLabelClick(chinaProvinces[0]);
+    }
+  };
+
   const handleAiAnalysis = async () => {
-    if (!userIdea?.trim() || !selectedCountry) return;
+    if (!userIdea?.trim() || !selectedMarket) return;
     setIsGenerating(true);
     setAiError('');
     setAiResult('');
     try {
       const report = await generateReport({
         productIdea: userIdea,
-        country: selectedCountry,
+        country: selectedMarket,
       });
       setAiResult(report);
     } catch (err) {
@@ -107,7 +142,7 @@ function App() {
       const reply = await sendChatMessage({
         message: userText,
         history,
-        country: selectedCountry,
+        country: selectedMarket,
       });
       setChatMessages((prev) => [...prev, { role: 'ai', text: reply }]);
     } catch (err) {
@@ -138,7 +173,7 @@ function App() {
         </div>
 
         <div className="center-nav">
-          <span className="nav-item active">OVERVIEW</span>
+          <span className="nav-item active">REGION MAP</span>
         </div>
 
         <div className="right-profile">
@@ -152,12 +187,14 @@ function App() {
 
       <div className="hero-section">
         <div className="live-tag">
-          <span className="dot"></span> GLOBAL VIEW &nbsp;&nbsp; <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> Live
+          <span className="dot"></span> REGION VIEW &nbsp;&nbsp;
+          <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> Live
         </div>
         <h1>跨文化<br/><span className="highlight">研究设计</span></h1>
-        <p>用文化故事与真实案例理解世界，再让 AI 帮你做本地化设计决策。</p>
+        <p>按国家或地区探索文化故事——中国已支持省级单元，其他国家保持国家级。</p>
         <div className="action-buttons">
           <button className="btn-outline" onClick={handleExploreMap}>Explore the Map ➔</button>
+          <button className="btn-outline" onClick={focusChina}>探索中国各省 ➔</button>
           <button className="btn-outline" onClick={handleToggleChat}>Chat with AI ➔</button>
         </div>
       </div>
@@ -178,9 +215,9 @@ function App() {
             <div ref={chatEndRef} />
           </div>
           {chatError && <div className="chat-error-banner">{chatError}</div>}
-          {selectedCountry && (
+          {selectedMarket && (
             <div className="chat-context-hint">
-              已关联目标市场：{selectedCountry.title}
+              已关联目标市场：{displayTitle}
             </div>
           )}
           <div className="chat-input-area">
@@ -189,7 +226,7 @@ function App() {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="输入国家、文化维度或设计构想..."
+              placeholder="输入地区、文化维度或设计构想..."
             />
             <button onClick={handleSendMessage} disabled={isChatLoading || !chatInput.trim()}>
               发送
@@ -203,27 +240,45 @@ function App() {
           ref={globeEl}
           globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
           backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
-          labelsData={countriesData}
+          labelsData={globeLabelsData}
           labelLat={(d) => d.lat}
           labelLng={(d) => d.lng}
           labelText={(d) => d.label}
-          labelSize={() => 1.8}
-          labelDotRadius={() => 0.6}
-          labelColor={() => 'white'}
+          labelSize={(d) => (d.marketType === 'region' ? 1.35 : 1.8)}
+          labelDotRadius={(d) => (d.marketType === 'region' ? 0.45 : 0.6)}
+          labelColor={(d) => (d.marketType === 'region' ? '#7ee8fa' : 'white')}
           labelResolution={2}
           onLabelClick={handleLabelClick}
         />
       </div>
 
-      {selectedCountry && (
+      {selectedMarket && (
         <div className="info-panel">
           <button className="close-btn" onClick={closePanel}>✕ Close</button>
-          <h2>{selectedCountry.title}</h2>
-          <p className="country-overview">{selectedCountry.overview}</p>
+
+          {selectedMarket.marketType === 'region' && selectedMarket.parentTitle && (
+            <div className="market-breadcrumb">
+              <span className="market-breadcrumb-parent">{selectedMarket.parentTitle}</span>
+              <span className="market-breadcrumb-sep">/</span>
+              <span className="market-breadcrumb-region">{selectedMarket.title}</span>
+            </div>
+          )}
+
+          <h2>{displayTitle}</h2>
+          <p className="country-overview">{selectedMarket.overview}</p>
+
+          {chinaRegionList && (
+            <RegionPicker
+              parent={{ title: '中国' }}
+              regions={chinaProvinces}
+              activeId={selectedMarket.id}
+              onSelect={(r) => handleLabelClick(r)}
+            />
+          )}
 
           <div style={{ width: '100%', height: '220px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedCountry.radarData}>
+              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedMarket.radarData}>
                 <PolarGrid stroke="rgba(255,255,255,0.15)" />
                 <PolarAngleAxis dataKey="name" tick={{ fill: '#8da4c4', fontSize: 11 }} />
                 <Tooltip wrapperStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
@@ -237,15 +292,15 @@ function App() {
             <div style={{ marginBottom: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#8da4c4' }}>
                 <span>UI 信息密度 (Info Density)</span>
-                <span>{selectedCountry.density}%</span>
+                <span>{selectedMarket.density}%</span>
               </div>
               <div className="density-track">
-                <div className="density-fill" style={{ width: `${selectedCountry.density}%` }}></div>
+                <div className="density-fill" style={{ width: `${selectedMarket.density}%` }}></div>
               </div>
             </div>
           </div>
 
-          <CulturalStoryPanel country={selectedCountry} />
+          <CulturalStoryPanel country={selectedMarket} />
 
           <div style={{ marginTop: '30px' }}>
             <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -261,7 +316,7 @@ function App() {
             <textarea
               value={userIdea}
               onChange={(e) => setUserIdea(e.target.value)}
-              placeholder="描述您的产品构想..."
+              placeholder={`描述您在${selectedMarket.title}市场的产品构想...`}
               style={{
                 width: '100%', height: '70px', borderRadius: '8px', padding: '12px',
                 boxSizing: 'border-box', background: 'rgba(0,0,0,0.4)', color: 'white',
