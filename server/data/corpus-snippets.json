@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "source": "xiaohongshu",
+      "sourceLabel": "小红书",
+      "markets": ["china", "usa", "japan"],
+      "keywords": ["二次元", "二手", "谷子", "周边", "出物", "收物", "ACG"],
+      "title": "谷圈出物：信任与验货",
+      "content": "现在买二手谷子最怕假货和跑单，宁愿加价走平台担保，也不愿意私下转账。发帖一定要晒对光视频和交易记录。",
+      "author": "吃谷人小记",
+      "url": "https://www.xiaohongshu.com"
+    },
+    {
+      "source": "xiaohongshu",
+      "sourceLabel": "小红书",
+      "markets": ["china", "usa"],
+      "keywords": ["Z世代", "Gen Z", "年轻", "消费", "美国", "留学"],
+      "title": "留美党：亚文化消费",
+      "content": "在美国买官方周边又贵又慢，更习惯 Depop/Mercari 淘二手，但物流和退换是痛点；社群种草比广告管用。",
+      "author": "LA二次元生存指南",
+      "url": "https://www.xiaohongshu.com"
+    },
+    {
+      "source": "xiaohongshu",
+      "sourceLabel": "小红书",
+      "markets": ["china", "japan"],
+      "keywords": ["日本", "动漫", "限定", "快闪", "池袋"],
+      "title": "赴日扫货笔记",
+      "content": "日本限定款溢价高，国内党愿意等代购但要透明税费；讨厌「到付惊喜」，希望 App 里直接显示含税到手价。",
+      "author": "东京买谷日记",
+      "url": "https://www.xiaohongshu.com"
+    },
+    {
+      "source": "weibo",
+      "sourceLabel": "微博",
+      "markets": ["china"],
+      "keywords": ["跨文化", "出海", "本地化", "UI", "设计"],
+      "title": "出海产品吐槽",
+      "content": "很多 App 把国内交互原封不动搬出去，支付和客服没跟上，差评集中在「看不懂」「找不到退款」。",
+      "author": "产品观察",
+      "url": "https://weibo.com"
+    },
+    {
+      "source": "zhihu",
+      "sourceLabel": "知乎",
+      "markets": ["china", "usa", "germany"],
+      "keywords": ["用户研究", "访谈", "定性", "洞察"],
+      "title": "定性研究 vs 问卷",
+      "content": "问卷只能告诉你「是什么」，访谈才能挖到「为什么」。出海场景要先验证文化假设，再做大样本量化。",
+      "author": "用研方法论",
+      "url": "https://www.zhihu.com"
+    },
+    {
+      "source": "xiaohongshu",
+      "sourceLabel": "小红书",
+      "markets": ["brazil", "india"],
+      "keywords": ["新兴市场", "支付", "现金", "分期"],
+      "title": "新兴市场价格敏感",
+      "content": "分期和本地钱包是转化关键；界面信息密度可以更高，但信任徽章（认证卖家、平台担保）必须显眼。",
+      "author": "出海增长笔记",
+      "url": "https://www.xiaohongshu.com"
+    },
+    {
+      "source": "reddit",
+      "sourceLabel": "Reddit/英文社区",
+      "markets": ["usa", "germany", "uk"],
+      "keywords": ["anime", "merch", "secondhand", "figure", "collectible"],
+      "title": "r/animecollective 讨论",
+      "content": "US collectors care about condition grading (MIB/used), fast shipping, and dispute protection. Scams in Facebook groups push people to marketplace apps.",
+      "author": "reddit_user",
+      "url": "https://www.reddit.com"
+    },
+    {
+      "source": "twitter",
+      "sourceLabel": "X/Twitter",
+      "markets": ["usa", "japan"],
+      "keywords": ["vtuber", "hololive", "merch", "drop"],
+      "title": "限量 drop FOMO",
+      "content": "Limited drops sell out in minutes; fans want waitlist + fair queue, hate bots. Authenticity verification is a must for resale.",
+      "author": "@otaku_trends",
+      "url": "https://twitter.com"
+    }
+  ]
+}
