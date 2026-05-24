@@ -31,7 +31,7 @@ function App() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'ai',
-      text: '您好！我是整合版跨文化研究专家（20年经验），专助中国团队出海。请选定国家/地区后，说明产品/人群/场景/目标。我将用「三步分析法」为您分析，并综合运用六维度诊断、文化民族志四步法、五大研究视角、语用学（如面子理论）与 Cultural Fit Gap 等完整能力。',
+      text: '您好！我是面向中国产品/UX 团队的跨文化顾问（20年经验）。请选定国家/地区，并说明产品、用户、场景与目标。我会用产品语言（少术语、多清单）按「发现问题→分析原因→落地建议」分析，并在需要时给出从洞察到上线各阶段要注意什么。',
     },
   ]);
   const [aiHealth, setAiHealth] = useState(null);
@@ -339,7 +339,7 @@ function App() {
             <textarea
               value={userIdea}
               onChange={(e) => setUserIdea(e.target.value)}
-              placeholder={`例：产品=二次元电商App；人群=18-25岁；场景=移动端购物；目标=进入${selectedMarket.title}市场。可补充沟通障碍或案例…`}
+              placeholder={`例：产品=二次元电商App；用户=18-25岁；场景=手机购物；目标=进入${selectedMarket.title}。可写当前阶段（调研/设计/开发/准备上线）…`}
               style={{
                 width: '100%', height: '70px', borderRadius: '8px', padding: '12px',
                 boxSizing: 'border-box', background: 'rgba(0,0,0,0.4)', color: 'white',
