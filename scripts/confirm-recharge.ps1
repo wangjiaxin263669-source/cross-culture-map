@@ -4,7 +4,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$OrderId,
   [string]$SiteUrl = "https://ephemeral-bubblegum-a79332.netlify.app",
-  [string]$Secret = $env:RECHARGE_ADMIN_SECRET
+  [string]$Secret = $(if ($env:RECHARGE_ADMIN_SECRET) { $env:RECHARGE_ADMIN_SECRET } else { 'CcMapProdAdmin_7f3e9a2b' })
 )
 
 if (-not $Secret) {

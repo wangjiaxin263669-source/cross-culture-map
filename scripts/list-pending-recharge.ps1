@@ -1,7 +1,7 @@
 # 查看待核实充值订单
 param(
   [string]$SiteUrl = "https://ephemeral-bubblegum-a79332.netlify.app",
-  [string]$Secret = $env:RECHARGE_ADMIN_SECRET
+  [string]$Secret = $(if ($env:RECHARGE_ADMIN_SECRET) { $env:RECHARGE_ADMIN_SECRET } else { 'CcMapProdAdmin_7f3e9a2b' })
 )
 
 if (-not $Secret) {
