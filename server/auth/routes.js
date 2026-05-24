@@ -4,6 +4,7 @@ import {
   findUserById,
   findUserByUsername,
   findUserByPhone,
+  updateUserPasswordByPhone,
   sanitizeUser,
   listChatSessions,
   getChatSession,
@@ -118,6 +119,33 @@ router.post('/login', async (req, res) => {
     res.json(await loginUserRecord(user));
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+/** 忘记密码：凭注册手机号设置新密码 */
+router.post('/reset-password', async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body.phone);
+    const { password, confirmPassword } = req.body;
+
+    const phoneErr = validatePhone(phone);
+    if (phoneErr) return res.status(400).json({ error: phoneErr });
+    const passErr = validatePassword(password);
+    if (passErr) return res.status(400).json({ error: passErr });
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: '两次输入的密码不一致' });
+    }
+
+    const existing = await findUserByPhone(phone);
+    if (!existing) {
+      return res.status(404).json({ error: '该手机号未注册' });
+    }
+
+    const passwordHash = await hashPassword(password);
+    await updateUserPasswordByPhone(phone, passwordHash);
+    res.json({ ok: true, message: '密码已重置，请使用新密码登录' });
+  } catch (err) {
+    res.status(400).json({ error: err.message || '重置失败' });
   }
 });
 

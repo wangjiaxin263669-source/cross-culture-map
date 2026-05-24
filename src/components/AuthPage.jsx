@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { register, login } from '../services/authApi.js';
+import { register, login, resetPassword } from '../services/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthPage() {
@@ -13,12 +13,31 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const switchMode = (next) => {
+    setMode(next);
+    setError('');
+    setSuccess('');
+    if (next === 'login') {
+      setPassword('');
+      setConfirmPassword('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
     try {
+      if (mode === 'reset') {
+        await resetPassword({ phone, password, confirmPassword });
+        setSuccess('密码已重置，请使用新密码登录');
+        setPassword('');
+        setConfirmPassword('');
+        setTimeout(() => switchMode('login'), 1500);
+        return;
+      }
+
       const data =
         mode === 'login'
           ? await login({ phone, password })
@@ -40,6 +59,10 @@ export default function AuthPage() {
     }
   };
 
+  const isReset = mode === 'reset';
+  const submitLabel =
+    loading ? '处理中…' : isReset ? '重置密码' : mode === 'login' ? '登录' : '注册';
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -48,30 +71,29 @@ export default function AuthPage() {
           <p>跨文化研究设计决策平台</p>
         </div>
 
-        <div className="auth-tabs">
-          <button
-            type="button"
-            className={mode === 'login' ? 'active' : ''}
-            onClick={() => {
-              setMode('login');
-              setError('');
-              setSuccess('');
-            }}
-          >
-            登录
-          </button>
-          <button
-            type="button"
-            className={mode === 'register' ? 'active' : ''}
-            onClick={() => {
-              setMode('register');
-              setError('');
-              setSuccess('');
-            }}
-          >
-            注册
-          </button>
-        </div>
+        {!isReset ? (
+          <div className="auth-tabs">
+            <button
+              type="button"
+              className={mode === 'login' ? 'active' : ''}
+              onClick={() => switchMode('login')}
+            >
+              登录
+            </button>
+            <button
+              type="button"
+              className={mode === 'register' ? 'active' : ''}
+              onClick={() => switchMode('register')}
+            >
+              注册
+            </button>
+          </div>
+        ) : (
+          <div className="auth-reset-head">
+            <h2>找回密码</h2>
+            <p>输入注册时使用的手机号，设置新密码后即可登录</p>
+          </div>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {mode === 'register' && (
@@ -100,7 +122,7 @@ export default function AuthPage() {
           </label>
 
           <label>
-            <span>密码</span>
+            <span>{isReset ? '新密码' : '密码'}</span>
             <input
               type="password"
               value={password}
@@ -111,7 +133,7 @@ export default function AuthPage() {
             />
           </label>
 
-          {mode === 'register' && (
+          {(mode === 'register' || isReset) && (
             <label>
               <span>确认密码</span>
               <input
@@ -125,16 +147,38 @@ export default function AuthPage() {
             </label>
           )}
 
+          {mode === 'login' && (
+            <button
+              type="button"
+              className="auth-forgot-link"
+              onClick={() => switchMode('reset')}
+            >
+              忘记密码？
+            </button>
+          )}
+
           {success && <div className="auth-success">{success}</div>}
-          {!success && authNotice && !error && <div className="auth-hint-msg">{authNotice}</div>}
+          {!success && authNotice && !error && mode !== 'reset' && (
+            <div className="auth-hint-msg">{authNotice}</div>
+          )}
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading || Boolean(success)}>
-            {loading ? '处理中…' : mode === 'login' ? '登录' : '注册'}
+            {submitLabel}
           </button>
         </form>
 
-        <p className="auth-footer-hint">一个手机号仅可注册一个账号。</p>
+        {isReset && (
+          <button type="button" className="auth-link-btn" onClick={() => switchMode('login')}>
+            返回登录
+          </button>
+        )}
+
+        <p className="auth-footer-hint">
+          {isReset
+            ? '仅需已注册的手机号即可重置密码，请妥善保管新密码。'
+            : '一个手机号仅可注册一个账号。'}
+        </p>
       </div>
     </div>
   );

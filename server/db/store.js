@@ -116,6 +116,16 @@ export async function bindPhoneToUser(userId, phone) {
   });
 }
 
+/** 通过手机号重置登录密码 */
+export async function updateUserPasswordByPhone(phone, passwordHash) {
+  return runDbUpdate((db) => {
+    const user = db.users.find((u) => u.phone === phone && u.phoneVerified);
+    if (!user) throw new Error('该手机号未注册');
+    user.passwordHash = passwordHash;
+    return user;
+  });
+}
+
 export async function createUserByPhone(phone, { initialBalanceCents = 0, initialBonusNote } = {}) {
   const suffix = phone.slice(-4);
   let username = `u${suffix}`;

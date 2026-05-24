@@ -60,6 +60,13 @@ export async function login({ phone, password }) {
   return data;
 }
 
+export async function resetPassword({ phone, password, confirmPassword }) {
+  return authFetch('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ phone, password, confirmPassword }),
+  });
+}
+
 export async function fetchMe() {
   return authFetch('/api/auth/me');
 }
