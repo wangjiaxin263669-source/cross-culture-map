@@ -26,8 +26,7 @@ const DEFAULT_CHAT_GREETING = {
 };
 
 function App() {
-  const { user, loading: authLoading, logout, refreshUser, authNotice, clearAuthNotice } =
-    useAuth();
+  const { user, loading: authLoading, logout, refreshUser } = useAuth();
   const globeEl = useRef();
   const threeStepSectionRef = useRef(null);
   const [selectedMarket, setSelectedMarket] = useState(null);
@@ -328,15 +327,6 @@ function App() {
   return (
     <div className="app-container">
       <div className="bg-gradient-mask"></div>
-
-      {authNotice && (
-        <div className="app-wallet-notice" role="status">
-          <span>{authNotice}</span>
-          <button type="button" className="app-wallet-notice-close" aria-label="关闭" onClick={clearAuthNotice}>
-            ×
-          </button>
-        </div>
-      )}
 
       <div className="top-bar">
         <div className="brand-logo">
