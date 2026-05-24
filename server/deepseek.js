@@ -3,6 +3,9 @@ import { loadSkillPrompt } from './loadSkill.js';
 
 const API_BASE = process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com';
 const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+const CHAT_MAX_TOKENS = Number(process.env.DEEPSEEK_CHAT_MAX_TOKENS || 3000);
+const REPORT_SECTION_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_MAX_TOKENS || 1400);
+const API_TIMEOUT_MS = Number(process.env.DEEPSEEK_TIMEOUT_MS || 55000);
 
 const PLATFORM_APPENDIX = `
 ## 平台集成说明（CROSS-CULTURE Design Decision Platform）
@@ -43,38 +46,50 @@ ${buildCountryContext(country)}
     prompt += `
 ## 报告模式（右侧「生成本地化设计报告」）
 
-请执行 SKILL 中的「文化民族志四步法」，并输出完整 Markdown 报告，结构如下：
-
-# 本地化设计报告 · {国家}
-
-## 1. 文化背景分析
-（2-3 句总览，含 Cultural Fit Gap 判断）
-
-## 2. 文化维度诊断（因）— 结合 Hofstede 分数逐项分析
-
-## 3. 关键发现
-（编号列表，每项含设计影响）
-
-## 4. UI/UX 本地化策略（果）
-### 4.1 信息架构与布局
-### 4.2 视觉与色彩
-### 4.3 文案与沟通调性（高/低语境）
-### 4.4 交互与信任机制
-
-## 5. 风险评级
-（🔴 高 / 🟡 中 / 🟢 低，列表说明）
-
-## 6. 参考案例与对照
-
-## 7. 可执行建议（按优先级 P0/P1/P2）
-
-## 8. 验证方法（A/B、民族志、文化探针等）
-
-## 9. 研究方法论建议（Research for Design 路径）
+执行 SKILL「文化民族志四步法」，输出 **精炼 Markdown**（控制篇幅，条理清晰）。
 `;
   }
 
   return prompt;
+}
+
+function appendReportSectionGuide(prompt, section) {
+  if (section === 'analysis') {
+    return `${prompt}
+
+## 本轮仅输出报告前半部分（勿写后半部分标题）
+
+# 本地化设计报告 · {国家/地区}
+
+## 1. 文化背景与 Cultural Fit Gap（3–5 句）
+
+## 2. 维度诊断（因）— 结合 Hofstede，每项 1–2 句
+
+## 3. 关键发现（3–5 条，含设计影响）`;
+  }
+  if (section === 'strategy') {
+    return `${prompt}
+
+## 本轮仅输出报告后半部分（勿重复前半标题）
+
+## 4. UI/UX 策略（果）— 信息架构 / 视觉 / 文案 / 信任（各 2–3 点）
+
+## 5. 风险评级（🔴🟡🟢）
+
+## 6. 可执行建议 P0/P1/P2
+
+## 7. 验证方法（2–3 条）`;
+  }
+  return `${prompt}
+
+# 本地化设计报告 · {国家/地区}
+## 1–7 完整结构（精炼，总字数 ≤2000）`;
+}
+
+function buildAgentSystemPromptWithSection(opts) {
+  const base = buildAgentSystemPrompt(opts);
+  if (opts.mode !== 'report') return base;
+  return appendReportSectionGuide(base, opts.section || 'full');
 }
 
 function getApiKey() {
@@ -145,21 +160,35 @@ function normalizeHistory(history) {
     .slice(-20);
 }
 
-async function chatCompletion(messages) {
+async function chatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS } = {}) {
   const apiKey = getApiKey();
-  const res = await fetch(`${API_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      temperature: 0.65,
-      max_tokens: 4096,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        temperature: 0.6,
+        max_tokens: maxTokens,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('DeepSeek 响应超时，请稍后重试或缩短产品描述');
+    }
+    throw wrapApiError(err);
+  } finally {
+    clearTimeout(timer);
+  }
 
   let data = {};
   try {
@@ -191,40 +220,57 @@ export async function generateChatReply({ message, history = [], country = null 
   ];
 
   try {
-    return await chatCompletion(messages);
+    return await chatCompletion(messages, { maxTokens: CHAT_MAX_TOKENS });
   } catch (err) {
     if (err.message?.startsWith('未配置') || err.message?.startsWith('DEEPSEEK')) throw err;
     throw wrapApiError(err);
   }
 }
 
-export async function generateLocalizationReport({ productIdea, country }) {
-  if (!country) {
-    throw new Error('请先在地球上选择目标国家/地区');
-  }
-
+async function generateReportSection({ productIdea, country, section }) {
   const query = `${productIdea} ${country.title} 本地化 UI UX 设计`;
-  const chunks = retrieveRelevantChunks(query, 5);
+  const chunks = retrieveRelevantChunks(query, section === 'analysis' ? 4 : 3);
   const knowledge = formatKnowledgeContext(chunks);
-  const systemContent = buildAgentSystemPrompt({ knowledge, country, mode: 'report' });
+  const systemContent = buildAgentSystemPromptWithSection({
+    knowledge,
+    country,
+    mode: 'report',
+    section,
+  });
 
-  const userContent = `请为以下产品在【${country.title}】市场生成本地化设计报告。
+  const regionLabel =
+    country.displayTitle ||
+    (country.parentTitle && country.marketType === 'region'
+      ? `${country.parentTitle} · ${country.title}`
+      : country.title);
+
+  const userContent = `请为以下产品在【${regionLabel}】市场生成本地化设计报告（${section === 'analysis' ? '前半：背景+维度+发现' : '后半：策略+风险+建议+验证'}）。
 
 产品/设计构想：
 ${productIdea}
 
-要求：
-1. 严格执行系统提示中的报告结构与 SKILL 四步法
-2. 引用平台 Hofstede 维度分数与课程资料
-3. 给出 Cultural Fit Gap 判断与 P0/P1/P2 优先级建议`;
+要求：引用 Hofstede 分数与课程资料；因果清晰；篇幅精炼。`;
 
   const messages = [
     { role: 'system', content: systemContent },
     { role: 'user', content: userContent },
   ];
 
+  return chatCompletion(messages, { maxTokens: REPORT_SECTION_MAX_TOKENS });
+}
+
+/** 并行生成两段报告，避免 Netlify 30s 网关超时 */
+export async function generateLocalizationReport({ productIdea, country }) {
+  if (!country) {
+    throw new Error('请先在地球上选择目标国家/地区');
+  }
+
   try {
-    return await chatCompletion(messages);
+    const [analysis, strategy] = await Promise.all([
+      generateReportSection({ productIdea, country, section: 'analysis' }),
+      generateReportSection({ productIdea, country, section: 'strategy' }),
+    ]);
+    return `${analysis.trim()}\n\n${strategy.trim()}`;
   } catch (err) {
     if (err.message?.startsWith('未配置') || err.message?.startsWith('DEEPSEEK')) throw err;
     throw wrapApiError(err);
