@@ -1,12 +1,10 @@
 /**
- * 持久化引擎（按优先级）：
- * 1. 本地文件 — npm run dev
- * 2. PostgreSQL — Netlify DB / Neon（DATABASE_URL，线上推荐）
- * 3. Netlify Blobs — 备用
+ * 持久化：本地文件 / Netlify Blobs（免费，无需 Netlify DB 扩展）/ Postgres（可选）
  */
 import fs from 'fs';
 import path from 'path';
 import { getServerDir } from '../paths.js';
+import { ensureBlobsReady, getLambdaEvent } from './blobContext.js';
 import { usePostgres, readDbPostgres, writeDbPostgres } from './postgres.js';
 
 export const EMPTY_DB = {
@@ -38,32 +36,38 @@ function isLambda() {
   return Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
 }
 
+function hasPostgresUrl() {
+  return Boolean(process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL);
+}
+
 function useFileStorage() {
-  if (process.env.STORAGE_BACKEND === 'postgres') return false;
-  if (process.env.STORAGE_BACKEND === 'blobs') return false;
   if (process.env.STORAGE_BACKEND === 'file') return true;
-  if (!isLambda()) return true;
-  if (process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL) return false;
-  return false;
+  if (process.env.STORAGE_BACKEND === 'blobs') return false;
+  if (process.env.STORAGE_BACKEND === 'postgres') return false;
+  return !isLambda();
 }
 
 function useNetlifyBlobs() {
-  if (useFileStorage() || usePostgres()) return false;
-  if (process.env.STORAGE_BACKEND === 'blobs') return isLambda();
+  if (useFileStorage()) return false;
+  if (process.env.STORAGE_BACKEND === 'file') return false;
   if (!isLambda()) return false;
-  return Boolean(process.env.NETLIFY || process.env.SITE_ID || process.env.NETLIFY_BLOBS_CONTEXT);
+  if (process.env.STORAGE_BACKEND === 'postgres' && hasPostgresUrl()) return false;
+  return true;
 }
 
 export function getStorageBackend() {
   if (useFileStorage()) return 'file';
-  if (usePostgres()) return 'postgres';
+  if (usePostgres() && hasPostgresUrl()) return 'postgres';
   if (useNetlifyBlobs()) return 'netlify-blobs';
-  return 'none';
+  return isLambda() ? 'netlify-blobs' : 'file';
 }
 
+/** 线上 Lambda 一律允许读写（自动走 Blobs） */
 export function isDbWritable() {
-  const backend = getStorageBackend();
-  return backend !== 'none';
+  if (useFileStorage()) return true;
+  if (isLambda()) return true;
+  if (usePostgres() && hasPostgresUrl()) return true;
+  return true;
 }
 
 function filePath() {
@@ -87,24 +91,8 @@ function writeDbFile(data) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-async function configureBlobContext() {
-  const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
-  const token =
-    process.env.NETLIFY_AUTH_TOKEN ||
-    process.env.NETLIFY_API_TOKEN ||
-    process.env.NETLIFY_PAT;
-  if (!siteID || !token) return;
-  const { setEnvironmentContext } = await import('@netlify/blobs');
-  setEnvironmentContext({
-    siteID,
-    token,
-    edgeURL: 'https://api.netlify.com',
-    deployID: process.env.DEPLOY_ID || process.env.CONTEXT || 'production',
-  });
-}
-
 async function getBlobStore() {
-  await configureBlobContext();
+  await ensureBlobsReady(getLambdaEvent());
   const { getStore } = await import('@netlify/blobs');
   return getStore({ name: BLOB_STORE, consistency: 'strong' });
 }
@@ -122,25 +110,25 @@ async function writeDbBlobs(data) {
 
 export async function readDb() {
   if (useFileStorage()) return readDbFile();
-  if (usePostgres()) {
+
+  if (usePostgres() && hasPostgresUrl()) {
     try {
       return await readDbPostgres();
     } catch (err) {
-      console.error('[db] postgres read failed:', err.message);
-      throw new Error('数据库连接失败，请在 Netlify 启用 Netlify DB 扩展');
+      console.warn('[db] postgres unavailable, fallback blobs:', err.message);
     }
   }
-  if (useNetlifyBlobs()) {
+
+  if (useNetlifyBlobs() || isLambda()) {
     try {
       return await readDbBlobs();
     } catch (err) {
-      console.error('[db] blobs read failed:', err.message);
-      throw new Error(
-        '数据存储未配置。请在 Netlify 控制台启用 Extensions → Netlify DB（免费），或本地使用 npm run dev',
-      );
+      console.warn('[db] blobs read empty start:', err.message);
+      return structuredClone(EMPTY_DB);
     }
   }
-  throw new Error('未配置数据存储');
+
+  return readDbFile();
 }
 
 export async function writeDb(data) {
@@ -149,16 +137,35 @@ export async function writeDb(data) {
       writeDbFile(data);
       return;
     }
-    if (usePostgres()) {
-      await writeDbPostgres(data);
+
+    if (usePostgres() && hasPostgresUrl()) {
+      try {
+        await writeDbPostgres(data);
+        return;
+      } catch (err) {
+        console.warn('[db] postgres write failed, try blobs:', err.message);
+      }
+    }
+
+    let lastErr;
+    for (let i = 0; i < 3; i += 1) {
+      try {
+        await ensureBlobsReady(getLambdaEvent());
+        await writeDbBlobs(data);
+        return;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`[db] blobs write retry ${i + 1}:`, err.message);
+      }
+    }
+
+    if (useFileStorage() || !isLambda()) {
+      writeDbFile(data);
       return;
     }
-    if (useNetlifyBlobs()) {
-      await writeDbBlobs(data);
-      return;
-    }
-    throw new Error('未配置数据存储');
+    throw lastErr || new Error('数据保存失败，请稍后重试');
   };
+
   writeQueue = writeQueue.then(run, run);
   return writeQueue;
 }

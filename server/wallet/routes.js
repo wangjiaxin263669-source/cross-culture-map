@@ -34,9 +34,6 @@ router.get('/transactions', requireAuth, async (req, res) => {
 
 router.post('/recharge/create', requireAuth, async (req, res) => {
   try {
-    if (!isDbWritable()) {
-      return res.status(503).json({ error: '当前环境不支持充值' });
-    }
     const { packageId, payType = 'alipay' } = req.body;
     const pkg = RECHARGE_PACKAGES.find((p) => p.id === packageId);
     if (!pkg) {

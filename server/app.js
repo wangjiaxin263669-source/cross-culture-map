@@ -34,6 +34,7 @@ import authRoutes from './auth/routes.js';
 import { getWechatConfig } from './auth/wechat.js';
 import { isDbWritable } from './db/store.js';
 import { getStorageBackend } from './db/engine.js';
+import { ensureBlobsReady } from './db/blobContext.js';
 import walletRoutes from './wallet/routes.js';
 import { withWalletCharge } from './wallet/middleware.js';
 import { getWalletPublicConfig } from './wallet/config.js';
@@ -66,6 +67,18 @@ export function createApp(options = {}) {
     }),
   );
   app.use(express.json({ limit: '2mb' }));
+
+  app.use(async (req, _res, next) => {
+    const event = req.apiGateway?.event;
+    if (event) {
+      try {
+        await ensureBlobsReady(event);
+      } catch {
+        /* ignore */
+      }
+    }
+    next();
+  });
 
   /** 防止请求挂死导致 Vite/Netlify 返回 504 */
   const API_DEADLINE_MS = Number(process.env.API_DEADLINE_MS || 52000);
@@ -133,6 +146,8 @@ export function createApp(options = {}) {
       auth: {
         dbWritable: isDbWritable(),
         storage: getStorageBackend(),
+        blobsContext: Boolean(process.env.NETLIFY_BLOBS_CONTEXT),
+        siteId: Boolean(process.env.SITE_ID || process.env.NETLIFY_SITE_ID),
         wechatLogin: wx.configured,
       },
       wallet: getWalletPublicConfig(),

@@ -31,12 +31,6 @@ async function authResponse(user) {
 
 router.post('/register', async (req, res) => {
   try {
-    if (!isDbWritable()) {
-      return res.status(503).json({
-        error:
-          '数据存储未配置。本地请运行 npm run dev；线上请在 Netlify 启用 Extensions → Netlify DB 后重新部署',
-      });
-    }
     const { username, password, displayName } = req.body;
     const uErr = validateUsername(username);
     if (uErr) return res.status(400).json({ error: uErr });
@@ -149,9 +143,6 @@ router.get('/history/chats/:id', requireAuth, async (req, res) => {
 });
 
 router.post('/history/chats', requireAuth, async (req, res) => {
-  if (!isDbWritable()) {
-    return res.status(503).json({ error: '历史记录无法保存到当前环境' });
-  }
   try {
     const session = await saveChatSession(req.user.id, req.body);
     res.json({ session });
@@ -176,9 +167,6 @@ router.get('/history/reports/:id', requireAuth, async (req, res) => {
 });
 
 router.post('/history/reports', requireAuth, async (req, res) => {
-  if (!isDbWritable()) {
-    return res.status(503).json({ error: '历史记录无法保存到当前环境' });
-  }
   try {
     const report = await saveReport(req.user.id, req.body);
     res.json({ report });
