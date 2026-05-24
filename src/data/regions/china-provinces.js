@@ -2,12 +2,31 @@
  * 中国省级地区（地球仪可点击单元）
  * 各省在国家级 Hofstede 基准上，结合地域文化、经济史与数字产品习惯做差异化解读
  */
+import { CHINA_REGION_LINKS } from '../curatedLinks.js';
+
+const PROVINCE_LINK_KEY = {
+  'cn-gd': 'guangdong',
+  'cn-bj': 'beijing',
+  'cn-sh': 'shanghai',
+  'cn-sc': 'sichuan',
+  'cn-zj': 'zhejiang',
+  'cn-sn': 'shaanxi',
+  'cn-yn': 'yunnan',
+  'cn-xj': 'xinjiang',
+  'cn-xz': 'tibet',
+  'cn-ln': 'northeast',
+  'cn-fj': 'fujian',
+  'cn-hb': 'hubei',
+};
+
 const CN_BASE_REFS = [
   { title: 'China — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/china/', tag: '国家基准', note: '全国维度分数参照系' },
   { title: 'The Influence of Cultural Values on Webpage Design', source: 'Kim et al., JCMC', year: '2009', url: 'https://onlinelibrary.wiley.com/doi/full/10.1111/j.1083-6101.2009.01454.x', tag: '实证文献', note: '集体主义与浏览行为' },
 ];
 
 function province(data) {
+  const linkKey = PROVINCE_LINK_KEY[data.id];
+  const curated = linkKey ? CHINA_REGION_LINKS[linkKey] : null;
   return {
     marketType: 'region',
     parentId: 'china',
@@ -16,7 +35,8 @@ function province(data) {
     ...data,
     title: data.title,
     label: data.label || data.title,
-    references: [...(data.references || []), ...CN_BASE_REFS],
+    videos: data.videos ?? curated?.videos ?? [],
+    references: [...(data.references || []), ...(curated?.refs || []), ...CN_BASE_REFS],
   };
 }
 
@@ -43,10 +63,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】商业务实 + 高密度信息习惯 →【果】转化路径要短、优惠要清晰、直播/社群下单要顺滑。',
     },
-    videos: [
-      { title: '岭南文化与广府民俗', url: 'https://www.bilibili.com/video/BV1GJ411x7h7/', provider: 'Bilibili', tag: '文化' },
-      { title: '中国直播电商观察', url: 'https://www.nngroup.com/articles/china-ux/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [
       { icon: '💡', title: '设计启示', content: '突出限时优惠、一键下单；支持粤语关键词搜索更佳。' },
     ],
@@ -73,10 +89,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】高权力距离与文化权威 →【果】资质展示、正规渠道、庄重配色比搞怪营销更安全。',
     },
-    videos: [
-      { title: '北京文化与传统礼仪', url: 'https://www.bilibili.com/video/BV1Yh411o7Sz/', provider: 'Bilibili', tag: '文化' },
-      { title: '政府与机构类 UI 可访问性', url: 'https://www.w3.org/WAI/standards-guidelines/wcag/', provider: 'W3C', tag: '规范' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '强化机构背书；避免过度娱乐化文案。' }],
   }),
   province({
@@ -101,10 +113,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】国际化审美 + 个体表达空间较大 →【果】留白、摄影质感、双语可选、会员感设计。',
     },
-    videos: [
-      { title: '上海城市文化与海派', url: 'https://www.bilibili.com/video/BV1fx411y7WU/', provider: 'Bilibili', tag: '文化' },
-      { title: '奢侈品牌数字化体验', url: 'https://www.nngroup.com/articles/luxury-ux/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '视觉精致度优先；英文/拼音副标题常见。' }],
   }),
   province({
@@ -129,10 +137,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】高宽容度 + 强社交 →【果】轻松语气、美食/娱乐视觉、分享裂变友好。',
     },
-    videos: [
-      { title: '巴蜀文化与川菜', url: 'https://www.bilibili.com/video/BV1KE411w7yG/', provider: 'Bilibili', tag: '文化' },
-      { title: '情绪设计入门', url: 'https://www.youtube.com/watch?v=G9J4fM7W6H0', provider: 'YouTube', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '可用方言梗（适度）；强调社交分享与趣味互动。' }],
   }),
   province({
@@ -157,10 +161,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】商业效率文化 →【果】仪表盘清晰、批量操作、导出报表、低学习成本。',
     },
-    videos: [
-      { title: '浙江民营经济与电商', url: 'https://www.bilibili.com/video/BV1b34y1B7EW/', provider: 'Bilibili', tag: '产业' },
-      { title: 'B2B 仪表盘设计', url: 'https://www.nngroup.com/articles/dashboard-design/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '数据可视化优先；流程短、可批量处理。' }],
   }),
   province({
@@ -185,10 +185,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】高长期导向 + 文化认同 →【果】品牌故事、非遗联名、时间轴叙事有效。',
     },
-    videos: [
-      { title: '陕西历史文化纪录片精选', url: 'https://www.bilibili.com/video/BV1xx411c7mu/', provider: 'Bilibili', tag: '文化' },
-      { title: '西安文旅城市品牌', url: 'https://www.bilibili.com/video/BV1xx411c7mu/', provider: 'Bilibili', tag: '品牌' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '文化 IP 联名；强调传承与品质背书。' }],
   }),
   province({
@@ -213,10 +209,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】多元包容 + 节庆文化 →【果】鲜艳但和谐配色、节庆主题皮肤、多语言/多民族意象尊重。',
     },
-    videos: [
-      { title: '云南少数民族文化概览', url: 'https://www.bilibili.com/video/BV1yJ411a7kG/', provider: 'Bilibili', tag: '文化' },
-      { title: 'Inclusive Design 基础', url: 'https://www.nngroup.com/articles/inclusive-design/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '避免刻板印象；节庆运营与文旅场景结合。' }],
   }),
   province({
@@ -241,10 +233,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】多元宗教与文化习俗 →【果】多语言切换、饮食/节庆合规审查、尊重性 imagery。',
     },
-    videos: [
-      { title: '新疆丝路文化', url: 'https://www.bilibili.com/video/BV1QE411w7Dd/', provider: 'Bilibili', tag: '文化' },
-      { title: 'Designing for Multilingual Users', url: 'https://www.nngroup.com/articles/international-usability/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '维/哈文字体支持；清真标识清晰；避免文化不敏感素材。' }],
   }),
   province({
@@ -269,10 +257,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】宗教文化敏感 →【果】符号合规、舒缓交互、真实摄影、藏文/中文双语。',
     },
-    videos: [
-      { title: '西藏文化与高原生活', url: 'https://www.bilibili.com/video/BV1yJ411a7kG/', provider: 'Bilibili', tag: '文化' },
-      { title: 'Low-bandwidth UX', url: 'https://www.nngroup.com/articles/mobile-design-for-emerging-markets/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '轻量化页面；尊重宗教符号；藏文排版需专业字体。' }],
   }),
   province({
@@ -297,9 +281,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】直爽务实 + 集体认同 →【果】价格透明、少套路、本地化幽默可拉近距离。',
     },
-    videos: [
-      { title: '东北文化与社会性格', url: 'https://www.bilibili.com/video/BV1Yh411o7Sz/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '直白文案；强调性价比与本地服务。' }],
   }),
   province({
@@ -324,10 +305,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】圈子信任 + 跨境经验 →【果】社群导流、多币种、物流可视化、吉利符号慎用。',
     },
-    videos: [
-      { title: '闽南文化与海洋贸易', url: 'https://www.bilibili.com/video/BV1GJ411x7h7/', provider: 'Bilibili', tag: '文化' },
-      { title: 'Cross-border E-commerce UX', url: 'https://www.nngroup.com/articles/international-usability/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: 'WhatsApp/微信社群承接；跨境物流状态清晰。' }],
   }),
   province({
@@ -352,9 +329,6 @@ export const chinaProvinces = [
       ],
       designLink: '【因】枢纽文化 →【果】均衡信息架构；兼顾南北用户的功能开关或本地化推荐。',
     },
-    videos: [
-      { title: '荆楚文化概述', url: 'https://www.bilibili.com/video/BV1KE411w7yG/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '默认中等密度；高校场景可做校园版入口。' }],
   }),
 ];
