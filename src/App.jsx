@@ -359,7 +359,7 @@ function App() {
                 fontWeight: '600', fontSize: '13px', transition: 'all 0.3s',
               }}
             >
-              {isGenerating ? '深度逻辑推理中...' : '生成本地化设计报告 ➔'}
+              {isGenerating ? 'AI 生成报告中（约 20–40 秒，请勿关闭）…' : '生成本地化设计报告 ➔'}
             </button>
 
             {aiError && <div className="ai-error">{aiError}</div>}
