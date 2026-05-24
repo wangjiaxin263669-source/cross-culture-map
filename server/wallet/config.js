@@ -17,11 +17,8 @@ export const WALLET_COSTS = {
 /** 新用户注册赠送，默认 0.5 元 */
 export const NEW_USER_BONUS_CENTS = centsFromEnv('NEW_USER_BONUS_CENTS', 50);
 
-/** 每日登录赠送，默认 0.05 元 */
-export const DAILY_LOGIN_BONUS_CENTS = centsFromEnv('DAILY_LOGIN_BONUS_CENTS', 5);
-
-/** 每日登录赠送累计上限，默认 0.7 元（达上限后不再发放） */
-export const DAILY_LOGIN_BONUS_CAP_CENTS = centsFromEnv('DAILY_LOGIN_BONUS_CAP_CENTS', 70);
+/** 每日登录赠送，默认 0.06 元；未使用部分次日零点（上海时区）清零 */
+export const DAILY_LOGIN_BONUS_CENTS = centsFromEnv('DAILY_LOGIN_BONUS_CENTS', 6);
 
 /** 充值档位（元 → 分） */
 export const RECHARGE_PACKAGES = [
@@ -54,6 +51,7 @@ export function getWalletPublicConfig() {
     })),
     newUserBonusYuan: formatYuan(NEW_USER_BONUS_CENTS),
     dailyLoginBonusYuan: formatYuan(DAILY_LOGIN_BONUS_CENTS),
-    dailyLoginBonusCapYuan: formatYuan(DAILY_LOGIN_BONUS_CAP_CENTS),
+    dailyLoginBonusExpiresAtMidnight: true,
+    dailyLoginBonusNote: '每日登录赠送当日有效，次日零点（北京时间）未使用部分自动清零',
   };
 }

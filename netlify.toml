@@ -9,8 +9,7 @@
   WECHAT_PAY_QR_URL = "/wechat-pay-qr.png"
   WECHAT_PAY_OWNER_NAME = "hchhh"
   NEW_USER_BONUS_CENTS = "50"
-  DAILY_LOGIN_BONUS_CENTS = "5"
-  DAILY_LOGIN_BONUS_CAP_CENTS = "70"
+  DAILY_LOGIN_BONUS_CENTS = "6"
   RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
   FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
 

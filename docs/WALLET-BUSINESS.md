@@ -11,10 +11,10 @@
 | 场景 | 金额 |
 |------|------|
 | 新用户注册 | ¥0.50 |
-| 每日首次登录 | ¥0.05/天（注册当天不重复发） |
-| 每日登录累计上限 | ¥0.50（领满后不再发放） |
+| 每日首次登录 | ¥0.06/天（注册当天不重复发） |
+| 每日登录赠送有效期 | 当日有效；未使用部分在次日零点（北京时间）自动清零 |
 
-可在 Netlify / `.env` 用 `NEW_USER_BONUS_CENTS=50`、`DAILY_LOGIN_BONUS_CENTS=5`、`DAILY_LOGIN_BONUS_CAP_CENTS=50` 调整。
+可在 Netlify / `.env` 用 `NEW_USER_BONUS_CENTS=50`、`DAILY_LOGIN_BONUS_CENTS=6` 调整。
 
 ## 微信收款码上线（3 步）
 
@@ -24,8 +24,7 @@
    - `WECHAT_PAY_QR_URL` = `/wechat-pay-qr.png`
    - `RECHARGE_ADMIN_SECRET` = 随机长密码（仅您知道）
    - `NEW_USER_BONUS_CENTS` = `50`（0.5 元）
-   - `DAILY_LOGIN_BONUS_CENTS` = `5`（0.05 元）
-   - `DAILY_LOGIN_BONUS_CAP_CENTS` = `50`（每日登录累计上限 0.5 元）
+   - `DAILY_LOGIN_BONUS_CENTS` = `6`（0.06 元，未使用次日零点清零）
 3. 用户付款后，您在微信里核对备注码，在电脑上执行入账：
 
 ```powershell

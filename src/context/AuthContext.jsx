@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     }
     if (params.get('daily_bonus') === '1') {
       window.history.replaceState({}, '', window.location.pathname);
-      setAuthNotice('每日登录奖励已到账');
+      setAuthNotice('每日登录奖励已到账（当日有效，次日零点未使用将清零）');
     }
 
     (async () => {
@@ -53,9 +53,13 @@ export function AuthProvider({ children }) {
         /* ignore */
       }
       const meData = await refreshUser();
-      if (meData?.dailyBonus?.granted) {
+      if (meData?.dailyBonus?.expiredCents > 0) {
         setAuthNotice(
-          `每日登录已赠送 ¥${(meData.dailyBonus.amountCents / 100).toFixed(2)}`,
+          `昨日未使用的每日登录赠送 ¥${(meData.dailyBonus.expiredCents / 100).toFixed(2)} 已清零`,
+        );
+      } else if (meData?.dailyBonus?.granted) {
+        setAuthNotice(
+          `每日登录已赠送 ¥${(meData.dailyBonus.amountCents / 100).toFixed(2)}（当日有效，次日零点未使用将清零）`,
         );
       }
       setLoading(false);
@@ -65,8 +69,14 @@ export function AuthProvider({ children }) {
   const loginSuccess = useCallback((data) => {
     setToken(data.token);
     setUser(data.user);
-    if (data.dailyBonus?.granted) {
-      setAuthNotice(`每日登录已赠送 ¥${(data.dailyBonus.amountCents / 100).toFixed(2)}`);
+    if (data.dailyBonus?.expiredCents > 0) {
+      setAuthNotice(
+        `昨日未使用的每日登录赠送 ¥${(data.dailyBonus.expiredCents / 100).toFixed(2)} 已清零`,
+      );
+    } else if (data.dailyBonus?.granted) {
+      setAuthNotice(
+        `每日登录已赠送 ¥${(data.dailyBonus.amountCents / 100).toFixed(2)}（当日有效，次日零点未使用将清零）`,
+      );
     }
   }, []);
 

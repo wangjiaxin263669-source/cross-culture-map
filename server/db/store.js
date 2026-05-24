@@ -3,6 +3,12 @@
  */
 import { randomUUID } from 'crypto';
 import { readDb, writeDb, runDbUpdate, isDbWritable, getStorageBackend } from './engine.js';
+import {
+  consumeDailyBonusOnUser,
+  ensureDailyBonusExpired,
+  expireDailyLoginBonusOnUser,
+  getTodayShanghai,
+} from '../wallet/dailyBonus.js';
 
 export { isDbWritable, getStorageBackend };
 
@@ -66,7 +72,7 @@ export async function createUser({
       phoneVerified: Boolean(phone && phoneVerified),
       phoneVerifiedAt: phone && phoneVerified ? new Date().toISOString() : null,
       balanceCents: Math.max(0, initialBalanceCents),
-      dailyLoginBonusEarnedCents: 0,
+      dailyBonusExpirableCents: 0,
       createdAt: new Date().toISOString(),
     };
     db.users.push(user);
@@ -153,6 +159,11 @@ export async function sanitizeUser(user) {
     : await getUserBalanceCents(user.id);
   safe.balanceCents = balanceCents;
   safe.balanceYuan = (balanceCents / 100).toFixed(2);
+  const expirable = Number.isFinite(user.dailyBonusExpirableCents)
+    ? user.dailyBonusExpirableCents
+    : 0;
+  safe.dailyBonusExpirableCents = expirable;
+  safe.dailyBonusExpirableYuan = (expirable / 100).toFixed(2);
   safe.phoneBound = Boolean(user.phone && user.phoneVerified);
   safe.requiresPhoneBinding = false;
   if (user.phone && user.phoneVerified) {
@@ -164,6 +175,7 @@ export async function sanitizeUser(user) {
 }
 
 export async function getUserBalanceCents(userId) {
+  await ensureDailyBonusExpired(userId);
   const user = await findUserById(userId);
   if (!user) return 0;
   return Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
@@ -181,6 +193,8 @@ export async function chargeUserBalance(userId, amountCents, meta = {}) {
   return runDbUpdate((db) => {
     const user = db.users.find((u) => u.id === userId);
     if (!user) throw new Error('用户不存在');
+    const today = getTodayShanghai();
+    expireDailyLoginBonusOnUser(user, today, db);
     const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
     if (before < amountCents) {
       const err = new Error('余额不足');
@@ -189,6 +203,7 @@ export async function chargeUserBalance(userId, amountCents, meta = {}) {
       err.costCents = amountCents;
       throw err;
     }
+    consumeDailyBonusOnUser(user, amountCents);
     user.balanceCents = before - amountCents;
     const tx = {
       id: randomUUID(),
