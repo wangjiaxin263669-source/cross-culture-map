@@ -1220,3 +1220,55 @@ body, html, #root {
 .three-step-highlight {
   box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7), 0 0 24px rgba(251, 191, 36, 0.25);
 }
+
+.open-platform-panel {
+  margin: 12px 0 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 10px;
+}
+.open-platform-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.open-platform-row:last-of-type {
+  border-bottom: none;
+}
+.open-platform-info strong {
+  color: #e2e8f0;
+  font-size: 12px;
+}
+.open-platform-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+.open-platform-badge.on {
+  background: rgba(52, 211, 153, 0.2);
+  color: #6ee7b7;
+}
+.open-platform-badge.off {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+.open-platform-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.open-platform-warn {
+  color: #fbbf24 !important;
+}
+.open-platform-msg {
+  color: #6ee7b7 !important;
+}
+.sim-corpus-errors p {
+  font-size: 11px;
+  color: #fca5a5;
+  margin: 4px 0;
+}
