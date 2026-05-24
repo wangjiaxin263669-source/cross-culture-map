@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
     if (NEW_USER_BONUS_CENTS > 0) {
       await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
         type: 'bonus',
-        note: '新用户注册赠送 ¥5',
+        note: '新用户注册赠送 ¥0.50',
       });
     }
     const fresh = await findUserByUsername(username);
@@ -134,7 +134,7 @@ router.get('/wechat/callback', async (req, res) => {
       if (NEW_USER_BONUS_CENTS > 0) {
         await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
           type: 'bonus',
-          note: '新用户注册赠送 ¥5',
+          note: '新用户注册赠送 ¥0.50',
         });
         user = await findUserByWechatOpenId(wx.openid);
       }
