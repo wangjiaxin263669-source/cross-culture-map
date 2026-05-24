@@ -114,7 +114,8 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
           {payStep === 'select' && (
             <>
               <p className="recharge-hint">
-                用于 AI 对话与报告（约 ¥{costs.chat || '0.10'}/次）。{wechatQrMode ? '微信扫码付款。' : ''}
+                对话约 ¥{costs.chat || '0.02'}/次，报告等约 ¥{costs.report || '0.10'}/次。
+                {wechatQrMode ? ' 微信扫码付款。' : ''}
               </p>
               {mockMode && (
                 <p className="recharge-mock-tag">开发模式：点击充值将立即到账</p>

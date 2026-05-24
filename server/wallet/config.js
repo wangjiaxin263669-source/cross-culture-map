@@ -6,7 +6,8 @@ function centsFromEnv(name, fallback) {
 }
 
 export const WALLET_COSTS = {
-  chat: centsFromEnv('WALLET_CHAT_COST_CENTS', 10),
+  /** 跨文化研究专家 · DeepSeek 对话，默认 ¥0.02/次 */
+  chat: centsFromEnv('WALLET_CHAT_COST_CENTS', 2),
   report: centsFromEnv('WALLET_REPORT_COST_CENTS', 10),
   sim_personas: centsFromEnv('WALLET_SIM_PERSONAS_COST_CENTS', 10),
   sim_interview: centsFromEnv('WALLET_SIM_INTERVIEW_COST_CENTS', 10),
