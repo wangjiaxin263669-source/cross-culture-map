@@ -16,18 +16,51 @@ function fail(msg) {
   failed = true;
 }
 
+const productionCheck = process.env.PRODUCTION_CHECK === '1';
+
 console.log('\n=== CROSS-CULTURE 上线前检查 ===\n');
 
 const envPath = path.join(root, '.env');
+let envText = '';
 if (fs.existsSync(envPath)) {
-  const env = fs.readFileSync(envPath, 'utf-8');
-  if (/DEEPSEEK_API_KEY=\s*sk-/.test(env) || /DEEPSEEK_API_KEY=.{10,}/.test(env)) {
+  envText = fs.readFileSync(envPath, 'utf-8');
+  if (/DEEPSEEK_API_KEY=\s*sk-/.test(envText) || /DEEPSEEK_API_KEY=.{10,}/.test(envText)) {
     ok('DEEPSEEK_API_KEY 已配置');
   } else {
     fail('DEEPSEEK_API_KEY 为空，请填写 .env');
   }
+} else if (productionCheck) {
+  fail('缺少 .env（可复制 .env.production.example）');
 } else {
   fail('缺少 .env（可复制 .env.example）');
+}
+
+const authDir = path.join(root, 'server', 'auth', 'routes.js');
+const walletDir = path.join(root, 'server', 'wallet', 'routes.js');
+if (fs.existsSync(authDir) && fs.existsSync(walletDir)) {
+  ok('账号 / 历史 / 钱包 模块已就绪');
+} else {
+  fail('缺少 server/auth 或 server/wallet');
+}
+
+if (envText) {
+  if (/JWT_SECRET=.+/.test(envText) && !/JWT_SECRET=.*change-in-production/.test(envText)) {
+    ok('JWT_SECRET 已配置');
+  } else if (productionCheck) {
+    fail('生产环境请设置 JWT_SECRET（随机长字符串）');
+  } else {
+    ok('JWT_SECRET（生产上线前务必修改）');
+  }
+
+  if (/PAYMENT_PROVIDER=zpay/.test(envText)) {
+    ok('支付渠道: zpay（生产）');
+  } else if (/PAYMENT_PROVIDER=mock/.test(envText)) {
+    if (productionCheck) {
+      fail('生产环境请将 PAYMENT_PROVIDER 改为 zpay 并配置 ZPAY_*');
+    } else {
+      ok('支付渠道: mock（仅开发）');
+    }
+  }
 }
 
 const distIndex = path.join(root, 'dist', 'index.html');

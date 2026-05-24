@@ -1,0 +1,17 @@
+# 最终版生产部署：账号 + 历史记录 + 充值（数据持久化在 server/data 卷）
+services:
+  cross-culture:
+    build: .
+    container_name: cross-culture-map
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    volumes:
+      - culture_data:/app/server/data
+
+volumes:
+  culture_data:

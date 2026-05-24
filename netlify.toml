@@ -5,7 +5,16 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  included_files = ["server/data/**", "server/prompts/**", "server/prompts/cross-cultural-research-SKILL-compact.md", "server/data/corpus-snippets.json"]
+  included_files = [
+    "server/data/**",
+    "server/prompts/**",
+    "server/prompts/cross-cultural-research-SKILL-compact.md",
+    "server/data/corpus-snippets.json",
+    "server/auth/**",
+    "server/db/**",
+    "server/wallet/**",
+    "server/payment/**"
+  ]
 
 [functions.api]
   # 报告生成需调用 DeepSeek，尽量拉长（Pro 最高 60s；超时会在前端显示 502/504）

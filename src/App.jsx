@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Globe from 'react-globe.gl';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import ReportMarkdown from './components/ReportMarkdown';
 import CulturalStoryPanel from './components/CulturalStoryPanel';
 import RegionPicker from './components/RegionPicker';
 import SimulatedResearchPanel from './components/SimulatedResearchPanel';
+import AuthPage from './components/AuthPage';
+import HistoryDrawer from './components/HistoryDrawer';
+import RechargeModal from './components/RechargeModal';
+import { useAuth } from './context/AuthContext';
 import {
   globeLabelsData,
   normalizeMarket,
@@ -13,9 +17,16 @@ import {
   getCountryById,
 } from './data/markets';
 import { sendChatMessage, generateReport, checkAiHealth } from './services/aiApi';
+import { saveChatSession, saveReport } from './services/historyApi';
 import './App.css';
 
+const DEFAULT_CHAT_GREETING = {
+  role: 'ai',
+  text: '您好！我是面向中国产品/UX 团队的跨文化顾问。请选定国家/地区，说明产品、用户、场景与目标。我会从用户真实感受（非上帝视角）出发，结合项目/B计划、数据、商业与全局思维，用产品语言给出三步分析与全链路落地建议。',
+};
+
 function App() {
+  const { user, loading: authLoading, logout, refreshUser } = useAuth();
   const globeEl = useRef();
   const threeStepSectionRef = useRef(null);
   const [selectedMarket, setSelectedMarket] = useState(null);
@@ -31,12 +42,11 @@ function App() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
   const chatEndRef = useRef(null);
-  const [chatMessages, setChatMessages] = useState([
-    {
-      role: 'ai',
-      text: '您好！我是面向中国产品/UX 团队的跨文化顾问。请选定国家/地区，说明产品、用户、场景与目标。我会从用户真实感受（非上帝视角）出发，结合项目/B计划、数据、商业与全局思维，用产品语言给出三步分析与全链路落地建议。',
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState([DEFAULT_CHAT_GREETING]);
+  const [chatSessionId, setChatSessionId] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [rechargeOpen, setRechargeOpen] = useState(false);
   const [aiHealth, setAiHealth] = useState(null);
 
   const displayTitle = useMemo(
@@ -61,12 +71,18 @@ function App() {
     return { parentCountry, regions };
   }, [selectedMarket]);
 
-  useEffect(() => {
-    if (globeEl.current) {
-      globeEl.current.controls().autoRotate = true;
-      globeEl.current.controls().autoRotateSpeed = 0.4;
-      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 });
-    }
+  /** 地球挂载后再启用自转（登录后才会渲染 Globe，不能用空依赖的 useEffect） */
+  const handleGlobeReady = useCallback(() => {
+    const apply = () => {
+      const globe = globeEl.current;
+      if (!globe?.controls) return false;
+      const controls = globe.controls();
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.4;
+      globe.pointOfView({ lat: 20, lng: 0, altitude: 2.2 });
+      return true;
+    };
+    if (!apply()) requestAnimationFrame(apply);
   }, []);
 
   useEffect(() => {
@@ -117,6 +133,78 @@ function App() {
     }
   };
 
+  const persistChat = useCallback(
+    async (messages, sessionId = chatSessionId) => {
+      if (!user || !messages?.length) return sessionId;
+      const firstUser = messages.find((m) => m.role === 'user');
+      const title = firstUser?.text?.slice(0, 48) || '跨文化对话';
+      try {
+        const session = await saveChatSession({
+          id: sessionId || undefined,
+          title,
+          messages,
+          market: selectedMarket
+            ? { id: selectedMarket.id, title: displayTitle }
+            : null,
+        });
+        if (!sessionId) setChatSessionId(session.id);
+        return session.id;
+      } catch {
+        return sessionId;
+      }
+    },
+    [user, chatSessionId, selectedMarket, displayTitle],
+  );
+
+  const persistAnalysisReport = useCallback(
+    async (content, productIdea) => {
+      if (!user || !content?.trim()) return;
+      try {
+        await saveReport({
+          type: 'three_step',
+          title: `${displayTitle || '跨文化'} · 三步分析`,
+          content,
+          productIdea: productIdea || '',
+          market: selectedMarket
+            ? { id: selectedMarket.id, title: displayTitle }
+            : null,
+        });
+      } catch {
+        /* 静默失败，不影响主流程 */
+      }
+    },
+    [user, selectedMarket, displayTitle],
+  );
+
+  const restoreMarketFromMeta = (marketMeta) => {
+    if (!marketMeta?.id) return;
+    const found =
+      getCountryById(marketMeta.id) ||
+      globeLabelsData.find((d) => d.id === marketMeta.id);
+    if (found) setSelectedMarket(normalizeMarket(found));
+  };
+
+  const handleNewChat = () => {
+    setChatSessionId(null);
+    setChatMessages([DEFAULT_CHAT_GREETING]);
+    setChatError('');
+  };
+
+  const handleLoadChatFromHistory = (session) => {
+    setChatSessionId(session.id);
+    setChatMessages(session.messages?.length ? session.messages : [DEFAULT_CHAT_GREETING]);
+    restoreMarketFromMeta(session.market);
+    setIsChatOpen(true);
+  };
+
+  const handleLoadReportFromHistory = (report) => {
+    restoreMarketFromMeta(report.market);
+    if (report.productIdea) setUserIdea(report.productIdea);
+    setAiResult(report.content || '');
+    setAiError('');
+    threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const handleSyncFromSimResearch = async (productIdea, { autoGenerate = false } = {}) => {
     setUserIdea(productIdea);
     setAiError('');
@@ -132,6 +220,7 @@ function App() {
           country: selectedMarket,
         });
         setAiResult(report);
+        await persistAnalysisReport(report, productIdea);
       } catch (err) {
         setAiError(err.message || '报告生成失败');
       } finally {
@@ -151,10 +240,13 @@ function App() {
         country: selectedMarket,
       });
       setAiResult(report);
+      await persistAnalysisReport(report, userIdea);
     } catch (err) {
       setAiError(err.message || '报告生成失败，请确认后端已启动且已配置 DEEPSEEK_API_KEY');
+      if (err.code === 'INSUFFICIENT_BALANCE') setRechargeOpen(true);
     } finally {
       setIsGenerating(false);
+      refreshUser();
     }
   };
 
@@ -184,18 +276,36 @@ function App() {
         history,
         country: selectedMarket,
       });
-      setChatMessages((prev) => [...prev, { role: 'ai', text: reply }]);
+      const withReply = [...nextMessages, { role: 'ai', text: reply }];
+      setChatMessages(withReply);
+      await persistChat(withReply);
     } catch (err) {
       const msg = err.message || '对话失败';
       setChatError(msg);
+      if (err.code === 'INSUFFICIENT_BALANCE') setRechargeOpen(true);
       setChatMessages((prev) => [
         ...prev,
         { role: 'ai', text: `请求失败：${msg}` },
       ]);
     } finally {
       setIsChatLoading(false);
+      refreshUser();
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-loading">加载中…</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  const avatarLetter = (user.displayName || user.username || '?').charAt(0).toUpperCase();
 
   return (
     <div className="app-container">
@@ -216,12 +326,66 @@ function App() {
           <span className="nav-item active">REGION MAP</span>
         </div>
 
-        <div className="right-profile">
-          <div className="avatar">A</div>
-          <div className="user-info">
-            <span>Adele-Lu</span>
-            <small>Administrator</small>
+        <div className="right-profile-wrap">
+          <div
+            className="right-profile"
+            role="button"
+            tabIndex={0}
+            onClick={() => setProfileMenuOpen((open) => !open)}
+            onKeyDown={(e) => e.key === 'Enter' && setProfileMenuOpen((open) => !open)}
+          >
+            <div className="avatar">
+              {user.avatar ? (
+                <img className="avatar-photo" src={user.avatar} alt="" />
+              ) : (
+                avatarLetter
+              )}
+            </div>
+            <div className="user-info">
+              <span>{user.displayName || user.username}</span>
+              <small>余额 ¥{user.balanceYuan ?? '0.00'}</small>
+            </div>
           </div>
+          {profileMenuOpen && (
+            <>
+              <button
+                type="button"
+                className="profile-menu-backdrop"
+                aria-label="关闭菜单"
+                onClick={() => setProfileMenuOpen(false)}
+              />
+              <div className="profile-menu">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRechargeOpen(true);
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  充值余额
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHistoryOpen(true);
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  历史记录
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!window.confirm('是否确认退出？')) return;
+                    logout();
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  退出登录
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -245,7 +409,12 @@ function App() {
         <div className="global-chat-modal">
           <div className="chat-header">
             <h3>✨ 跨文化研究专家 · DeepSeek</h3>
-            <button className="close-chat-btn" onClick={handleToggleChat}>✕ 隐藏</button>
+            <div className="chat-header-actions">
+              <button type="button" className="new-chat-btn" onClick={handleNewChat}>
+                新对话
+              </button>
+              <button className="close-chat-btn" onClick={handleToggleChat}>✕ 隐藏</button>
+            </div>
           </div>
           <div className="chat-messages">
             {chatMessages.map((msg, idx) => (
@@ -277,9 +446,10 @@ function App() {
         </div>
       )}
 
-      <div className="globe-wrapper">
+      <div className="globe-wrapper globe-layer">
         <Globe
           ref={globeEl}
+          onGlobeReady={handleGlobeReady}
           globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
           backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
           labelsData={globeLabelsData}
@@ -356,6 +526,17 @@ function App() {
             marketTitle={displayTitle}
             aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
             onSyncToThreeStepReport={handleSyncFromSimResearch}
+            onReportGenerated={(content, topic) =>
+              saveReport({
+                type: 'sim_research',
+                title: `${displayTitle} · 模拟调研`,
+                content,
+                productIdea: topic || '',
+                market: selectedMarket
+                  ? { id: selectedMarket.id, title: displayTitle }
+                  : null,
+              }).catch(() => {})
+            }
           />
 
           <div
@@ -408,6 +589,20 @@ function App() {
           </div>
         </div>
       )}
+
+      <HistoryDrawer
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onLoadChat={handleLoadChatFromHistory}
+        onLoadReport={handleLoadReportFromHistory}
+      />
+
+      <RechargeModal
+        open={rechargeOpen}
+        onClose={() => setRechargeOpen(false)}
+        balanceYuan={user.balanceYuan}
+        onSuccess={() => refreshUser()}
+      />
     </div>
   );
 }

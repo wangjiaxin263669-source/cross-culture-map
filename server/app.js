@@ -30,6 +30,13 @@ import {
 import { getKnowledgeMeta } from './knowledge.js';
 import { getSkillMeta } from './loadSkill.js';
 import { getServerDir } from './paths.js';
+import authRoutes from './auth/routes.js';
+import { getWechatConfig } from './auth/wechat.js';
+import { isDbWritable } from './db/store.js';
+import walletRoutes from './wallet/routes.js';
+import { withWalletCharge } from './wallet/middleware.js';
+import { getWalletPublicConfig } from './wallet/config.js';
+import { getPaymentPublicConfig } from './payment/index.js';
 
 const serverDir = getServerDir();
 dotenv.config({ path: path.join(serverDir, '..', '.env') });
@@ -51,7 +58,12 @@ export function createApp(options = {}) {
     app.set('trust proxy', 1);
   }
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin: true,
+      credentials: true,
+    }),
+  );
   app.use(express.json({ limit: '2mb' }));
 
   /** 防止请求挂死导致 Vite/Netlify 返回 504 */
@@ -106,6 +118,7 @@ export function createApp(options = {}) {
   });
 
   app.get('/api/health', (_req, res) => {
+    const wx = getWechatConfig();
     res.json({
       ok: true,
       aiConfigured: isConfigured(),
@@ -116,8 +129,17 @@ export function createApp(options = {}) {
       corpus: getCorpusMeta(),
       model: getModelName(),
       mode: isServerless ? 'netlify' : isProd || hasDist ? 'production' : 'development',
+      auth: {
+        dbWritable: isDbWritable(),
+        wechatLogin: wx.configured,
+      },
+      wallet: getWalletPublicConfig(),
+      payment: getPaymentPublicConfig(),
     });
   });
+
+  app.use('/api/auth', authRoutes);
+  app.use('/api/wallet', walletRoutes);
 
   app.get('/api/open-platform/status', (_req, res) => {
     res.json({
@@ -264,8 +286,9 @@ export function createApp(options = {}) {
     }
   });
 
-  app.post('/api/chat', async (req, res) => {
-    try {
+  app.post(
+    '/api/chat',
+    ...withWalletCharge('chat', async (req, res) => {
       const { message, history = [], country = null } = req.body;
       if (!message?.trim()) {
         return res.status(400).json({ error: '消息不能为空' });
@@ -275,15 +298,17 @@ export function createApp(options = {}) {
         history,
         country,
       });
-      res.json({ reply });
-    } catch (err) {
-      console.error('[chat]', err.message);
-      res.status(500).json({ error: err.message || '对话生成失败' });
-    }
-  });
+      res.json({
+        reply,
+        balanceCents: req.walletCharge?.balanceCents,
+        costCents: req.walletCharge?.costCents,
+      });
+    }),
+  );
 
-  app.post('/api/simulated-research/personas', async (req, res) => {
-    try {
+  app.post(
+    '/api/simulated-research/personas',
+    ...withWalletCharge('sim_personas', async (req, res) => {
       const {
         researchTopic,
         audienceCriteria,
@@ -309,15 +334,13 @@ export function createApp(options = {}) {
         country,
         corpusContext: ctx,
       });
-      res.json({ personas });
-    } catch (err) {
-      console.error('[sim-personas]', err.message);
-      res.status(500).json({ error: err.message || '人设生成失败' });
-    }
-  });
+      res.json({ personas, balanceCents: req.walletCharge?.balanceCents });
+    }),
+  );
 
-  app.post('/api/simulated-research/interview', async (req, res) => {
-    try {
+  app.post(
+    '/api/simulated-research/interview',
+    ...withWalletCharge('sim_interview', async (req, res) => {
       const { persona, researchTopic, guideQuestions, country, corpusContext } = req.body;
       if (!persona?.name) {
         return res.status(400).json({ error: '缺少受访者人设' });
@@ -332,15 +355,13 @@ export function createApp(options = {}) {
         country,
         corpusContext: corpusContext || '',
       });
-      res.json({ interview });
-    } catch (err) {
-      console.error('[sim-interview]', err.message);
-      res.status(500).json({ error: err.message || '模拟访谈失败' });
-    }
-  });
+      res.json({ interview, balanceCents: req.walletCharge?.balanceCents });
+    }),
+  );
 
-  app.post('/api/simulated-research/report', async (req, res) => {
-    try {
+  app.post(
+    '/api/simulated-research/report',
+    ...withWalletCharge('sim_report', async (req, res) => {
       const {
         researchTopic,
         audienceCriteria,
@@ -360,15 +381,13 @@ export function createApp(options = {}) {
         country,
         corpusSnippets: corpusSnippets || [],
       });
-      res.json({ report });
-    } catch (err) {
-      console.error('[sim-report]', err.message);
-      res.status(500).json({ error: err.message || '调研报告生成失败' });
-    }
-  });
+      res.json({ report, balanceCents: req.walletCharge?.balanceCents });
+    }),
+  );
 
-  app.post('/api/report', async (req, res) => {
-    try {
+  app.post(
+    '/api/report',
+    ...withWalletCharge('report', async (req, res) => {
       const { productIdea, country } = req.body;
       if (!productIdea?.trim()) {
         return res.status(400).json({ error: '请描述您的产品构想' });
@@ -380,12 +399,13 @@ export function createApp(options = {}) {
         productIdea: productIdea.trim(),
         country,
       });
-      res.json({ report });
-    } catch (err) {
-      console.error('[report]', err.message);
-      res.status(500).json({ error: err.message || '报告生成失败' });
-    }
-  });
+      res.json({
+        report,
+        balanceCents: req.walletCharge?.balanceCents,
+        costCents: req.walletCharge?.costCents,
+      });
+    }),
+  );
 
   if (shouldServeWeb) {
     if (isProd && !hasDist) {

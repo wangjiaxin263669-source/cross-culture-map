@@ -12,6 +12,7 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY server ./server
 COPY scripts/start-prod.mjs ./scripts/start-prod.mjs
+RUN mkdir -p server/data
 
 ENV NODE_ENV=production
 EXPOSE 3001

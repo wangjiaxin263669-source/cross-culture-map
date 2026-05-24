@@ -1,3 +1,5 @@
+import { getAuthHeaders } from './authApi.js';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function apiErrorHint(status, path = '') {
@@ -26,7 +28,7 @@ async function request(path, body, { timeoutMs = 90000 } = {}) {
   try {
     res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -50,6 +52,12 @@ async function request(path, body, { timeoutMs = 90000 } = {}) {
     /* 非 JSON 响应（如 Netlify 504 HTML） */
   }
   if (!res.ok) {
+    if (res.status === 402) {
+      const err = new Error(data.error || '余额不足，请先充值');
+      err.code = 'INSUFFICIENT_BALANCE';
+      err.status = 402;
+      throw err;
+    }
     throw new Error(data.error || apiErrorHint(res.status, path));
   }
   return data;

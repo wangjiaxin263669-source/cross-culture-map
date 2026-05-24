@@ -48,6 +48,7 @@ export default function SimulatedResearchPanel({
   marketTitle,
   aiConfigured,
   onSyncToThreeStepReport,
+  onReportGenerated,
 }) {
   const [step, setStep] = useState('setup');
   const [researchTopic, setResearchTopic] = useState('');
@@ -197,6 +198,7 @@ export default function SimulatedResearchPanel({
       });
       setReport(md);
       setStep('report');
+      onReportGenerated?.(md, researchTopic);
       persistSession({
         researchTopic,
         audienceCriteria,

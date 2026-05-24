@@ -13,6 +13,7 @@
     "build": "vite build",
     "build:knowledge": "node server/scripts/build-knowledge.mjs",
     "predeploy": "node scripts/predeploy.mjs",
+    "deploy:final": "node scripts/predeploy.mjs && npm run build",
     "start": "node scripts/kill-api-port.mjs && npm run build && npm run start:prod",
     "start:prod": "node scripts/start-prod.mjs",
     "start:server": "node server/index.js",
@@ -20,9 +21,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "pdf-parse": "^2.4.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",

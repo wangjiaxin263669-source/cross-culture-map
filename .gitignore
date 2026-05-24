@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 .env
 .env.local
+server/data/open-platform-tokens.json
+server/data/platform-db.json
 dist
 dist-ssr
 *.local
