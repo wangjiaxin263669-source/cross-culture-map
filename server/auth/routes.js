@@ -33,7 +33,8 @@ router.post('/register', async (req, res) => {
   try {
     if (!isDbWritable()) {
       return res.status(503).json({
-        error: '数据存储未就绪，请稍后重试或联系管理员',
+        error:
+          '数据存储未配置。本地请运行 npm run dev；线上请在 Netlify 启用 Extensions → Netlify DB 后重新部署',
       });
     }
     const { username, password, displayName } = req.body;

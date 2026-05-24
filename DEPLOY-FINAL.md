@@ -1,6 +1,7 @@
 # 最终版上线指南（免费 · 无需 VPS）
 
-最终版已接入 **Netlify Blobs**（Netlify 免费套餐自带），账号、历史记录、余额会**永久保存**，继续用 Netlify 即可，不必买服务器。
+账号、历史、余额使用 **Netlify DB（免费 Neon 数据库）** 永久保存。  
+本地开发用文件存储，线上启用 Netlify DB 即可（比 Blobs 更稳定）。
 
 ---
 
@@ -13,24 +14,29 @@ cd cross-culture-map
 .\scripts\deploy-final.ps1
 ```
 
-### 2. Netlify 自动部署
+### 2. 启用免费数据库（必做，约 1 分钟）
 
-1. 打开 [Netlify](https://app.netlify.com) → 你的站点 → **Deploys**
-2. 等待构建完成（读取 `netlify.toml`）
-3. **Site configuration → Environment variables**，确认已有：
-   - `DEEPSEEK_API_KEY`
-   - `JWT_SECRET`（随机长字符串）
-   - `PAYMENT_PROVIDER=mock`（仅测试）或 `zpay` + 支付参数（正式收款）
+1. [Netlify](https://app.netlify.com) → 你的站点 → **Extensions**
+2. 安装 **Netlify DB**（免费 Neon）→ 按提示创建
+3. 完成后会自动有环境变量 `DATABASE_URL`
 
-### 3. 验证
+### 3. 环境变量
 
-访问 `https://你的站点.netlify.app/api/health`，应看到：
+**Site configuration → Environment variables**：
+
+- `DEEPSEEK_API_KEY`
+- `JWT_SECRET`（随机长字符串）
+- `PAYMENT_PROVIDER=mock`（测试）或 `zpay`（正式收款）
+- `DATABASE_URL`（安装 Netlify DB 后自动出现，无需手填）
+
+### 4. 重新部署并验证
+
+**Deploys** → **Trigger deploy** → **Deploy site**
+
+访问 `https://你的站点/api/health`：
 
 ```json
-"auth": {
-  "dbWritable": true,
-  "storage": "netlify-blobs"
-}
+"auth": { "dbWritable": true, "storage": "postgres" }
 ```
 
 然后：注册 → 充值 → 生成报告 → 刷新页面，历史与余额仍在。
@@ -47,7 +53,7 @@ cd cross-culture-map
 
 | 环境 | 存储方式 | 费用 |
 |------|----------|------|
-| Netlify 线上 | Netlify Blobs | 免费额度内 $0 |
+| Netlify 线上 | Netlify DB (Postgres) | 免费额度内 $0 |
 | 本地 dev | JSON 文件 | $0 |
 | Docker / VPS（可选） | JSON 文件卷 | 视主机 |
 

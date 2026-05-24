@@ -1,11 +1,13 @@
 /**
- * 持久化引擎：
- * - 本地 npm run dev → JSON 文件
- * - Netlify 线上 → Netlify Blobs（需 connectLambda）
+ * 持久化引擎（按优先级）：
+ * 1. 本地文件 — npm run dev
+ * 2. PostgreSQL — Netlify DB / Neon（DATABASE_URL，线上推荐）
+ * 3. Netlify Blobs — 备用
  */
 import fs from 'fs';
 import path from 'path';
 import { getServerDir } from '../paths.js';
+import { usePostgres, readDbPostgres, writeDbPostgres } from './postgres.js';
 
 export const EMPTY_DB = {
   users: [],
@@ -36,22 +38,32 @@ function isLambda() {
   return Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
 }
 
-/** 本地开发一律用文件；仅 Lambda（Netlify Functions）用 Blobs */
-export function useNetlifyBlobs() {
-  if (process.env.STORAGE_BACKEND === 'file') return false;
+function useFileStorage() {
+  if (process.env.STORAGE_BACKEND === 'postgres') return false;
+  if (process.env.STORAGE_BACKEND === 'blobs') return false;
+  if (process.env.STORAGE_BACKEND === 'file') return true;
+  if (!isLambda()) return true;
+  if (process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL) return false;
+  return false;
+}
+
+function useNetlifyBlobs() {
+  if (useFileStorage() || usePostgres()) return false;
+  if (process.env.STORAGE_BACKEND === 'blobs') return isLambda();
   if (!isLambda()) return false;
-  if (process.env.STORAGE_BACKEND === 'blobs') return true;
   return Boolean(process.env.NETLIFY || process.env.SITE_ID || process.env.NETLIFY_BLOBS_CONTEXT);
 }
 
 export function getStorageBackend() {
-  return useNetlifyBlobs() ? 'netlify-blobs' : 'file';
+  if (useFileStorage()) return 'file';
+  if (usePostgres()) return 'postgres';
+  if (useNetlifyBlobs()) return 'netlify-blobs';
+  return 'none';
 }
 
 export function isDbWritable() {
-  if (useNetlifyBlobs()) return true;
-  if (process.env.FORCE_FILE_DB === '1') return true;
-  return !isLambda();
+  const backend = getStorageBackend();
+  return backend !== 'none';
 }
 
 function filePath() {
@@ -75,19 +87,25 @@ function writeDbFile(data) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-async function getBlobStore() {
-  const { getStore } = await import('@netlify/blobs');
-
+async function configureBlobContext() {
   const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
   const token =
     process.env.NETLIFY_AUTH_TOKEN ||
     process.env.NETLIFY_API_TOKEN ||
     process.env.NETLIFY_PAT;
+  if (!siteID || !token) return;
+  const { setEnvironmentContext } = await import('@netlify/blobs');
+  setEnvironmentContext({
+    siteID,
+    token,
+    edgeURL: 'https://api.netlify.com',
+    deployID: process.env.DEPLOY_ID || process.env.CONTEXT || 'production',
+  });
+}
 
-  if (siteID && token) {
-    return getStore({ name: BLOB_STORE, siteID, token, consistency: 'strong' });
-  }
-
+async function getBlobStore() {
+  await configureBlobContext();
+  const { getStore } = await import('@netlify/blobs');
   return getStore({ name: BLOB_STORE, consistency: 'strong' });
 }
 
@@ -103,26 +121,43 @@ async function writeDbBlobs(data) {
 }
 
 export async function readDb() {
+  if (useFileStorage()) return readDbFile();
+  if (usePostgres()) {
+    try {
+      return await readDbPostgres();
+    } catch (err) {
+      console.error('[db] postgres read failed:', err.message);
+      throw new Error('数据库连接失败，请在 Netlify 启用 Netlify DB 扩展');
+    }
+  }
   if (useNetlifyBlobs()) {
     try {
       return await readDbBlobs();
     } catch (err) {
-      console.error('[db] Netlify Blobs read failed:', err.message);
+      console.error('[db] blobs read failed:', err.message);
       throw new Error(
-        '数据存储暂时不可用。若为本机开发请使用 npm run dev；若为线上站点请重新部署后再试。',
+        '数据存储未配置。请在 Netlify 控制台启用 Extensions → Netlify DB（免费），或本地使用 npm run dev',
       );
     }
   }
-  return readDbFile();
+  throw new Error('未配置数据存储');
 }
 
 export async function writeDb(data) {
   const run = async () => {
+    if (useFileStorage()) {
+      writeDbFile(data);
+      return;
+    }
+    if (usePostgres()) {
+      await writeDbPostgres(data);
+      return;
+    }
     if (useNetlifyBlobs()) {
       await writeDbBlobs(data);
-    } else {
-      writeDbFile(data);
+      return;
     }
+    throw new Error('未配置数据存储');
   };
   writeQueue = writeQueue.then(run, run);
   return writeQueue;
