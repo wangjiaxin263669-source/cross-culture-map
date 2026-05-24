@@ -97,6 +97,12 @@ function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatLoading]);
 
+  useEffect(() => {
+    if (!user || !authNotice) return undefined;
+    const timer = setTimeout(() => clearAuthNotice(), 12000);
+    return () => clearTimeout(timer);
+  }, [user, authNotice, clearAuthNotice]);
+
   const handleLabelClick = (raw) => {
     const market = normalizeMarket(raw);
     setSelectedMarket(market);
@@ -312,12 +318,6 @@ function App() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!user || !authNotice) return undefined;
-    const timer = setTimeout(() => clearAuthNotice(), 12000);
-    return () => clearTimeout(timer);
-  }, [user, authNotice, clearAuthNotice]);
 
   if (!user) {
     return <AuthPage />;
