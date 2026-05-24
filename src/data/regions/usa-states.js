@@ -35,11 +35,6 @@ export const usaStates = [
       { title: 'California Consumer Privacy Act (CCPA)', source: 'California DOJ', year: '2023', url: 'https://oag.ca.gov/privacy/ccpa', tag: '合规', note: '隐私设计地方法规' },
       { title: 'Silicon Valley Product Culture', source: 'Harvard Business Review', year: '—', url: 'https://hbr.org/topic/subject/innovation', tag: '产业', note: '创新迭代文化' },
     ],
-    videos: [
-      { title: '加州历史：从淘金热到科技', url: 'https://www.youtube.com/watch?v=8k2Qrl7aBRo', provider: 'YouTube', tag: '历史' },
-      { title: 'Inclusive Design in Tech', url: 'https://www.nngroup.com/articles/inclusive-design/', provider: 'NN/g', tag: 'UX' },
-      { title: 'Privacy-First UX Patterns', url: 'https://www.youtube.com/watch?v=0EFFMonjWzQ', provider: 'YouTube', tag: '隐私' },
-    ],
     designInsights: [
       { icon: '💡', title: '设计启示', content: '隐私仪表盘、包容性语言、碳足迹/健康标签可选展示。' },
       { icon: '🖼️', title: '案例', content: 'Apple、Patagonia 等加州品牌强调价值与极简。', caseLink: 'https://www.apple.com/', imageUrl: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&q=80&w=600' },
@@ -68,10 +63,6 @@ export const usaStates = [
       ],
       designLink: '【因】极高效率文化 + 竞争感 →【果】首屏即核心价值、强对比可读性、快速结账与即时客服。',
     },
-    videos: [
-      { title: '纽约城市文化与节奏', url: 'https://www.youtube.com/watch?v=MtQM4FshE1Y', provider: 'YouTube', tag: '文化' },
-      { title: 'Mobile UX for Commuters', url: 'https://www.nngroup.com/articles/mobile-ux/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '单手操作、深色模式、极简结账；避免冗长 onboarding。' }],
   }),
   r({
@@ -97,10 +88,6 @@ export const usaStates = [
       ],
       designLink: '【因】高男性度 + 直给沟通 →【果】大 CTA、清晰价格、本地配送/自提、尊重敏感话题。',
     },
-    videos: [
-      { title: '德州历史与文化认同', url: 'https://www.youtube.com/watch?v=ZFq9x5TE8UE', provider: 'YouTube', tag: '文化' },
-      { title: 'Bilingual UX Design', url: 'https://www.nngroup.com/articles/international-usability/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '西语支持；突出本地自提/配送；直白文案。' }],
   }),
   r({
@@ -126,10 +113,6 @@ export const usaStates = [
       ],
       designLink: '【因】人口老龄化 + 拉美文化 →【果】无障碍字号、西语/英语切换、电话入口、清晰时间敏感信息。',
     },
-    videos: [
-      { title: '佛罗里达多元文化概览', url: 'https://www.youtube.com/watch?v=2kMsSWs0RPk', provider: 'YouTube', tag: '文化' },
-      { title: 'Designing for Seniors', url: 'https://www.nngroup.com/articles/usability-for-senior-users/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '大字体模式；电话客服入口；西语资源。' }],
   }),
   r({
@@ -155,10 +138,6 @@ export const usaStates = [
       ],
       designLink: '【因】工程师文化 + 环保价值 →【果】克制 UI、详细规格、碳足迹信息、少打扰通知。',
     },
-    videos: [
-      { title: '太平洋西北城市文化', url: 'https://www.youtube.com/watch?v=8k2Qrl7aBRo', provider: 'YouTube', tag: '文化' },
-      { title: 'Sustainable UX', url: 'https://www.nngroup.com/articles/designing-for-sustainability/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '技术规格透明；通知克制；环保信息可选展开。' }],
   }),
   r({
@@ -184,9 +163,6 @@ export const usaStates = [
       ],
       designLink: '【因】中部务实 + 枢纽经济 →【果】可靠的状态更新、清晰价格、包容性视觉、中等密度。',
     },
-    videos: [
-      { title: '芝加哥城市史', url: 'https://www.youtube.com/watch?v=MtQM4FshE1Y', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '强调可靠与售后；旅行类实时信息；多元 imagery。' }],
   }),
   r({
@@ -212,10 +188,6 @@ export const usaStates = [
       ],
       designLink: '【因】高教育 + 中等不确定性规避 →【果】引用文献、数据图表、分层披露、专业可信语气。',
     },
-    videos: [
-      { title: '波士顿与学术文化', url: 'https://www.youtube.com/watch?v=8k2Qrl7aBRo', provider: 'YouTube', tag: '文化' },
-      { title: 'Credibility in UX', url: 'https://www.nngroup.com/articles/credibility/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '数据出处、白皮书下载；长文用清晰层级。' }],
   }),
   r({
@@ -241,10 +213,6 @@ export const usaStates = [
       ],
       designLink: '【因】旅游松弛 + 文化敏感 →【果】柔和交互、真实摄影、文化合规审查、多语言。',
     },
-    videos: [
-      { title: '夏威夷文化与 Aloha 精神', url: 'https://www.youtube.com/watch?v=2kMsSWs0RPk', provider: 'YouTube', tag: '文化' },
-      { title: 'Cultural Sensitivity in Design', url: 'https://www.nngroup.com/articles/cultural-sensitivity/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '避免压迫式促销；尊重原住民元素；旅游预订透明。' }],
   }),
   r({
@@ -270,9 +238,6 @@ export const usaStates = [
       ],
       designLink: '【因】社区认同 + 音乐体育文化 →【果】代表性 imagery、联名活动、热情但真实的客服语气。',
     },
-    videos: [
-      { title: '亚特兰大与非裔文化', url: 'https://www.youtube.com/watch?v=ZFq9x5TE8UE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '社区与音乐营销；非裔用户真实代表；客服人性化。' }],
   }),
   r({
@@ -298,9 +263,6 @@ export const usaStates = [
       ],
       designLink: '【因】户外文化 + 创新接受度 →【果】功能导向摄影、季节运营、合规品类提示、诚实订阅。',
     },
-    videos: [
-      { title: '科罗拉多户外文化', url: 'https://www.youtube.com/watch?v=8k2Qrl7aBRo', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '户外场景 imagery；季节模块；订阅透明。' }],
   }),
 ];
