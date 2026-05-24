@@ -3,6 +3,7 @@ import path from 'path';
 import { getServerDir } from './paths.js';
 
 const BUNDLED_SKILL = path.join(getServerDir(), 'prompts', 'cross-cultural-research-SKILL.md');
+const COMPACT_SKILL = path.join(getServerDir(), 'prompts', 'cross-cultural-research-SKILL-compact.md');
 const DESKTOP_SKILL = path.join(
   process.env.USERPROFILE || '',
   'Desktop',
@@ -10,13 +11,13 @@ const DESKTOP_SKILL = path.join(
   'SKILL.md'
 );
 
-let cachedSkillBody = null;
-let cachedSkillSource = null;
+/** @type {Map<string, { body: string, source: string }>} */
+const skillCache = new Map();
 
-/** Serverless 下截断上限；整合版 SKILL 较长，前置章节优先保留 */
-const SERVERLESS_SKILL_MAX = 11000;
+/** Serverless 完整版 SKILL 截断上限 */
+const SERVERLESS_SKILL_MAX = 6500;
 
-function isServerlessRuntime() {
+export function isServerlessRuntime() {
   return Boolean(
     process.env.AWS_LAMBDA_FUNCTION_NAME ||
     process.env.AWS_EXECUTION_ENV ||
@@ -46,36 +47,52 @@ function readSkillFile(filePath) {
 }
 
 /**
- * 加载 cross-cultural-research SKILL（优先 SKILL_PATH → 桌面原版 → 项目内置）
+ * @param {{ variant?: 'compact' | 'full' }} options
+ * - compact：对话 & Netlify 报告（快、省 token）
+ * - full：本地完整报告（整合版 SKILL）
  */
-export function loadSkillPrompt() {
-  if (cachedSkillBody) {
-    return { body: cachedSkillBody, source: cachedSkillSource };
+export function loadSkillPrompt(options = {}) {
+  const variant = options.variant === 'compact' ? 'compact' : 'full';
+  const cacheKey = `${variant}:${isServerlessRuntime() ? 'sls' : 'local'}`;
+  if (skillCache.has(cacheKey)) {
+    return skillCache.get(cacheKey);
+  }
+
+  if (variant === 'compact') {
+    const compact =
+      readSkillFile(COMPACT_SKILL) ||
+      readSkillFile(BUNDLED_SKILL)?.slice(0, SERVERLESS_SKILL_MAX);
+    const result = {
+      body: compact || '你是一名跨文化研究设计专家。',
+      source: compact ? 'compact' : 'fallback',
+    };
+    skillCache.set(cacheKey, result);
+    return result;
   }
 
   const candidates = isServerlessRuntime()
     ? [{ path: BUNDLED_SKILL, label: 'bundled' }]
     : [
         { path: process.env.SKILL_PATH, label: 'SKILL_PATH' },
-        { path: DESKTOP_SKILL, label: 'Desktop/cross-cultural-research/SKILL.md' },
         { path: BUNDLED_SKILL, label: 'bundled' },
+        { path: DESKTOP_SKILL, label: 'Desktop/cross-cultural-research/SKILL.md' },
       ];
 
   for (const { path: p, label } of candidates) {
     const raw = readSkillFile(p);
     if (raw) {
-      cachedSkillBody = trimForServerless(raw);
-      cachedSkillSource = label;
-      return { body: cachedSkillBody, source: label };
+      const result = { body: trimForServerless(raw), source: label };
+      skillCache.set(cacheKey, result);
+      return result;
     }
   }
 
-  cachedSkillBody = '你是一名跨文化研究设计专家。';
-  cachedSkillSource = 'fallback';
-  return { body: cachedSkillBody, source: cachedSkillSource };
+  const fallback = { body: '你是一名跨文化研究设计专家。', source: 'fallback' };
+  skillCache.set(cacheKey, fallback);
+  return fallback;
 }
 
 export function getSkillMeta() {
-  const { source } = loadSkillPrompt();
+  const { source } = loadSkillPrompt({ variant: 'compact' });
   return { skill: 'cross-cultural-research', skillSource: source };
 }
