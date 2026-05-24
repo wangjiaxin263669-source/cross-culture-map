@@ -40,7 +40,7 @@ export default function AuthPage() {
         setCode(String(data.devCode));
         setDevHint(data.devHint || `验证码：${data.devCode}`);
       } else {
-        setDevHint('');
+        setDevHint('验证码已发送至您的手机，请查收短信');
       }
     } catch (err) {
       setError(err.message || '发送失败');
@@ -191,8 +191,8 @@ export default function AuthPage() {
             </p>
           )}
 
-          {devHint && (authConfig.smsMock || authConfig.smsExposeDevCode) && (
-            <div className="auth-hint-msg">{devHint}</div>
+          {devHint && (
+            <div className={`auth-hint-msg ${authConfig.smsMock ? '' : 'auth-hint-ok'}`}>{devHint}</div>
           )}
           {success && <div className="auth-success">{success}</div>}
           {!success && authNotice && !error && <div className="auth-hint-msg">{authNotice}</div>}

@@ -1440,6 +1440,11 @@ body, html, #root {
   font-size: 12px;
   margin-bottom: 12px;
 }
+.auth-hint-msg.auth-hint-ok {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
 .auth-hint.warn {
   font-size: 11px;
   color: #fbbf24;

@@ -29,6 +29,7 @@ function envSms() {
     unisms: {
       accessKeyId: process.env.UNISMS_ACCESS_KEY_ID?.trim() || '',
       signature: process.env.UNISMS_SIGNATURE?.trim() || '跨文化平台',
+      templateId: process.env.UNISMS_TEMPLATE_ID?.trim() || '',
     },
     aliyun: {
       accessKeyId: process.env.ALIYUN_SMS_ACCESS_KEY_ID?.trim() || '',
@@ -54,8 +55,8 @@ export async function resolveSmsRuntime() {
 
   let provider = merged.provider;
   if (provider === 'auto') {
-    if (merged.smsbao.user && merged.smsbao.password) provider = 'smsbao';
-    else if (merged.unisms.accessKeyId) provider = 'unisms';
+    if (merged.unisms.accessKeyId) provider = 'unisms';
+    else if (merged.smsbao.user && merged.smsbao.password) provider = 'smsbao';
     else provider = 'mock';
   }
 
@@ -121,19 +122,40 @@ async function sendViaSmsBao(phone, code, smsbao) {
   }
 }
 
+const UNISMS_ERRORS = {
+  InsufficientFunds: 'UniSMS 余额不足，请登录控制台充值',
+  InvalidSignature: '短信签名未审核或填写错误，请检查 UNISMS_SIGNATURE',
+  InvalidCredentials: 'AccessKey 无效，请检查 UNISMS_ACCESS_KEY_ID',
+};
+
 async function sendViaUniSms(phone, code, unisms) {
-  if (!unisms.accessKeyId) throw new Error('短信服务未配置');
-  const content = `【${unisms.signature}】您的验证码是${code}，5分钟内有效。`;
+  if (!unisms.accessKeyId) throw new Error('未配置 UNISMS_ACCESS_KEY_ID');
+  if (!unisms.signature) throw new Error('未配置 UNISMS_SIGNATURE');
+
   const url = `https://uni.apistd.com/?action=sms.message.send&accessKeyId=${encodeURIComponent(unisms.accessKeyId)}`;
+  const body = {
+    to: phone,
+    signature: unisms.signature,
+  };
+  if (unisms.templateId) {
+    body.templateId = unisms.templateId;
+    body.templateData = { code, ttl: '5' };
+  } else {
+    body.content = `您的验证码是${code}，5分钟内有效。`;
+  }
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: phone, signature: unisms.signature, content }),
+    body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (data.code !== '0' && data.code !== 0) {
-    throw new Error(data.message || '短信发送失败');
+  const ok = data.code === '0' || data.code === 0;
+  if (!ok) {
+    const msg = UNISMS_ERRORS[data.message] || data.message || 'UniSMS 短信发送失败';
+    throw new Error(msg);
   }
+  console.log('[UniSMS] sent', phone, data.data?.messages?.[0]?.id || '');
 }
 
 async function sendViaAliyun(phone, code, aliyun) {
