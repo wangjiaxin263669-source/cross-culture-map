@@ -6,11 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authConfig, setAuthConfig] = useState({
-    wechatLogin: false,
-    devLogin: false,
-    dbWritable: true,
-  });
+  const [authConfig, setAuthConfig] = useState({ dbWritable: true });
   const [authNotice, setAuthNotice] = useState('');
 
   const refreshUser = useCallback(async () => {

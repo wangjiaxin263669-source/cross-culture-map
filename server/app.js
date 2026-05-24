@@ -31,7 +31,6 @@ import { getKnowledgeMeta } from './knowledge.js';
 import { getSkillMeta } from './loadSkill.js';
 import { getServerDir } from './paths.js';
 import authRoutes from './auth/routes.js';
-import { getWechatConfig } from './auth/wechat.js';
 import { isDbWritable } from './db/store.js';
 import { getStorageBackend } from './db/engine.js';
 import { ensureBlobsReady } from './db/blobContext.js';
@@ -131,9 +130,7 @@ export function createApp(options = {}) {
     next();
   });
 
-  app.get('/api/health', async (_req, res) => {
-    const wx = getWechatConfig();
-    const isProd = process.env.NODE_ENV === 'production';
+  app.get('/api/health', (_req, res) => {
     res.json({
       ok: true,
       aiConfigured: isConfigured(),
@@ -149,10 +146,7 @@ export function createApp(options = {}) {
         storage: getStorageBackend(),
         blobsContext: Boolean(process.env.NETLIFY_BLOBS_CONTEXT),
         siteId: Boolean(process.env.SITE_ID || process.env.NETLIFY_SITE_ID),
-        wechatLogin: wx.configured,
-        devLogin:
-          process.env.WECHAT_LOGIN_MOCK === 'true' || (!isProd && !wx.configured),
-        authMode: 'wechat',
+        authMode: 'phone_password',
       },
       wallet: getWalletPublicConfig(),
       payment: getPaymentPublicConfig(),

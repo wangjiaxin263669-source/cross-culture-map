@@ -1,50 +1,40 @@
 import React, { useState } from 'react';
-import { getWechatLoginUrl, login, devLogin } from '../services/authApi.js';
+import { register, login } from '../services/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthPage() {
-  const { loginSuccess, authConfig, authNotice } = useAuth();
-  const [wechatLoading, setWechatLoading] = useState(false);
-  const [legacyOpen, setLegacyOpen] = useState(false);
-  const [username, setUsername] = useState('');
+  const { loginSuccess, authNotice } = useAuth();
+  const [mode, setMode] = useState('login');
+  const [nickname, setNickname] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleWechat = async () => {
-    setError('');
-    setWechatLoading(true);
-    try {
-      const { url } = await getWechatLoginUrl();
-      window.location.href = url;
-    } catch (err) {
-      setError(err.message || '微信登录暂不可用');
-      setWechatLoading(false);
-    }
-  };
-
-  const handleDevLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const data = await devLogin();
-      loginSuccess(data);
-    } catch (err) {
-      setError(err.message || '开发登录失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLegacyLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
     try {
-      const data = await login({ username, password });
-      loginSuccess(data);
+      const data =
+        mode === 'login'
+          ? await login({ phone, password })
+          : await register({ nickname, phone, password, confirmPassword });
+
+      if (mode === 'register') {
+        const bonus = data.newUserBonus?.granted
+          ? `，已赠送 ¥${data.newUserBonus.amountYuan} 体验额度`
+          : '';
+        setSuccess(`注册成功${bonus}，正在进入平台…`);
+        setTimeout(() => loginSuccess(data), 600);
+      } else {
+        loginSuccess(data);
+      }
     } catch (err) {
-      setError(err.message || '登录失败');
+      setError(err.message || '操作失败');
     } finally {
       setLoading(false);
     }
@@ -58,86 +48,93 @@ export default function AuthPage() {
           <p>跨文化研究设计决策平台</p>
         </div>
 
-        {authConfig.wechatLogin ? (
-          <>
-            <button
-              type="button"
-              className="auth-wechat-btn auth-wechat-primary"
-              onClick={handleWechat}
-              disabled={wechatLoading}
-            >
-              {wechatLoading ? '跳转微信中…' : '微信扫码登录 / 注册'}
-            </button>
-            <p className="auth-footer-hint">
-              使用微信扫码即可登录；新用户自动创建账号并赠送体验额度。一个微信对应一个账号。
-            </p>
-          </>
-        ) : (
-          <div className="auth-hint-msg">
-            <p>微信登录尚未配置。请在服务器环境变量中设置：</p>
-            <p className="auth-env-hint">WECHAT_OPEN_APP_ID、WECHAT_OPEN_APP_SECRET</p>
-            <p className="auth-inline-hint">
-              开放平台申请：https://open.weixin.qq.com （网站应用 · 微信登录）
-            </p>
-          </div>
-        )}
-
-        {authConfig.devLogin && (
+        <div className="auth-tabs">
           <button
             type="button"
-            className="auth-submit auth-dev-login-btn"
-            onClick={handleDevLogin}
-            disabled={loading}
+            className={mode === 'login' ? 'active' : ''}
+            onClick={() => {
+              setMode('login');
+              setError('');
+              setSuccess('');
+            }}
           >
-            {loading ? '登录中…' : '开发模式：一键进入（无需微信）'}
+            登录
           </button>
-        )}
-
-        <div className="auth-divider">
-          <span>老用户</span>
+          <button
+            type="button"
+            className={mode === 'register' ? 'active' : ''}
+            onClick={() => {
+              setMode('register');
+              setError('');
+              setSuccess('');
+            }}
+          >
+            注册
+          </button>
         </div>
-        <button
-          type="button"
-          className="auth-link-btn"
-          onClick={() => {
-            setLegacyOpen((v) => !v);
-            setError('');
-          }}
-        >
-          {legacyOpen ? '收起账号密码登录' : '使用原账号密码登录'}
-        </button>
 
-        {legacyOpen && (
-          <form className="auth-form" onSubmit={handleLegacyLogin}>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {mode === 'register' && (
             <label>
-              <span>账号</span>
+              <span>昵称</span>
               <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="注册时的账号名"
-                autoComplete="username"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="1–20 个字符"
+                autoComplete="nickname"
                 required
               />
             </label>
+          )}
+
+          <label>
+            <span>手机号</span>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              placeholder="11 位中国大陆手机号"
+              autoComplete="tel"
+              required
+            />
+          </label>
+
+          <label>
+            <span>密码</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="至少 6 位"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              required
+            />
+          </label>
+
+          {mode === 'register' && (
             <label>
-              <span>密码</span>
+              <span>确认密码</span>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入密码"
-                autoComplete="current-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="再次输入密码"
+                autoComplete="new-password"
                 required
               />
             </label>
-            <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? '登录中…' : '登录'}
-            </button>
-          </form>
-        )}
+          )}
 
-        {authNotice && !error && <div className="auth-hint-msg">{authNotice}</div>}
-        {error && <div className="auth-error">{error}</div>}
+          {success && <div className="auth-success">{success}</div>}
+          {!success && authNotice && !error && <div className="auth-hint-msg">{authNotice}</div>}
+          {error && <div className="auth-error">{error}</div>}
+
+          <button type="submit" className="auth-submit" disabled={loading || Boolean(success)}>
+            {loading ? '处理中…' : mode === 'login' ? '登录' : '注册'}
+          </button>
+        </form>
+
+        <p className="auth-footer-hint">一个手机号仅可注册一个账号。</p>
       </div>
     </div>
   );

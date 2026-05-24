@@ -12,11 +12,7 @@
   DAILY_LOGIN_BONUS_CENTS = "5"
   DAILY_LOGIN_BONUS_CAP_CENTS = "70"
   RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
-  # 微信登录（在 Netlify Environment variables 配置，勿提交 Git）：
-  #   WECHAT_OPEN_APP_ID=
-  #   WECHAT_OPEN_APP_SECRET=
   FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
-  WECHAT_REDIRECT_URI = "https://ephemeral-bubblegum-a79332.netlify.app/api/auth/wechat/callback"
 
 [functions]
   directory = "netlify/functions"

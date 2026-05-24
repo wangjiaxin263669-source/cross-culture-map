@@ -32,7 +32,7 @@ function assertPhoneAvailable(db, phone, exceptUserId = null) {
   const taken = db.users.some(
     (u) => u.phone === phone && u.phoneVerified && u.id !== exceptUserId,
   );
-  if (taken) throw new Error('该手机号已被其他账号绑定');
+  if (taken) throw new Error('该手机号已被注册');
 }
 
 export async function createUser({

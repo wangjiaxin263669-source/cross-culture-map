@@ -31,36 +31,37 @@ async function authFetch(path, options = {}) {
     /* ignore */
   }
   if (!res.ok) {
-    const err = new Error(data.error || `请求失败 (${res.status})`);
-    err.code = data.code;
-    err.requiresPhoneBinding = data.requiresPhoneBinding;
-    throw err;
+    throw new Error(data.error || `请求失败 (${res.status})`);
   }
   return data;
 }
 
-export async function login({ username, password }) {
-  const data = await authFetch('/api/auth/login', {
+export async function register({ nickname, phone, password, confirmPassword }) {
+  const data = await authFetch('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({
+      nickname,
+      displayName: nickname,
+      phone,
+      password,
+      confirmPassword,
+    }),
   });
   setToken(data.token);
   return data;
 }
 
-/** 本地开发：未配置微信时一键登录 */
-export async function devLogin() {
-  const data = await authFetch('/api/auth/dev/login', { method: 'POST', body: '{}' });
+export async function login({ phone, password }) {
+  const data = await authFetch('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ phone, password }),
+  });
   setToken(data.token);
   return data;
 }
 
 export async function fetchMe() {
   return authFetch('/api/auth/me');
-}
-
-export async function getWechatLoginUrl() {
-  return authFetch('/api/auth/wechat/url');
 }
 
 export function logout() {

@@ -4,9 +4,6 @@ import {
   findUserById,
   findUserByUsername,
   findUserByPhone,
-  findUserByWechatOpenId,
-  bindPhoneToUser,
-  createUserByPhone,
   sanitizeUser,
   listChatSessions,
   getChatSession,
@@ -18,14 +15,11 @@ import {
   deleteReport,
 } from '../db/store.js';
 import { signToken } from './jwt.js';
-import { buildWechatLoginUrl, exchangeWechatCode, getWechatConfig } from './wechat.js';
 import { requireAuth } from './middleware.js';
-import { verifyPassword } from './password.js';
+import { hashPassword, verifyPassword, validatePassword } from './password.js';
 import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
 import { tryGrantDailyLoginBonus } from '../wallet/dailyBonus.js';
-import { normalizePhone, validatePhone, userHasBoundPhone } from './phone.js';
-import { sendOtp, verifyOtp } from './otp.js';
-import { resolveSmsRuntime, isSmsSendConfigured, shouldExposeDevCodeInApi } from './sms.js';
+import { normalizePhone, validatePhone } from './phone.js';
 
 const router = Router();
 
@@ -41,198 +35,87 @@ async function loginUserRecord(user) {
   return authResponse(fresh, { dailyBonus });
 }
 
-/** 发送短信验证码 */
-router.post('/sms/send', async (req, res) => {
-  try {
-    if (!isSmsSendConfigured()) {
-      return res.status(503).json({ error: '短信服务未配置，请联系管理员' });
-    }
-    const phone = normalizePhone(req.body?.phone);
-    const purpose = req.body?.purpose === 'bind' ? 'bind' : 'login';
-    const err = validatePhone(phone);
-    if (err) return res.status(400).json({ error: err });
+function validateNickname(name) {
+  const n = String(name || '').trim();
+  if (n.length < 1 || n.length > 20) {
+    return '昵称长度为 1–20 个字符';
+  }
+  return null;
+}
 
-    const result = await sendOtp({ phone, purpose });
-    const payload = {
-      ok: true,
-      message: '验证码已发送',
-      expiresInSec: result.expiresInSec,
-    };
-    if (result.mockCode && (await shouldExposeDevCodeInApi())) {
-      payload.devHint = `验证码：${result.mockCode}`;
-      payload.devCode = result.mockCode;
+function uniqueUsernameForPhone(phone) {
+  return `m${phone}`;
+}
+
+/** 注册：昵称 + 手机号 + 密码 */
+router.post('/register', async (req, res) => {
+  try {
+    const displayName = (req.body.displayName || req.body.nickname || '').trim();
+    const phone = normalizePhone(req.body.phone);
+    const { password, confirmPassword } = req.body;
+
+    const nickErr = validateNickname(displayName);
+    if (nickErr) return res.status(400).json({ error: nickErr });
+    const phoneErr = validatePhone(phone);
+    if (phoneErr) return res.status(400).json({ error: phoneErr });
+    const passErr = validatePassword(password);
+    if (passErr) return res.status(400).json({ error: passErr });
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: '两次输入的密码不一致' });
     }
-    res.json(payload);
+
+    if (await findUserByPhone(phone)) {
+      return res.status(400).json({ error: '该手机号已被注册' });
+    }
+
+    let username = uniqueUsernameForPhone(phone);
+    if (await findUserByUsername(username)) {
+      username = `${username}_${Date.now().toString(36).slice(-4)}`;
+    }
+
+    const passwordHash = await hashPassword(password);
+    const user = await createUser({
+      username,
+      passwordHash,
+      displayName,
+      phone,
+      phoneVerified: true,
+      initialBalanceCents: NEW_USER_BONUS_CENTS,
+      initialBonusNote: '新用户注册赠送 ¥0.50',
+    });
+
+    res.json(
+      await authResponse(user, {
+        newUserBonus:
+          NEW_USER_BONUS_CENTS > 0
+            ? { granted: true, amountYuan: (NEW_USER_BONUS_CENTS / 100).toFixed(2) }
+            : null,
+      }),
+    );
   } catch (err) {
-    res.status(400).json({ error: err.message || '发送失败' });
+    res.status(400).json({ error: err.message || '注册失败' });
   }
 });
 
-/** 手机号 + 验证码登录（未注册则自动创建账号） */
-router.post('/sms/login', async (req, res) => {
-  try {
-    const phone = normalizePhone(req.body?.phone);
-    const code = String(req.body?.code || '').trim();
-    const err = validatePhone(phone);
-    if (err) return res.status(400).json({ error: err });
-    if (!/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: '请输入 6 位验证码' });
-    }
-
-    await verifyOtp({ phone, purpose: 'login', code });
-
-    let user = await findUserByPhone(phone);
-    let newUserBonus = null;
-    if (!user) {
-      const created = await createUserByPhone(phone, {
-        initialBalanceCents: NEW_USER_BONUS_CENTS,
-        initialBonusNote: '新用户注册赠送 ¥0.50',
-      });
-      // 优先用写入事务返回的用户，避免 Netlify Blobs 读后写延迟导致误判未绑定
-      user = userHasBoundPhone(created) ? created : await findUserById(created.id);
-      if (NEW_USER_BONUS_CENTS > 0) {
-        newUserBonus = {
-          granted: true,
-          amountYuan: (NEW_USER_BONUS_CENTS / 100).toFixed(2),
-        };
-      }
-    }
-
-    if (!userHasBoundPhone(user)) {
-      return res.status(403).json({ error: '账号未绑定手机号，请先完成绑定' });
-    }
-
-    const data = await loginUserRecord(user);
-    res.json({ ...data, newUserBonus });
-  } catch (err) {
-    res.status(400).json({ error: err.message || '登录失败' });
-  }
-});
-
-/** 老账号：用户名密码验证后绑定手机（一次性迁移） */
-router.post('/legacy/bind-phone', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const phone = normalizePhone(req.body?.phone);
-    const code = String(req.body?.code || '').trim();
-
-    if (!username?.trim() || !password) {
-      return res.status(400).json({ error: '请输入原账号和密码' });
-    }
-    const pErr = validatePhone(phone);
-    if (pErr) return res.status(400).json({ error: pErr });
-    if (!/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: '请输入 6 位验证码' });
-    }
-
-    const user = await findUserByUsername(username);
-    if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: '账号或密码错误' });
-    }
-    if (userHasBoundPhone(user)) {
-      return res.status(400).json({ error: '该账号已绑定手机，请直接用手机号登录' });
-    }
-    const ok = await verifyPassword(password, user.passwordHash);
-    if (!ok) {
-      return res.status(401).json({ error: '账号或密码错误' });
-    }
-
-    const taken = await findUserByPhone(phone);
-    if (taken && taken.id !== user.id) {
-      return res.status(400).json({ error: '该手机号已被其他账号绑定' });
-    }
-
-    await verifyOtp({ phone, purpose: 'bind', code });
-    await bindPhoneToUser(user.id, phone);
-    const data = await loginUserRecord(await findUserById(user.id));
-    res.json({ ...data, message: '手机号绑定成功' });
-  } catch (err) {
-    res.status(400).json({ error: err.message || '绑定失败' });
-  }
-});
-
-/** 已登录但未绑手机（如微信）— 绑定后继续 */
-router.post('/bind-phone', requireAuth, async (req, res) => {
-  try {
-    if (userHasBoundPhone(req.user)) {
-      return res.status(400).json({ error: '已绑定手机号' });
-    }
-    const phone = normalizePhone(req.body?.phone);
-    const code = String(req.body?.code || '').trim();
-    const pErr = validatePhone(phone);
-    if (pErr) return res.status(400).json({ error: pErr });
-    if (!/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: '请输入 6 位验证码' });
-    }
-
-    const taken = await findUserByPhone(phone);
-    if (taken && taken.id !== req.user.id) {
-      return res.status(400).json({ error: '该手机号已被其他账号绑定' });
-    }
-
-    await verifyOtp({ phone, purpose: 'bind', code });
-    await bindPhoneToUser(req.user.id, phone);
-    const data = await loginUserRecord(await findUserById(req.user.id));
-    res.json({ ...data, message: '手机号绑定成功' });
-  } catch (err) {
-    res.status(400).json({ error: err.message || '绑定失败' });
-  }
-});
-
-/** @deprecated 已停用账号密码注册 */
-router.post('/register', (_req, res) => {
-  res.status(410).json({
-    error: '已改为手机号验证码登录，请使用验证码注册/登录',
-    code: 'AUTH_METHOD_DEPRECATED',
-  });
-});
-
-/** 老用户：账号密码登录（无需手机） */
+/** 登录：手机号 + 密码 */
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username?.trim() || !password) {
-      return res.status(400).json({ error: '请输入账号和密码' });
-    }
-    const user = await findUserByUsername(username);
+    const phone = normalizePhone(req.body.phone);
+    const { password } = req.body;
+    const phoneErr = validatePhone(phone);
+    if (phoneErr) return res.status(400).json({ error: phoneErr });
+    if (!password) return res.status(400).json({ error: '请输入密码' });
+
+    const user = await findUserByPhone(phone);
     if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: '账号或密码错误' });
+      return res.status(401).json({ error: '手机号或密码错误' });
     }
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
-      return res.status(401).json({ error: '账号或密码错误' });
+      return res.status(401).json({ error: '手机号或密码错误' });
     }
-    const data = await loginUserRecord(user);
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-/** 本地开发：未配置微信时一键登录 */
-router.post('/dev/login', async (req, res) => {
-  const allow =
-    process.env.WECHAT_LOGIN_MOCK === 'true' ||
-    (process.env.NODE_ENV !== 'production' && !getWechatConfig().configured);
-  if (!allow) {
-    return res.status(404).json({ error: '不可用' });
-  }
-  try {
-    const devOpenId = 'dev_local_openid';
-    let user = await findUserByWechatOpenId(devOpenId);
-    if (!user) {
-      const created = await createUser({
-        username: 'dev_user',
-        passwordHash: null,
-        displayName: '开发测试用户',
-        wechatOpenId: devOpenId,
-        initialBalanceCents: NEW_USER_BONUS_CENTS,
-        initialBonusNote: '新用户注册赠送 ¥0.50',
-      });
-      user = await findUserById(created.id);
-    }
-    const data = await loginUserRecord(user);
-    res.json({ ...data, dev: true });
+    res.json(await loginUserRecord(user));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -242,63 +125,7 @@ router.get('/me', requireAuth, async (req, res) => {
   const dailyBonus = await tryGrantDailyLoginBonus(req.user.id);
   const raw = await findUserById(req.user.id);
   const user = await sanitizeUser(raw);
-  res.json({
-    user,
-    dailyBonus,
-    requiresPhoneBinding: user.requiresPhoneBinding,
-  });
-});
-
-router.get('/wechat/url', (_req, res) => {
-  const cfg = getWechatConfig();
-  if (!cfg.configured) {
-    return res.status(400).json({
-      error: '未配置微信登录。请在 .env 设置 WECHAT_OPEN_APP_ID 与 WECHAT_OPEN_APP_SECRET',
-      configured: false,
-    });
-  }
-  const state = Math.random().toString(36).slice(2);
-  res.json({ url: buildWechatLoginUrl(state), state });
-});
-
-router.get('/wechat/callback', async (req, res) => {
-  const frontend =
-    process.env.FRONTEND_URL?.trim() || process.env.VITE_APP_URL?.trim() || 'http://localhost:5173';
-  try {
-    const { code } = req.query;
-    if (!code) {
-      return res.redirect(`${frontend}?auth_error=missing_code`);
-    }
-    const wx = await exchangeWechatCode(String(code));
-    let user = await findUserByWechatOpenId(wx.openid);
-    if (!user) {
-      const base = `wx_${wx.openid.slice(-8)}`;
-      let username = base;
-      let n = 0;
-      while (await findUserByUsername(username)) {
-        n += 1;
-        username = `${base}_${n}`;
-      }
-      user = await createUser({
-        username,
-        passwordHash: null,
-        displayName: wx.nickname,
-        wechatOpenId: wx.openid,
-        avatar: wx.avatar,
-        initialBalanceCents: NEW_USER_BONUS_CENTS,
-        initialBonusNote: '新用户注册赠送 ¥0.50',
-      });
-      user = await findUserById(user.id);
-    }
-
-    const dailyBonus = await tryGrantDailyLoginBonus(user.id);
-    const fresh = dailyBonus.granted ? await findUserById(user.id) : user;
-    const token = signToken(await sanitizeUser(fresh));
-    const bonusQuery = dailyBonus.granted ? '&daily_bonus=1' : '';
-    res.redirect(`${frontend}?token=${encodeURIComponent(token)}${bonusQuery}`);
-  } catch (err) {
-    res.redirect(`${frontend}?auth_error=${encodeURIComponent(err.message)}`);
-  }
+  res.json({ user, dailyBonus });
 });
 
 router.get('/history/chats', requireAuth, async (req, res) => {
