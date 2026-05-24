@@ -13,6 +13,21 @@ const DESKTOP_SKILL = path.join(
 let cachedSkillBody = null;
 let cachedSkillSource = null;
 
+const SERVERLESS_SKILL_MAX = 4500;
+
+function isServerlessRuntime() {
+  return Boolean(
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.NETLIFY,
+  );
+}
+
+function trimForServerless(body) {
+  if (!isServerlessRuntime() || body.length <= SERVERLESS_SKILL_MAX) return body;
+  return `${body.slice(0, SERVERLESS_SKILL_MAX)}\n\n…（Serverless 环境已截断 SKILL 以控制生成耗时）`;
+}
+
 /** 去掉 YAML frontmatter，保留 Markdown 正文 */
 function stripFrontmatter(text) {
   if (text.startsWith('---')) {
@@ -37,18 +52,20 @@ export function loadSkillPrompt() {
     return { body: cachedSkillBody, source: cachedSkillSource };
   }
 
-  const candidates = [
-    { path: process.env.SKILL_PATH, label: 'SKILL_PATH' },
-    { path: DESKTOP_SKILL, label: 'Desktop/cross-cultural-research/SKILL.md' },
-    { path: BUNDLED_SKILL, label: 'bundled' },
-  ];
+  const candidates = isServerlessRuntime()
+    ? [{ path: BUNDLED_SKILL, label: 'bundled' }]
+    : [
+        { path: process.env.SKILL_PATH, label: 'SKILL_PATH' },
+        { path: DESKTOP_SKILL, label: 'Desktop/cross-cultural-research/SKILL.md' },
+        { path: BUNDLED_SKILL, label: 'bundled' },
+      ];
 
   for (const { path: p, label } of candidates) {
-    const body = readSkillFile(p);
-    if (body) {
-      cachedSkillBody = body;
+    const raw = readSkillFile(p);
+    if (raw) {
+      cachedSkillBody = trimForServerless(raw);
       cachedSkillSource = label;
-      return { body, source: label };
+      return { body: cachedSkillBody, source: label };
     }
   }
 
