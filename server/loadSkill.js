@@ -13,7 +13,8 @@ const DESKTOP_SKILL = path.join(
 let cachedSkillBody = null;
 let cachedSkillSource = null;
 
-const SERVERLESS_SKILL_MAX = 6500;
+/** Serverless 下截断上限；整合版 SKILL 较长，前置章节优先保留 */
+const SERVERLESS_SKILL_MAX = 9500;
 
 function isServerlessRuntime() {
   return Boolean(
