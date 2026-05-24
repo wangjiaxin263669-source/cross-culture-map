@@ -93,122 +93,119 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
     <div className="recharge-overlay" onClick={onClose}>
       <div className="recharge-modal" onClick={(e) => e.stopPropagation()}>
         <div className="recharge-header">
-          <h3>账户充值</h3>
-          <button type="button" className="recharge-close" onClick={onClose}>
+          <div>
+            <h3>账户充值</h3>
+            <p className="recharge-balance-inline">
+              余额 <strong>¥{balanceYuan ?? '0.00'}</strong>
+              {payStep === 'pay' && payInfo && (
+                <>
+                  {' '}
+                  · 应付 <strong className="recharge-pay-amount">¥{payInfo.amountYuan}</strong>
+                </>
+              )}
+            </p>
+          </div>
+          <button type="button" className="recharge-close" onClick={onClose} aria-label="关闭">
             ✕
           </button>
         </div>
 
-        <p className="recharge-balance">
-          当前余额：<strong>¥{balanceYuan ?? '0.00'}</strong>
-        </p>
-
-        {payStep === 'select' && (
-          <>
-            <p className="recharge-hint">
-              充值进入您的平台余额，用于 AI 对话与报告（每次约 ¥{costs.chat || '0.10'}）。
-              {wechatQrMode
-                ? ' 请用微信扫码付款至平台收款码，款项由平台运营方收取；DeepSeek API 费用由平台自行承担。'
-                : ' 开发模式下可模拟到账。'}
-            </p>
-
-            {mockMode && (
-              <p className="recharge-mock-tag">开发模式：点击充值将立即到账（无需真实付款）</p>
-            )}
-
-            <div className="recharge-packages">
-              {packages.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`recharge-pkg ${packageId === p.id ? 'active' : ''}`}
-                  onClick={() => setPackageId(p.id)}
-                >
-                  <span className="recharge-pkg-label">{p.label}</span>
-                  {p.bonusCents > 0 && (
-                    <small>到账 ¥{p.totalYuan}（含赠送）</small>
-                  )}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {payStep === 'pay' && payInfo && (
-          <div className="recharge-wechat-step">
-            <p className="recharge-wechat-amount">
-              请支付 <strong>¥{payInfo.amountYuan}</strong>
-              {payInfo.totalCreditYuan !== payInfo.amountYuan && (
-                <span>（到账 ¥{payInfo.totalCreditYuan}）</span>
+        <div className="recharge-body">
+          {payStep === 'select' && (
+            <>
+              <p className="recharge-hint">
+                用于 AI 对话与报告（约 ¥{costs.chat || '0.10'}/次）。{wechatQrMode ? '微信扫码付款。' : ''}
+              </p>
+              {mockMode && (
+                <p className="recharge-mock-tag">开发模式：点击充值将立即到账</p>
               )}
-            </p>
-            <div className="recharge-qr-card">
-              <p className="recharge-qr-title">扫码支付</p>
-              <div className="recharge-qr-wrap">
-                <img
-                  src={payInfo.qrImageUrl}
-                  alt="支付二维码"
-                  className="recharge-qr-img"
-                />
+              <div className="recharge-packages">
+                {packages.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`recharge-pkg ${packageId === p.id ? 'active' : ''}`}
+                    onClick={() => setPackageId(p.id)}
+                  >
+                    <span className="recharge-pkg-label">{p.label}</span>
+                    {p.bonusCents > 0 && <small>到账 ¥{p.totalYuan}</small>}
+                  </button>
+                ))}
               </div>
-              <p className="recharge-qr-sub">请使用微信扫一扫完成付款</p>
+            </>
+          )}
+
+          {payStep === 'pay' && payInfo && (
+            <div className="recharge-wechat-step">
+              <div className="recharge-qr-card">
+                <p className="recharge-qr-title">扫码支付</p>
+                <div className="recharge-qr-wrap">
+                  <img src={payInfo.qrImageUrl} alt="支付二维码" className="recharge-qr-img" />
+                </div>
+              </div>
+              <p className="recharge-remark">
+                转账备注：
+                <button type="button" className="recharge-remark-code" onClick={copyRemark}>
+                  {payInfo.payRemark}
+                </button>
+                <small> 复制</small>
+              </p>
+              <p className="recharge-pay-tip">付款后点击下方按钮，核实到账后余额更新</p>
             </div>
-            <p className="recharge-remark">
-              转账备注（必填）：
-              <button type="button" className="recharge-remark-code" onClick={copyRemark}>
-                {payInfo.payRemark}
-              </button>
-              <small> 点击复制</small>
+          )}
+
+          {payStep === 'done' && (
+            <p className="recharge-success-block">
+              已提交付款申请，核实到账后余额将更新，请稍后刷新查看。
             </p>
-            <ul className="recharge-instructions">
-              {(payInfo.instructions || []).map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+          )}
 
-        {payStep === 'done' && (
-          <p className="recharge-success-block">
-            已收到您的付款申请。管理员核对微信到账后，余额将自动更新，请稍后刷新页面查看。
-          </p>
-        )}
+          {error && <div className="recharge-error">{error}</div>}
+          {message && <div className="recharge-success">{message}</div>}
+        </div>
 
-        {error && <div className="recharge-error">{error}</div>}
-        {message && <div className="recharge-success">{message}</div>}
+        <div className="recharge-footer">
+          {payStep === 'select' && (
+            <>
+              <button
+                type="button"
+                className="recharge-submit"
+                disabled={loading || !packageId}
+                onClick={handleCreateOrder}
+              >
+                {loading ? '处理中…' : mockMode ? '确认充值' : wechatQrMode ? '下一步' : '去支付'}
+              </button>
+              <button type="button" className="recharge-cancel" onClick={onClose}>
+                取消
+              </button>
+            </>
+          )}
 
-        {payStep === 'select' && (
-          <button
-            type="button"
-            className="recharge-submit"
-            disabled={loading || !packageId}
-            onClick={handleCreateOrder}
-          >
-            {loading ? '处理中…' : mockMode ? '确认充值（开发）' : wechatQrMode ? '下一步 · 微信扫码' : '去支付'}
-          </button>
-        )}
+          {payStep === 'pay' && (
+            <>
+              <button
+                type="button"
+                className="recharge-submit"
+                disabled={loading}
+                onClick={handleSubmitPaid}
+              >
+                {loading ? '提交中…' : '我已完成转账'}
+              </button>
+              <button type="button" className="recharge-cancel" onClick={() => setPayStep('select')}>
+                返回重选
+              </button>
+              <button type="button" className="recharge-cancel ghost" onClick={onClose}>
+                取消
+              </button>
+            </>
+          )}
 
-        {payStep === 'pay' && (
-          <div className="recharge-pay-actions">
-            <button
-              type="button"
-              className="recharge-submit"
-              disabled={loading}
-              onClick={handleSubmitPaid}
-            >
-              {loading ? '提交中…' : '我已完成转账'}
+          {payStep === 'done' && (
+            <button type="button" className="recharge-submit" onClick={onClose}>
+              关闭
             </button>
-            <button type="button" className="recharge-back" onClick={() => setPayStep('select')}>
-              返回重选
-            </button>
-          </div>
-        )}
-
-        {payStep === 'done' && (
-          <button type="button" className="recharge-submit" onClick={onClose}>
-            关闭
-          </button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
