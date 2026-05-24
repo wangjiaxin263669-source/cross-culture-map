@@ -31,10 +31,6 @@ export const indiaStates = [
       ],
       designLink: '【因】娱乐文化 + 数字支付 →【果】UPI/钱包、明星联名、多语言、高密度促销但结构清晰。',
     },
-    videos: [
-      { title: '孟买与宝莱坞文化', url: 'https://www.youtube.com/watch?v=3Pq9blTtKfE', provider: 'YouTube', tag: '文化' },
-      { title: '印度用户设计', url: 'https://www.smashingmagazine.com/2014/07/designing-for-the-indian-user/', provider: 'Smashing', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: 'UPI 支付；印地/马拉地语；明星营销合规。' }],
   }),
   r({
@@ -60,9 +56,6 @@ export const indiaStates = [
       ],
       designLink: '【因】高权力距离 + 节日文化 →【果】敬语选项、节日运营、本地公共服务信息、政府背书样式。',
     },
-    videos: [
-      { title: '德里历史与文化', url: 'https://www.youtube.com/watch?v=3Pq9blTtKfE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '印地语优先；节日模块；AQI/本地警报。' }],
   }),
   r({
@@ -88,9 +81,6 @@ export const indiaStates = [
       ],
       designLink: '【因】科技开放 + 南印文化 →【果】英语+卡纳达语、开发者友好文档、实时状态、年轻职场审美。',
     },
-    videos: [
-      { title: '班加罗尔科技文化', url: 'https://www.youtube.com/watch?v=3Pq9blTtKfE', provider: 'YouTube', tag: '科技' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '卡纳达语切换；API 文档；实时物流。' }],
   }),
   r({
@@ -116,9 +106,6 @@ export const indiaStates = [
       ],
       designLink: '【因】语言认同 + 宗教饮食 →【果】泰米尔语优先、素食标识、电影营销合规、庙塔 imagery 尊重。',
     },
-    videos: [
-      { title: '泰米尔文化与电影', url: 'https://www.bilibili.com/video/BV1QK4y1r7SW/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '泰米尔语；素食标识；文化敏感。' }],
   }),
   r({
@@ -144,9 +131,6 @@ export const indiaStates = [
       ],
       designLink: '【因】文化精英 + 节日叙事 →【果】孟加拉语、长文可读性、节日礼盒、文学气质排版。',
     },
-    videos: [
-      { title: '孟加拉文化与节日', url: 'https://www.youtube.com/watch?v=3Pq9blTtKfE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '孟加拉语；节日礼盒；长文排版。' }],
   }),
   r({
@@ -172,9 +156,6 @@ export const indiaStates = [
       ],
       designLink: '【因】旅游奢华 + 高权力距离 →【果】华丽但尊重的 imagery、婚礼套餐、多角色预订、季节提示。',
     },
-    videos: [
-      { title: '拉贾斯坦宫殿文化', url: 'https://www.youtube.com/watch?v=3Pq9blTtKfE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '旅游预订；婚礼模块；文化尊重。' }],
   }),
 ];
