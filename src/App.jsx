@@ -45,6 +45,7 @@ function App() {
   const [chatMessages, setChatMessages] = useState([DEFAULT_CHAT_GREETING]);
   const [chatSessionId, setChatSessionId] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [aiHealth, setAiHealth] = useState(null);
@@ -133,9 +134,15 @@ function App() {
     }
   };
 
+  const bumpHistory = useCallback(() => {
+    setHistoryRefreshKey((k) => k + 1);
+  }, []);
+
   const persistChat = useCallback(
     async (messages, sessionId = chatSessionId) => {
-      if (!user || !messages?.length) return sessionId;
+      if (!user) return sessionId;
+      const hasUserMsg = messages?.some((m) => m.role === 'user' && m.text?.trim());
+      if (!hasUserMsg) return sessionId;
       const firstUser = messages.find((m) => m.role === 'user');
       const title = firstUser?.text?.slice(0, 48) || '跨文化对话';
       try {
@@ -148,32 +155,35 @@ function App() {
             : null,
         });
         if (!sessionId) setChatSessionId(session.id);
+        bumpHistory();
         return session.id;
-      } catch {
+      } catch (err) {
+        console.warn('[history] 对话保存失败:', err.message);
         return sessionId;
       }
     },
-    [user, chatSessionId, selectedMarket, displayTitle],
+    [user, chatSessionId, selectedMarket, displayTitle, bumpHistory],
   );
 
   const persistAnalysisReport = useCallback(
-    async (content, productIdea) => {
+    async (content, productIdea, type = 'three_step', titleSuffix = '三步分析') => {
       if (!user || !content?.trim()) return;
       try {
         await saveReport({
-          type: 'three_step',
-          title: `${displayTitle || '跨文化'} · 三步分析`,
+          type,
+          title: `${displayTitle || '跨文化'} · ${titleSuffix}`,
           content,
           productIdea: productIdea || '',
           market: selectedMarket
             ? { id: selectedMarket.id, title: displayTitle }
             : null,
         });
-      } catch {
-        /* 静默失败，不影响主流程 */
+        bumpHistory();
+      } catch (err) {
+        console.warn('[history] 报告保存失败:', err.message);
       }
     },
-    [user, selectedMarket, displayTitle],
+    [user, selectedMarket, displayTitle, bumpHistory],
   );
 
   const restoreMarketFromMeta = (marketMeta) => {
@@ -287,6 +297,7 @@ function App() {
         ...prev,
         { role: 'ai', text: `请求失败：${msg}` },
       ]);
+      await persistChat(nextMessages);
     } finally {
       setIsChatLoading(false);
       refreshUser();
@@ -527,15 +538,7 @@ function App() {
             aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
             onSyncToThreeStepReport={handleSyncFromSimResearch}
             onReportGenerated={(content, topic) =>
-              saveReport({
-                type: 'sim_research',
-                title: `${displayTitle} · 模拟调研`,
-                content,
-                productIdea: topic || '',
-                market: selectedMarket
-                  ? { id: selectedMarket.id, title: displayTitle }
-                  : null,
-              }).catch(() => {})
+              persistAnalysisReport(content, topic, 'sim_research', '模拟调研')
             }
           />
 
@@ -592,6 +595,7 @@ function App() {
 
       <HistoryDrawer
         open={historyOpen}
+        refreshKey={historyRefreshKey}
         onClose={() => setHistoryOpen(false)}
         onLoadChat={handleLoadChatFromHistory}
         onLoadReport={handleLoadReportFromHistory}

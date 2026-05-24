@@ -243,37 +243,46 @@ export async function getChatSession(userId, sessionId) {
 }
 
 export async function saveChatSession(userId, payload) {
-  const db = await readDb();
-  const now = new Date().toISOString();
-  let session = payload.id
-    ? db.chatSessions.find((s) => s.id === payload.id && s.userId === userId)
-    : null;
+  return runDbUpdate((db) => {
+    const now = new Date().toISOString();
+    let session = payload.id
+      ? db.chatSessions.find((s) => s.id === payload.id && s.userId === userId)
+      : null;
 
-  if (session) {
-    session.title = payload.title || session.title;
-    session.messages = payload.messages || session.messages;
-    session.market = payload.market ?? session.market;
-    session.updatedAt = now;
-  } else {
-    session = {
-      id: randomUUID(),
-      userId,
-      title: payload.title || '跨文化对话',
-      messages: payload.messages || [],
-      market: payload.market || null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    db.chatSessions.push(session);
-  }
-  await writeDb(db);
-  return session;
+    if (session) {
+      session.title = payload.title || session.title;
+      session.messages = payload.messages || session.messages;
+      session.market = payload.market ?? session.market;
+      session.updatedAt = now;
+    } else {
+      session = {
+        id: randomUUID(),
+        userId,
+        title: payload.title || '跨文化对话',
+        messages: payload.messages || [],
+        market: payload.market || null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.chatSessions.push(session);
+    }
+
+    if (db.chatSessions.length > 200) {
+      db.chatSessions = db.chatSessions
+        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+        .slice(0, 200);
+    }
+
+    return session;
+  });
 }
 
 export async function deleteChatSession(userId, sessionId) {
-  const db = await readDb();
-  db.chatSessions = db.chatSessions.filter((s) => !(s.id === sessionId && s.userId === userId));
-  await writeDb(db);
+  return runDbUpdate((db) => {
+    db.chatSessions = db.chatSessions.filter(
+      (s) => !(s.id === sessionId && s.userId === userId),
+    );
+  });
 }
 
 export async function listReports(userId, limit = 50) {
@@ -291,26 +300,33 @@ export async function getReport(userId, reportId) {
 }
 
 export async function saveReport(userId, payload) {
-  const db = await readDb();
-  const report = {
-    id: payload.id || randomUUID(),
-    userId,
-    type: payload.type || 'analysis',
-    title: payload.title || '跨文化报告',
-    content: payload.content || '',
-    market: payload.market || null,
-    productIdea: payload.productIdea || '',
-    createdAt: payload.createdAt || new Date().toISOString(),
-  };
-  const idx = db.reports.findIndex((r) => r.id === report.id && r.userId === userId);
-  if (idx >= 0) db.reports[idx] = report;
-  else db.reports.push(report);
-  await writeDb(db);
-  return report;
+  return runDbUpdate((db) => {
+    const report = {
+      id: payload.id || randomUUID(),
+      userId,
+      type: payload.type || 'analysis',
+      title: payload.title || '跨文化报告',
+      content: payload.content || '',
+      market: payload.market || null,
+      productIdea: payload.productIdea || '',
+      createdAt: payload.createdAt || new Date().toISOString(),
+    };
+    const idx = db.reports.findIndex((r) => r.id === report.id && r.userId === userId);
+    if (idx >= 0) db.reports[idx] = report;
+    else db.reports.push(report);
+
+    if (db.reports.length > 200) {
+      db.reports = db.reports
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+        .slice(0, 200);
+    }
+
+    return report;
+  });
 }
 
 export async function deleteReport(userId, reportId) {
-  const db = await readDb();
-  db.reports = db.reports.filter((r) => !(r.id === reportId && r.userId === userId));
-  await writeDb(db);
+  return runDbUpdate((db) => {
+    db.reports = db.reports.filter((r) => !(r.id === reportId && r.userId === userId));
+  });
 }

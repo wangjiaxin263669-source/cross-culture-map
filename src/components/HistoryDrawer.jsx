@@ -8,6 +8,7 @@ import {
 
 export default function HistoryDrawer({
   open,
+  refreshKey = 0,
   onClose,
   onLoadChat,
   onLoadReport,
@@ -31,7 +32,7 @@ export default function HistoryDrawer({
     } finally {
       setLoading(false);
     }
-  }, [open]);
+  }, [open, refreshKey]);
 
   useEffect(() => {
     refresh();
