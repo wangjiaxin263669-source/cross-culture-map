@@ -54,6 +54,7 @@ export async function ensureBlobsReady(event = lastEvent) {
       siteID,
       token,
       edgeURL: 'https://api.netlify.com',
+      uncachedEdgeURL: 'https://api.netlify.com',
       deployID,
     });
     return true;

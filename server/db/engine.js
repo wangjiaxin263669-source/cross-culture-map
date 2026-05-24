@@ -94,7 +94,8 @@ function writeDbFile(data) {
 async function getBlobStore() {
   await ensureBlobsReady(getLambdaEvent());
   const { getStore } = await import('@netlify/blobs');
-  return getStore({ name: BLOB_STORE, consistency: 'strong' });
+  // eventual：无需 uncachedEdgeURL，适合账号/历史这类键值存储
+  return getStore({ name: BLOB_STORE, consistency: 'eventual' });
 }
 
 async function readDbBlobs() {

@@ -12,7 +12,6 @@ import {
   getReport,
   saveReport,
   deleteReport,
-  isDbWritable,
 } from '../db/store.js';
 import { hashPassword, verifyPassword, validatePassword, validateUsername } from './password.js';
 import { signToken } from './jwt.js';

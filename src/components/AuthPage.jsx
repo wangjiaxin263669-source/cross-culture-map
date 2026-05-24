@@ -103,12 +103,6 @@ export default function AuthPage() {
           {authNotice && !error && <div className="auth-error">{authNotice}</div>}
           {error && <div className="auth-error">{error}</div>}
 
-          {!authConfig.dbWritable && mode === 'register' && (
-            <div className="auth-hint warn">
-              当前为无持久化存储的部署环境，注册可能不可用。请使用 VPS 部署或联系管理员。
-            </div>
-          )}
-
           <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? '处理中…' : mode === 'login' ? '登录' : '创建账号'}
           </button>
