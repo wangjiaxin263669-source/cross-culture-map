@@ -1,12 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-function apiErrorHint(status) {
+function apiErrorHint(status, path = '') {
+  const isReport = path.includes('/report');
   if (status === 502 || status === 504) {
     return (
-      '报告生成超时或后端未响应（' +
+      (isReport ? '报告' : '对话') +
+      '超时或后端未响应（' +
       status +
-      '）。请确认：① 本地已运行 npm run dev 并打开终端显示的端口（如 http://localhost:5174）；' +
-      '② 线上站 Netlify 已配置 DEEPSEEK_API_KEY；③ 稍后重试（报告约需 20–40 秒）'
+      '）。请确认：① 本地运行 npm run dev，打开终端端口（常见 http://localhost:5174，勿用 5173）；' +
+      '② 若刚改过代码请 Ctrl+C 后重新 npm run dev；' +
+      '③ 线上 Netlify 环境变量 DEEPSEEK_API_KEY；④ 等待约 15–45 秒后重试'
     );
   }
   if (status === 0) {
@@ -29,7 +32,11 @@ async function request(path, body, { timeoutMs = 90000 } = {}) {
     });
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('请求超时（90秒）。报告内容较多时请稍后重试，或缩短产品描述。');
+      throw new Error(
+        path.includes('/report')
+          ? '报告请求超时（120秒）。请缩短产品描述后重试，或重启 npm run dev。'
+          : '对话请求超时（90秒）。请稍后重试，或重启 npm run dev。',
+      );
     }
     throw new Error(apiErrorHint(0));
   } finally {
@@ -43,7 +50,7 @@ async function request(path, body, { timeoutMs = 90000 } = {}) {
     /* 非 JSON 响应（如 Netlify 504 HTML） */
   }
   if (!res.ok) {
-    throw new Error(data.error || apiErrorHint(res.status));
+    throw new Error(data.error || apiErrorHint(res.status, path));
   }
   return data;
 }
@@ -85,11 +92,15 @@ export function serializeCountry(country) {
 }
 
 export async function sendChatMessage({ message, history, country }) {
-  const data = await request('/api/chat', {
-    message,
-    history,
-    country: serializeCountry(country),
-  });
+  const data = await request(
+    '/api/chat',
+    {
+      message,
+      history,
+      country: serializeCountry(country),
+    },
+    { timeoutMs: 90000 },
+  );
   return data.reply;
 }
 
