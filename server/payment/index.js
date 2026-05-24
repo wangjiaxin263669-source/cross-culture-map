@@ -4,6 +4,13 @@ import { createWechatQrPayment, getWechatQrConfig } from './wechatQr.js';
 
 function resolveProvider() {
   const explicit = process.env.PAYMENT_PROVIDER?.trim().toLowerCase();
+  const onNetlify = Boolean(
+    process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME,
+  );
+  // Netlify 线上默认微信收款码（避免控制台遗留 mock 覆盖 netlify.toml）
+  if (onNetlify && explicit !== 'zpay') {
+    return 'wechat_qr';
+  }
   if (explicit) return explicit;
   if (process.env.WECHAT_PAY_QR_URL?.trim()) return 'wechat_qr';
   return 'mock';

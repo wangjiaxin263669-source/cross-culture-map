@@ -5,9 +5,6 @@
 [build.environment]
   NODE_VERSION = "20"
   NETLIFY = "true"
-
-# 正式环境：微信收款码充值 + 赠送规则（无需在 Netlify 控制台手填）
-[context.production.environment]
   PAYMENT_PROVIDER = "wechat_qr"
   WECHAT_PAY_QR_URL = "/wechat-pay-qr.png"
   WECHAT_PAY_OWNER_NAME = "hchhh"
