@@ -1,11 +1,16 @@
 import { retrieveRelevantChunks, formatKnowledgeContext } from './knowledge.js';
-import { loadSkillPrompt } from './loadSkill.js';
+import { isServerlessRuntime, loadSkillPrompt } from './loadSkill.js';
 
 const API_BASE = process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com';
 const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
-const CHAT_MAX_TOKENS = Number(process.env.DEEPSEEK_CHAT_MAX_TOKENS || 3000);
-const REPORT_SECTION_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_MAX_TOKENS || 1600);
-const API_TIMEOUT_MS = Number(process.env.DEEPSEEK_TIMEOUT_MS || 55000);
+const CHAT_MAX_TOKENS = Number(process.env.DEEPSEEK_CHAT_MAX_TOKENS || 1800);
+const REPORT_SECTION_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_MAX_TOKENS || 1400);
+const REPORT_SINGLE_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_SINGLE_MAX_TOKENS || 3200);
+const API_TIMEOUT_MS = Number(
+  process.env.DEEPSEEK_TIMEOUT_MS || (isServerlessRuntime() ? 50000 : 55000),
+);
+const CHAT_RAG_CHUNKS = 2;
+const REPORT_RAG_CHUNKS = 3;
 
 const PLATFORM_APPENDIX = `
 ## 平台集成说明（CROSS-CULTURE · 整合版 SKILL）
@@ -41,7 +46,8 @@ const PLATFORM_APPENDIX = `
 `;
 
 function buildAgentSystemPrompt({ knowledge, country, mode = 'chat' }) {
-  const { body: skillBody } = loadSkillPrompt();
+  const skillVariant = mode === 'chat' || isServerlessRuntime() ? 'compact' : 'full';
+  const { body: skillBody } = loadSkillPrompt({ variant: skillVariant });
 
   let prompt = `${skillBody}
 
@@ -107,8 +113,22 @@ function appendReportSectionGuide(prompt, section) {
   }
   return `${prompt}
 
-# 本地化设计报告 · {国家/地区}
-## 1–7 完整结构（精炼，总字数 ≤2000）`;
+## 本轮输出完整报告（章节 0–9，精炼，总字数 ≤2800）
+
+# 跨文化产品设计报告 · {国家/地区}
+
+## 0. 项目摘要
+## 1. 发现问题（🔴🟡🟢；用户感受+全局风险）
+## 2. 分析问题（六维度四行降维）
+## 2.5 Cultural Fit Gap
+## 2.6 五大产品思维速览
+## 3. 应对策略（P0/P1/P2）
+## 4. 适应性设计方案
+## 5. 产品全链路落地清单（7阶段）
+## 6. B 计划
+## 7. 数据指标与下一版目标
+## 8. 风险与验证方法
+## 9. 收束`;
 }
 
 function buildAgentSystemPromptWithSection(opts) {
@@ -234,7 +254,7 @@ async function chatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS } = {}) {
 }
 
 export async function generateChatReply({ message, history = [], country = null }) {
-  const chunks = retrieveRelevantChunks(message, 4);
+  const chunks = retrieveRelevantChunks(message, CHAT_RAG_CHUNKS);
   const knowledge = formatKnowledgeContext(chunks);
   const systemContent = buildAgentSystemPrompt({ knowledge, country, mode: 'chat' });
 
@@ -254,7 +274,7 @@ export async function generateChatReply({ message, history = [], country = null 
 
 async function generateReportSection({ productIdea, country, section }) {
   const query = `${productIdea} ${country.title} 本地化 UI UX 设计`;
-  const chunks = retrieveRelevantChunks(query, section === 'analysis' ? 4 : 3);
+  const chunks = retrieveRelevantChunks(query, REPORT_RAG_CHUNKS);
   const knowledge = formatKnowledgeContext(chunks);
   const systemContent = buildAgentSystemPromptWithSection({
     knowledge,
@@ -287,13 +307,49 @@ ${productIdea}
   return chatCompletion(messages, { maxTokens: REPORT_SECTION_MAX_TOKENS });
 }
 
-/** 并行生成两段报告，避免 Netlify 30s 网关超时 */
+/** Netlify：单次调用 + 精简 SKILL，控制在 60s 内 */
+async function generateReportSingleCall({ productIdea, country }) {
+  const query = `${productIdea} ${country.title} 本地化 UI UX 设计`;
+  const chunks = retrieveRelevantChunks(query, REPORT_RAG_CHUNKS);
+  const knowledge = formatKnowledgeContext(chunks);
+  const systemContent = buildAgentSystemPromptWithSection({
+    knowledge,
+    country,
+    mode: 'report',
+    section: 'full',
+  });
+
+  const regionLabel =
+    country.displayTitle ||
+    (country.parentTitle && country.marketType === 'region'
+      ? `${country.parentTitle} · ${country.title}`
+      : country.title);
+
+  const userContent = `请为【${regionLabel}】撰写完整跨文化产品设计报告（章节 0–9，精炼可执行）。
+
+产品信息：
+${productIdea}
+
+要求：三步 + 五大思维 + Fit Gap + 7阶段 + B计划 + 数据指标；产品语言；引用平台数据。`;
+
+  const messages = [
+    { role: 'system', content: systemContent },
+    { role: 'user', content: userContent },
+  ];
+
+  return chatCompletion(messages, { maxTokens: REPORT_SINGLE_MAX_TOKENS });
+}
+
+/** 本地：并行两段；Serverless：单次调用防 504 */
 export async function generateLocalizationReport({ productIdea, country }) {
   if (!country) {
     throw new Error('请先在地球上选择目标国家/地区');
   }
 
   try {
+    if (isServerlessRuntime()) {
+      return (await generateReportSingleCall({ productIdea, country })).trim();
+    }
     const [analysis, strategy] = await Promise.all([
       generateReportSection({ productIdea, country, section: 'analysis' }),
       generateReportSection({ productIdea, country, section: 'strategy' }),
