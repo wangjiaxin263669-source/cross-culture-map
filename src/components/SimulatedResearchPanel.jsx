@@ -10,6 +10,7 @@ import {
 } from '../services/simulatedResearchApi';
 import { downloadResearchPdf } from '../utils/exportResearchPdf';
 import { downloadResearchWord } from '../utils/exportResearchWord';
+import OpenPlatformPanel from './OpenPlatformPanel';
 import {
   listPersonas,
   listSessions,
@@ -57,6 +58,7 @@ export default function SimulatedResearchPanel({
 
   const [corpusSnippets, setCorpusSnippets] = useState([]);
   const [corpusMeta, setCorpusMeta] = useState(null);
+  const [corpusErrors, setCorpusErrors] = useState([]);
   const [personas, setPersonas] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [report, setReport] = useState('');
@@ -104,6 +106,7 @@ export default function SimulatedResearchPanel({
     });
     setCorpusSnippets(snippets);
     setCorpusMeta(meta);
+    setCorpusErrors(meta?.errors || []);
     return snippets;
   };
 
@@ -384,6 +387,8 @@ export default function SimulatedResearchPanel({
         <div className="ai-error">请先配置 DEEPSEEK_API_KEY 后使用模拟调研</div>
       )}
 
+      <OpenPlatformPanel />
+
       <div className="sim-step-tabs">
         {STEPS.map((s, idx) => {
           const currentIdx = STEPS.findIndex((x) => x.id === step);
@@ -431,9 +436,17 @@ export default function SimulatedResearchPanel({
           </div>
           {corpusMeta && (
             <p className="sim-hint">
-              语料库 {corpusMeta.snippetCount ?? '—'} 条精选
-              {corpusMeta.serperConfigured ? ' · 全网搜索已启用' : ' · 配置 SERPER_API_KEY 可启用全网/小红书搜索'}
+              精选 {corpusMeta.snippetCount ?? '—'} 条
+              {corpusMeta.justoneConfigured ? ' · Just One API 已配置' : ' · 配置 JUSTONE_API_TOKEN 可拉取真实笔记'}
+              {corpusMeta.serperConfigured ? ' · Serper 已启用' : ''}
             </p>
+          )}
+          {corpusErrors.length > 0 && (
+            <div className="sim-corpus-errors">
+              {corpusErrors.map((e) => (
+                <p key={e}>{e}</p>
+              ))}
+            </div>
           )}
           {corpusSnippets.length > 0 && (
             <div className="sim-corpus-preview">
