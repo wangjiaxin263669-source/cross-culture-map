@@ -35,22 +35,42 @@ async function post(path, body, timeoutMs = 90000) {
   return data;
 }
 
-export async function generatePersonas({ researchTopic, audienceCriteria, personaCount, country }) {
+export async function searchCorpus({ query, marketId, sources }) {
+  return post('/api/corpus/search', { query, marketId, sources }, 30000);
+}
+
+export async function generatePersonas({
+  researchTopic,
+  audienceCriteria,
+  personaCount,
+  country,
+  corpusSnippets,
+  corpusContext,
+}) {
   const data = await post('/api/simulated-research/personas', {
     researchTopic,
     audienceCriteria,
     personaCount,
     country: serializeCountry(country),
+    corpusSnippets,
+    corpusContext,
   });
   return data.personas;
 }
 
-export async function runInterview({ persona, researchTopic, guideQuestions, country }) {
+export async function runInterview({
+  persona,
+  researchTopic,
+  guideQuestions,
+  country,
+  corpusContext,
+}) {
   const data = await post('/api/simulated-research/interview', {
     persona,
     researchTopic,
     guideQuestions,
     country: serializeCountry(country),
+    corpusContext,
   });
   return data.interview;
 }
@@ -61,6 +81,7 @@ export async function synthesizeReport({
   personas,
   interviews,
   country,
+  corpusSnippets,
 }) {
   const data = await post(
     '/api/simulated-research/report',
@@ -70,8 +91,14 @@ export async function synthesizeReport({
       personas,
       interviews,
       country: serializeCountry(country),
+      corpusSnippets,
     },
     120000,
   );
   return data.report;
+}
+
+export async function buildSyncToThreeStepPayload(session) {
+  const data = await post('/api/simulated-research/sync-payload', session, 15000);
+  return data.productIdea;
 }
