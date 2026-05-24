@@ -7,6 +7,11 @@ export function getTodayShanghai() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
 }
 
+function getDateShanghai(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+}
+
 function getExpirableCents(user) {
   return Number.isFinite(user.dailyBonusExpirableCents) ? user.dailyBonusExpirableCents : 0;
 }
@@ -107,7 +112,7 @@ export async function tryGrantDailyLoginBonus(userId) {
 
     const expired = expireDailyLoginBonusOnUser(user, today, db);
 
-    const createdDay = (user.createdAt || '').slice(0, 10);
+    const createdDay = getDateShanghai(user.createdAt);
     if (createdDay === today) {
       return { granted: false, amountCents: 0, reason: 'new_user_day', expiredCents: expired.expiredCents };
     }
