@@ -150,7 +150,6 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
                   alt="支付二维码"
                   className="recharge-qr-img"
                 />
-                <span className="recharge-qr-mask" aria-hidden="true" />
               </div>
               <p className="recharge-qr-sub">请使用微信扫一扫完成付款</p>
             </div>
