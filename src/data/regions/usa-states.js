@@ -31,7 +31,7 @@ export const usaStates = [
     },
     references: [
       { title: 'California Consumer Privacy Act (CCPA)', source: 'California DOJ', year: '2023', url: 'https://oag.ca.gov/privacy/ccpa', tag: '合规', note: '隐私设计地方法规' },
-      { title: 'Silicon Valley Product Culture', source: 'Harvard Business Review', year: '—', url: 'https://hbr.org/topic/subject/innovation', tag: '产业', note: '创新迭代文化' },
+      { title: 'Innovation | Harvard Business Review', source: 'HBR', year: '—', url: 'https://hbr.org/topic/subject/innovation', tag: '产业', note: '硅谷式创新迭代与产品文化参考' },
     ],
     designInsights: [
       { icon: '💡', title: '设计启示', content: '隐私仪表盘、包容性语言、碳足迹/健康标签可选展示。' },
