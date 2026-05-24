@@ -31,10 +31,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】极高不确定性规避 + 长期导向 →【果】税込价格、详尽 FAQ、道歉式错误文案、预约制流程。',
     },
-    videos: [
-      { title: '东京都市文化纪录片', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-      { title: '日本电商 UX 研究', url: 'https://baymard.com/blog/japanese-ecommerce-ux', provider: 'Baymard', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '税込标价；静音默认；敬语客服；配送时段精细。' }],
   }),
   r({
@@ -60,10 +56,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】关西外向 + 实惠文化 →【果】比价表、幽默但得体的文案、口碑/评分突出、排队信息透明。',
     },
-    videos: [
-      { title: '关西文化与大阪', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-      { title: '日本地区差异', url: 'https://www.youtube.com/watch?v=s8ETUOQM4Rk', provider: 'YouTube', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '突出评分与优惠；语气可更轻松；比价功能。' }],
   }),
   r({
@@ -89,9 +81,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】传统文化 + 高长期导向 →【果】季节视觉、预约流程、克制动画、文化合规。',
     },
-    videos: [
-      { title: '京都传统文化', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '季节主题；预约制；和色与留白；尊重传统符号。' }],
   }),
   r({
@@ -117,9 +106,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】旅游季节 + 土产文化 →【果】礼盒装选项、冷链说明、天气/路况模块、稍低密度也可。',
     },
-    videos: [
-      { title: '北海道旅游与文化', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '季节运营；礼盒与冷链；路况/天气信息。' }],
   }),
   r({
@@ -145,9 +131,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】群岛休闲 + 文化独特 →【果】明亮海洋视觉、双语、灵活退改、琉球文化合规。',
     },
-    videos: [
-      { title: '冲绳琉球文化', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '海洋明亮风；双语；台风退改政策清晰。' }],
   }),
   r({
@@ -173,9 +156,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】制造业文化 + 高不确定性规避 →【果】可靠优先、详细规格、售后可见、克制营销。',
     },
-    videos: [
-      { title: '日本制造业文化', url: 'https://www.youtube.com/watch?v=s8ETUOQM4Rk', provider: 'YouTube', tag: '产业' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '质量与保修信息前置；参数对比表；少浮夸动画。' }],
   }),
   r({
@@ -201,9 +181,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】美食社交 + 门户区位 →【果】预约排队、多语言、跨境支付、事件运营模块。',
     },
-    videos: [
-      { title: '福冈与九州文化', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '餐饮预约；亚洲语言；跨境旅行套餐。' }],
   }),
   r({
@@ -229,9 +206,6 @@ export const japanPrefectures = [
       ],
       designLink: '【因】国际港口 + 双场景用户 →【果】多语言、周末旅游模块、通勤时刻表整合。',
     },
-    videos: [
-      { title: '横滨开港历史', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '英中日多语；旅游/通勤模式切换。' }],
   }),
 ];
