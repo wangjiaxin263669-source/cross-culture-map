@@ -4,6 +4,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tool
 import ReportMarkdown from './components/ReportMarkdown';
 import CulturalStoryPanel from './components/CulturalStoryPanel';
 import RegionPicker from './components/RegionPicker';
+import SimulatedResearchPanel from './components/SimulatedResearchPanel';
 import {
   globeLabelsData,
   normalizeMarket,
@@ -324,6 +325,12 @@ function App() {
           </div>
 
           <CulturalStoryPanel country={selectedMarket} />
+
+          <SimulatedResearchPanel
+            market={selectedMarket}
+            marketTitle={displayTitle}
+            aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
+          />
 
           <div style={{ marginTop: '30px' }}>
             <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
