@@ -1,9 +1,7 @@
 import { createRegion } from './_regionFactory.js';
+import { getRegionBaseRefs } from '../countryCurated.js';
 
-const IN_REFS = [
-  { title: 'India — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/india/', tag: '国家基准', note: '印度全国维度参照' },
-  { title: 'Designing for the Indian User', source: 'Smashing Magazine', year: '2014', url: 'https://www.smashingmagazine.com/2014/07/designing-for-the-indian-user/', tag: 'UX 研究', note: '印度用户行为' },
-];
+const IN_REFS = getRegionBaseRefs('india');
 
 const r = (data) => createRegion('india', '印度', 'India', IN_REFS, data);
 

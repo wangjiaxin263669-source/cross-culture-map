@@ -1,8 +1,10 @@
 /**
  * 各国文化数据：故事 + 文献依据（可点击）+ 视频 + 设计启示
- * 结论来源：Hofstede 维度 + 同行评审文献 + 设计行业实证
+ * 结论来源：霍夫斯泰德维度 + 国内平台可核验文献/视频（见 countryCurated.js）
  */
-export const countriesData = [
+import { applyCountryCurated } from './countryCurated.js';
+
+const RAW_COUNTRIES = [
   {
     id: 'china',
     hasRegions: true,
@@ -336,3 +338,6 @@ export const countriesData = [
     ],
   },
 ];
+
+/** 覆盖文献/视频/案例链接为已核验的国内平台资源 */
+export const countriesData = RAW_COUNTRIES.map(applyCountryCurated);

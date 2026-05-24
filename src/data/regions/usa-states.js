@@ -1,9 +1,7 @@
 import { createRegion } from './_regionFactory.js';
+import { getRegionBaseRefs } from '../countryCurated.js';
 
-const USA_REFS = [
-  { title: 'The USA — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/the-usa/', tag: '国家基准', note: '美国全国维度参照' },
-  { title: 'Collectivist and Individualist Influences on Web Design', source: 'Kim et al., JCMC', year: '2009', url: 'https://onlinelibrary.wiley.com/doi/full/10.1111/j.1083-6101.2009.01454.x', tag: '实证文献', note: '个人主义与浏览行为' },
-];
+const USA_REFS = getRegionBaseRefs('usa');
 
 const r = (data) => createRegion('usa', '美国', 'USA', USA_REFS, data);
 

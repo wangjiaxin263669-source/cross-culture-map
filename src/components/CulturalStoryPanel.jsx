@@ -1,11 +1,13 @@
 import React from 'react';
+import { isVideoUrl } from '../data/linkPlatforms.js';
 
 function providerIcon(provider) {
   const p = (provider || '').toLowerCase();
   if (p.includes('bilibili')) return '📺';
-  if (p.includes('youtube')) return '▶️';
-  if (p.includes('nng') || p.includes('nn/g')) return '📖';
-  if (p.includes('hofstede')) return '📊';
+  if (p.includes('抖音')) return '🎵';
+  if (p.includes('知乎')) return '📖';
+  if (p.includes('人人都是产品经理') || p.includes('woshipm')) return '📄';
+  if (p.includes('站酷') || p.includes('zcool')) return '🎨';
   return '🔗';
 }
 
@@ -18,6 +20,8 @@ export default function CulturalStoryPanel({ country }) {
     videos = [],
     designInsights = [],
   } = country;
+
+  const videoList = videos.filter((v) => isVideoUrl(v.url));
 
   return (
     <div className="culture-panel">
@@ -86,14 +90,15 @@ export default function CulturalStoryPanel({ country }) {
         </section>
       )}
 
-      {videos.length > 0 && (
+      {videoList.length > 0 && (
         <section className="video-section">
           <h3 className="section-heading">
             <span className="section-icon">🎬</span>
             视频讲解 · 点击观看
           </h3>
+          <p className="section-hint">仅展示 B 站等可播放视频；文献请见上方卡片</p>
           <div className="video-grid">
-            {videos.map((v, i) => (
+            {videoList.map((v, i) => (
               <a
                 key={i}
                 href={v.url}

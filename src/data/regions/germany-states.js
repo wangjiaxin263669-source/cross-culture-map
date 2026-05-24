@@ -1,9 +1,7 @@
 import { createRegion } from './_regionFactory.js';
+import { getRegionBaseRefs } from '../countryCurated.js';
 
-const DE_REFS = [
-  { title: 'Germany — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/germany/', tag: '国家基准', note: '德国全国维度参照' },
-  { title: 'Designing for Germany', source: 'Smashing Magazine', year: '2010', url: 'https://www.smashingmagazine.com/2010/03/how-to-design-for-germany/', tag: 'UX 研究', note: '德国电商习惯' },
-];
+const DE_REFS = getRegionBaseRefs('germany');
 
 const r = (data) => createRegion('germany', '德国', 'Germany', DE_REFS, data);
 

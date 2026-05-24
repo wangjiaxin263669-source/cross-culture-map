@@ -1,9 +1,7 @@
 import { createRegion } from './_regionFactory.js';
+import { getRegionBaseRefs } from '../countryCurated.js';
 
-const JP_REFS = [
-  { title: 'Japan — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/japan/', tag: '国家基准', note: '日本全国维度参照' },
-  { title: 'Japanese UX Design Patterns', source: 'Baymard Institute', year: '—', url: 'https://baymard.com/blog/japanese-ecommerce-ux', tag: 'UX 研究', note: '电商信息密度' },
-];
+const JP_REFS = getRegionBaseRefs('japan');
 
 const r = (data) => createRegion('japan', '日本', 'Japan', JP_REFS, data);
 

@@ -3,6 +3,8 @@
  * 各省在国家级 Hofstede 基准上，结合地域文化、经济史与数字产品习惯做差异化解读
  */
 import { CHINA_REGION_LINKS } from '../curatedLinks.js';
+import { getRegionBaseRefs } from '../countryCurated.js';
+import { isVideoUrl } from '../linkPlatforms.js';
 
 const PROVINCE_LINK_KEY = {
   'cn-gd': 'guangdong',
@@ -19,10 +21,7 @@ const PROVINCE_LINK_KEY = {
   'cn-hb': 'hubei',
 };
 
-const CN_BASE_REFS = [
-  { title: 'China — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/china/', tag: '国家基准', note: '全国维度分数参照系' },
-  { title: 'The Influence of Cultural Values on Webpage Design', source: 'Kim et al., JCMC', year: '2009', url: 'https://onlinelibrary.wiley.com/doi/full/10.1111/j.1083-6101.2009.01454.x', tag: '实证文献', note: '集体主义与浏览行为' },
-];
+const CN_BASE_REFS = getRegionBaseRefs('china');
 
 function province(data) {
   const linkKey = PROVINCE_LINK_KEY[data.id];
@@ -35,7 +34,7 @@ function province(data) {
     ...data,
     title: data.title,
     label: data.label || data.title,
-    videos: data.videos ?? curated?.videos ?? [],
+    videos: (data.videos ?? curated?.videos ?? []).filter((v) => isVideoUrl(v.url)),
     references: [...(data.references || []), ...(curated?.refs || []), ...CN_BASE_REFS],
   };
 }

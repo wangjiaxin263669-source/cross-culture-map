@@ -1,9 +1,7 @@
 import { createRegion } from './_regionFactory.js';
+import { getRegionBaseRefs } from '../countryCurated.js';
 
-const BR_REFS = [
-  { title: 'Brazil — Hofstede Country Comparison', source: 'Hofstede Insights', year: '2024', url: 'https://www.hofstede-insights.com/country-comparison/brazil/', tag: '国家基准', note: '巴西全国维度参照' },
-  { title: 'Trust and Culture', source: 'Nielsen Norman Group', year: '—', url: 'https://www.nngroup.com/articles/trust-and-culture/', tag: 'UX 研究', note: '社交信任' },
-];
+const BR_REFS = getRegionBaseRefs('brazil');
 
 const r = (data) => createRegion('brazil', '巴西', 'Brazil', BR_REFS, data);
 
