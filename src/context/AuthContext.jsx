@@ -8,9 +8,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState({
     wechatLogin: false,
+    devLogin: false,
     dbWritable: true,
-    phoneLogin: true,
-    smsMock: true,
   });
   const [authNotice, setAuthNotice] = useState('');
 
@@ -46,10 +45,6 @@ export function AuthProvider({ children }) {
     if (params.get('daily_bonus') === '1') {
       window.history.replaceState({}, '', window.location.pathname);
       setAuthNotice('每日登录奖励已到账');
-    }
-    if (params.get('bind_phone') === '1') {
-      window.history.replaceState({}, '', window.location.pathname);
-      setAuthNotice('请绑定手机号后继续使用平台');
     }
 
     (async () => {

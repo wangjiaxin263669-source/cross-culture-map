@@ -144,7 +144,7 @@ export async function sanitizeUser(user) {
   safe.balanceCents = balanceCents;
   safe.balanceYuan = (balanceCents / 100).toFixed(2);
   safe.phoneBound = Boolean(user.phone && user.phoneVerified);
-  safe.requiresPhoneBinding = !safe.phoneBound;
+  safe.requiresPhoneBinding = false;
   if (user.phone && user.phoneVerified) {
     safe.phoneMasked = `${user.phone.slice(0, 3)}****${user.phone.slice(7)}`;
   } else {

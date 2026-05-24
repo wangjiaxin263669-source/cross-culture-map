@@ -39,36 +39,18 @@ async function authFetch(path, options = {}) {
   return data;
 }
 
-export async function sendSmsCode({ phone, purpose = 'login' }) {
-  return authFetch('/api/auth/sms/send', {
+export async function login({ username, password }) {
+  const data = await authFetch('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ phone, purpose }),
-  });
-}
-
-export async function smsLogin({ phone, code }) {
-  const data = await authFetch('/api/auth/sms/login', {
-    method: 'POST',
-    body: JSON.stringify({ phone, code }),
+    body: JSON.stringify({ username, password }),
   });
   setToken(data.token);
   return data;
 }
 
-export async function legacyBindPhone({ username, password, phone, code }) {
-  const data = await authFetch('/api/auth/legacy/bind-phone', {
-    method: 'POST',
-    body: JSON.stringify({ username, password, phone, code }),
-  });
-  setToken(data.token);
-  return data;
-}
-
-export async function bindPhone({ phone, code }) {
-  const data = await authFetch('/api/auth/bind-phone', {
-    method: 'POST',
-    body: JSON.stringify({ phone, code }),
-  });
+/** 本地开发：未配置微信时一键登录 */
+export async function devLogin() {
+  const data = await authFetch('/api/auth/dev/login', { method: 'POST', body: '{}' });
   setToken(data.token);
   return data;
 }

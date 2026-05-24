@@ -1485,6 +1485,23 @@ body, html, #root {
   font-weight: 600;
   cursor: pointer;
 }
+.auth-wechat-btn.auth-wechat-primary {
+  padding: 14px;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.auth-dev-login-btn {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.auth-env-hint {
+  font-family: monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 8px 0;
+}
 .auth-footer-hint {
   margin: 20px 0 0;
   font-size: 11px;

@@ -17,10 +17,10 @@ import {
   saveReport,
   deleteReport,
 } from '../db/store.js';
-import { verifyPassword, validatePassword, validateUsername } from './password.js';
 import { signToken } from './jwt.js';
 import { buildWechatLoginUrl, exchangeWechatCode, getWechatConfig } from './wechat.js';
-import { requireAuth, requirePhoneBound } from './middleware.js';
+import { requireAuth } from './middleware.js';
+import { verifyPassword } from './password.js';
 import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
 import { tryGrantDailyLoginBonus } from '../wallet/dailyBonus.js';
 import { normalizePhone, validatePhone, userHasBoundPhone } from './phone.js';
@@ -187,12 +187,55 @@ router.post('/register', (_req, res) => {
   });
 });
 
-/** @deprecated 已停用账号密码登录 */
-router.post('/login', (_req, res) => {
-  res.status(410).json({
-    error: '已改为手机号验证码登录。老用户请使用「绑定已有账号」',
-    code: 'AUTH_METHOD_DEPRECATED',
-  });
+/** 老用户：账号密码登录（无需手机） */
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username?.trim() || !password) {
+      return res.status(400).json({ error: '请输入账号和密码' });
+    }
+    const user = await findUserByUsername(username);
+    if (!user || !user.passwordHash) {
+      return res.status(401).json({ error: '账号或密码错误' });
+    }
+    const ok = await verifyPassword(password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: '账号或密码错误' });
+    }
+    const data = await loginUserRecord(user);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** 本地开发：未配置微信时一键登录 */
+router.post('/dev/login', async (req, res) => {
+  const allow =
+    process.env.WECHAT_LOGIN_MOCK === 'true' ||
+    (process.env.NODE_ENV !== 'production' && !getWechatConfig().configured);
+  if (!allow) {
+    return res.status(404).json({ error: '不可用' });
+  }
+  try {
+    const devOpenId = 'dev_local_openid';
+    let user = await findUserByWechatOpenId(devOpenId);
+    if (!user) {
+      const created = await createUser({
+        username: 'dev_user',
+        passwordHash: null,
+        displayName: '开发测试用户',
+        wechatOpenId: devOpenId,
+        initialBalanceCents: NEW_USER_BONUS_CENTS,
+        initialBonusNote: '新用户注册赠送 ¥0.50',
+      });
+      user = await findUserById(created.id);
+    }
+    const data = await loginUserRecord(user);
+    res.json({ ...data, dev: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/me', requireAuth, async (req, res) => {
@@ -248,14 +291,9 @@ router.get('/wechat/callback', async (req, res) => {
       user = await findUserById(user.id);
     }
 
-    const token = signToken(await sanitizeUser(user));
-    if (!userHasBoundPhone(user)) {
-      return res.redirect(
-        `${frontend}?token=${encodeURIComponent(token)}&bind_phone=1`,
-      );
-    }
-
     const dailyBonus = await tryGrantDailyLoginBonus(user.id);
+    const fresh = dailyBonus.granted ? await findUserById(user.id) : user;
+    const token = signToken(await sanitizeUser(fresh));
     const bonusQuery = dailyBonus.granted ? '&daily_bonus=1' : '';
     res.redirect(`${frontend}?token=${encodeURIComponent(token)}${bonusQuery}`);
   } catch (err) {
@@ -263,17 +301,17 @@ router.get('/wechat/callback', async (req, res) => {
   }
 });
 
-router.get('/history/chats', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/history/chats', requireAuth, async (req, res) => {
   res.json({ sessions: await listChatSessions(req.user.id) });
 });
 
-router.get('/history/chats/:id', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/history/chats/:id', requireAuth, async (req, res) => {
   const session = await getChatSession(req.user.id, req.params.id);
   if (!session) return res.status(404).json({ error: '对话不存在' });
   res.json({ session });
 });
 
-router.post('/history/chats', requireAuth, requirePhoneBound, async (req, res) => {
+router.post('/history/chats', requireAuth, async (req, res) => {
   try {
     const session = await saveChatSession(req.user.id, req.body);
     res.json({ session });
@@ -282,22 +320,22 @@ router.post('/history/chats', requireAuth, requirePhoneBound, async (req, res) =
   }
 });
 
-router.delete('/history/chats/:id', requireAuth, requirePhoneBound, async (req, res) => {
+router.delete('/history/chats/:id', requireAuth, async (req, res) => {
   await deleteChatSession(req.user.id, req.params.id);
   res.json({ ok: true });
 });
 
-router.get('/history/reports', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/history/reports', requireAuth, async (req, res) => {
   res.json({ reports: await listReports(req.user.id) });
 });
 
-router.get('/history/reports/:id', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/history/reports/:id', requireAuth, async (req, res) => {
   const report = await getReport(req.user.id, req.params.id);
   if (!report) return res.status(404).json({ error: '报告不存在' });
   res.json({ report });
 });
 
-router.post('/history/reports', requireAuth, requirePhoneBound, async (req, res) => {
+router.post('/history/reports', requireAuth, async (req, res) => {
   try {
     const report = await saveReport(req.user.id, req.body);
     res.json({ report });
@@ -306,7 +344,7 @@ router.post('/history/reports', requireAuth, requirePhoneBound, async (req, res)
   }
 });
 
-router.delete('/history/reports/:id', requireAuth, requirePhoneBound, async (req, res) => {
+router.delete('/history/reports/:id', requireAuth, async (req, res) => {
   await deleteReport(req.user.id, req.params.id);
   res.json({ ok: true });
 });

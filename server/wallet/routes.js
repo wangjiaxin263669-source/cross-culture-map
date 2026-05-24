@@ -10,7 +10,7 @@ import {
   saveSmsPlatformSettings,
 } from '../db/store.js';
 import { requireRechargeAdmin } from './admin.js';
-import { requireAuth, requirePhoneBound } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { getWalletPublicConfig, RECHARGE_PACKAGES } from './config.js';
 import { getWalletSnapshot } from './billing.js';
 import {
@@ -22,22 +22,22 @@ import {
 
 const router = Router();
 
-router.get('/config', requireAuth, requirePhoneBound, (_req, res) => {
+router.get('/config', requireAuth, (_req, res) => {
   res.json({
     wallet: getWalletPublicConfig(),
     payment: getPaymentPublicConfig(),
   });
 });
 
-router.get('/balance', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/balance', requireAuth, async (req, res) => {
   res.json(await getWalletSnapshot(req.user.id));
 });
 
-router.get('/transactions', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/transactions', requireAuth, async (req, res) => {
   res.json({ transactions: await listWalletTransactions(req.user.id) });
 });
 
-router.post('/recharge/create', requireAuth, requirePhoneBound, async (req, res) => {
+router.post('/recharge/create', requireAuth, async (req, res) => {
   try {
     const { packageId, payType = 'alipay' } = req.body;
     const pkg = RECHARGE_PACKAGES.find((p) => p.id === packageId);
@@ -93,7 +93,7 @@ router.post('/recharge/create', requireAuth, requirePhoneBound, async (req, res)
   }
 });
 
-router.get('/recharge/status/:orderId', requireAuth, requirePhoneBound, async (req, res) => {
+router.get('/recharge/status/:orderId', requireAuth, async (req, res) => {
   const order = await findRechargeOrder(req.params.orderId);
   if (!order || order.userId !== req.user.id) {
     return res.status(404).json({ error: '订单不存在' });
@@ -102,7 +102,7 @@ router.get('/recharge/status/:orderId', requireAuth, requirePhoneBound, async (r
 });
 
 /** 用户扫码付款后提交，等待管理员核实入账 */
-router.post('/recharge/submit-paid', requireAuth, requirePhoneBound, async (req, res) => {
+router.post('/recharge/submit-paid', requireAuth, async (req, res) => {
   try {
     const { orderId } = req.body;
     if (!orderId) return res.status(400).json({ error: '缺少订单号' });

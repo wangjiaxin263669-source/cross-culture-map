@@ -32,7 +32,6 @@ import { getSkillMeta } from './loadSkill.js';
 import { getServerDir } from './paths.js';
 import authRoutes from './auth/routes.js';
 import { getWechatConfig } from './auth/wechat.js';
-import { resolveSmsRuntime, isSmsSendConfigured } from './auth/sms.js';
 import { isDbWritable } from './db/store.js';
 import { getStorageBackend } from './db/engine.js';
 import { ensureBlobsReady } from './db/blobContext.js';
@@ -134,7 +133,7 @@ export function createApp(options = {}) {
 
   app.get('/api/health', async (_req, res) => {
     const wx = getWechatConfig();
-    const sms = await resolveSmsRuntime();
+    const isProd = process.env.NODE_ENV === 'production';
     res.json({
       ok: true,
       aiConfigured: isConfigured(),
@@ -151,11 +150,9 @@ export function createApp(options = {}) {
         blobsContext: Boolean(process.env.NETLIFY_BLOBS_CONTEXT),
         siteId: Boolean(process.env.SITE_ID || process.env.NETLIFY_SITE_ID),
         wechatLogin: wx.configured,
-        phoneLogin: true,
-        smsConfigured: isSmsSendConfigured(),
-        smsMock: sms.mock,
-        smsProvider: sms.provider,
-        smsExposeDevCode: Boolean(sms.exposeDevCode && sms.mock),
+        devLogin:
+          process.env.WECHAT_LOGIN_MOCK === 'true' || (!isProd && !wx.configured),
+        authMode: 'wechat',
       },
       wallet: getWalletPublicConfig(),
       payment: getPaymentPublicConfig(),

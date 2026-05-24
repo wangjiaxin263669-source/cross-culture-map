@@ -1,4 +1,4 @@
-import { requireAuth, requirePhoneBound } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { chargeForOperation, refundOperation, InsufficientBalanceError } from './billing.js';
 
 /**
@@ -8,7 +8,6 @@ import { chargeForOperation, refundOperation, InsufficientBalanceError } from '.
 export function withWalletCharge(operation, handler) {
   return [
     requireAuth,
-    requirePhoneBound,
     async (req, res) => {
       let charged = null;
       const maybeRefund = async () => {
