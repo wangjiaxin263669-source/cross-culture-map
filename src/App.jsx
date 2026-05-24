@@ -419,12 +419,12 @@ function App() {
       {isChatOpen && (
         <div className="global-chat-modal">
           <div className="chat-header">
-            <h3>
-              ✨ 跨文化研究专家 · DeepSeek
+            <div className="chat-header-title">
+              <h3>✨ 跨文化研究专家 · DeepSeek</h3>
               {aiHealth?.wallet?.costsYuan?.chat && (
-                <small className="chat-cost-hint"> ¥{aiHealth.wallet.costsYuan.chat}/次</small>
+                <span className="chat-cost-hint">¥{aiHealth.wallet.costsYuan.chat}/次</span>
               )}
-            </h3>
+            </div>
             <div className="chat-header-actions">
               <button type="button" className="new-chat-btn" onClick={handleNewChat}>
                 新对话

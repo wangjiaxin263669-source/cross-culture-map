@@ -252,23 +252,34 @@ body, html, #root {
 }
 
 .chat-header {
-  padding: 18px 20px;
+  padding: 14px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
-.chat-header h3 {
+.chat-header-title {
+  flex: 1;
+  min-width: 0;
+}
+.chat-header-title h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.35;
   color: #fff;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chat-cost-hint {
+  display: block;
+  margin-top: 2px;
   font-size: 11px;
   font-weight: 500;
   color: #00f0ff;
-  margin-left: 4px;
+  white-space: nowrap;
 }
 .close-chat-btn {
   background: transparent;
@@ -276,6 +287,8 @@ body, html, #root {
   color: #8da4c4;
   cursor: pointer;
   font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color 0.3s;
 }
 .close-chat-btn:hover { color: #fff; }
@@ -1490,7 +1503,8 @@ body, html, #root {
 .chat-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .new-chat-btn {
   padding: 6px 10px;
@@ -1500,6 +1514,8 @@ body, html, #root {
   background: rgba(0, 240, 255, 0.08);
   color: #00f0ff;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* —— 历史记录抽屉 —— */
