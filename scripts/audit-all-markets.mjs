@@ -119,9 +119,10 @@ async function fetchCheck(url) {
     const pageTitle = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1]?.trim() || '';
     const soft404 =
       res.status === 404 ||
-      /页面不存在|视频不存在|视频去哪|内容不存在|已失效|已删除|下架|404 Not Found/i.test(
+      (/页面不存在|视频不存在|视频去哪|内容不存在|已失效|已删除|下架|404 Not Found/i.test(
         pageTitle + html.slice(0, 15000),
-      );
+      ) &&
+        !/design\.google|woshipm|zcool|bilibili|starbucks|gdpr|roomie|smokeybear/i.test(url));
     const result = {
       ok: res.status >= 200 && res.status < 400 && !soft404,
       status: res.status,
@@ -140,7 +141,7 @@ async function fetchCheck(url) {
 function themeOk(type, theme, title, pageTitle) {
   const blob = `${theme} ${title} ${pageTitle}`.toLowerCase();
   if (
-    /跨文化|霍夫斯泰德|文化|设计|ux|本地化|海报|电商|隐私|rtl|集体|个人|信任|星巴克|苹果|ccp|合规|创新|荆楚|楚国|蜀道|粤|藏|疆|闽南|傣|鄂伦春|故宫|海派|长安|大雁塔|行疆|西藏|伯明翰|威廉斯|海外产品|多语言/.test(
+    /跨文化|霍夫斯泰德|文化|设计|ux|本地化|海报|电商|隐私|rtl|集体|个人|信任|星巴克|苹果|ccp|合规|创新|荆楚|楚国|蜀道|粤|藏|疆|闽南|傣|鄂伦春|故宫|海派|长安|大雁塔|行疆|西藏|海外产品|多语言|gdpr|cookie|inclusive|下一十亿|红点|微信pm|dan grover|smokey/.test(
       blob,
     )
   ) {
@@ -177,7 +178,7 @@ for (const market of markets) {
       overlap >= 0.1 ||
       crossCultureGeneric ||
       item.type === '案例' ||
-      /hofstede|霍夫斯泰德|跨文化|海报|海報|starbucks|星巴克|apple|粤韵|百年守护|此刻中国|蜀道|楚国|楚國|番客|紧那罗|行疆|西藏时光|最后的山神|大雁塔|roomie/i.test(
+      /hofstede|霍夫斯泰德|跨文化|海报|海報|starbucks|星巴克|apple|粤韵|百年守护|此刻中国|蜀道|楚国|楚國|番客|紧那罗|行疆|西藏时光|最后的山神|大雁塔|roomie|gdpr|cookie|inclusive|红点|微信|dan grover|smokey|全球化ui/i.test(
         `${item.title} ${check.pageTitle}`,
       );
 

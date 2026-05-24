@@ -1,5 +1,6 @@
 import { createRegion } from './_regionFactory.js';
 import { getRegionBaseRefs } from '../countryCurated.js';
+import { CANON } from '../designerCanon.js';
 
 const USA_REFS = getRegionBaseRefs('usa');
 
@@ -30,8 +31,8 @@ export const usaStates = [
       designLink: '【因】高个人主义 + 高宽容度 →【果】清晰隐私控制、包容性文案、可持续叙事、简洁但不冷漠的 UI。',
     },
     references: [
-      { title: 'California Consumer Privacy Act (CCPA)', source: 'California DOJ', year: '2023', url: 'https://oag.ca.gov/privacy/ccpa', tag: '合规', note: '隐私设计地方法规' },
-      { title: 'Innovation | Harvard Business Review', source: 'HBR', year: '—', url: 'https://hbr.org/topic/subject/innovation', tag: '产业', note: '硅谷式创新迭代与产品文化参考' },
+      { title: 'California Consumer Privacy Act (CCPA)', source: 'California DOJ', year: '2023', url: 'https://oag.ca.gov/privacy/ccpa', tag: '合规', note: '【设计师必读】加州隐私优先于默认收集，影响 App 权限与 Cookie 设计。' },
+      CANON.cnUsApp,
     ],
     designInsights: [
       { icon: '💡', title: '设计启示', content: '隐私仪表盘、包容性语言、碳足迹/健康标签可选展示。' },

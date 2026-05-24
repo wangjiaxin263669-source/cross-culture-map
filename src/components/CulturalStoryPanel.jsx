@@ -66,7 +66,7 @@ export default function CulturalStoryPanel({ country }) {
             <span className="section-icon">📚</span>
             文献与数据来源
           </h3>
-          <p className="section-hint">点击标题可在新标签页打开原文</p>
+          <p className="section-hint">点击标题可在新标签页打开原文；标注「设计师必读」的为跨文化 UX 经典参考</p>
           <div className="references-grid">
             {references.map((ref, i) => (
               <a
