@@ -42,9 +42,9 @@ export const countriesData = [
       { title: 'Cross-Cultural Web Design', source: 'Nielsen Norman Group', year: '—', url: 'https://www.nngroup.com/articles/cross-cultural-design/', tag: 'UX 研究', note: '高语境文化与信息密度' },
     ],
     videos: [
-      { title: '什么是文化研究？（入门动画）', url: 'https://www.bilibili.com/video/BV1td4y1P7Us/', provider: 'Bilibili', tag: '入门' },
-      { title: '霍夫斯泰德文化维度模型讲解', url: 'https://www.youtube.com/watch?v=lX7pY5nXYHY', provider: 'YouTube', tag: '理论' },
-      { title: '中国移动互联网设计观察', url: 'https://www.nngroup.com/articles/china-ux/', provider: 'NN/g', tag: 'UX' },
+      { title: '什么是文化研究？（入门）', url: 'https://www.bilibili.com/video/BV1td4y1P7Us/', provider: 'Bilibili', tag: '入门' },
+      { title: '伯明翰学派与当代文化研究', url: 'https://www.bilibili.com/video/BV1rr4y1S76L/', provider: 'Bilibili', tag: '理论' },
+      { title: '跨文化网页设计准则', url: 'https://www.nngroup.com/articles/cross-cultural-design/', provider: 'NN/g', tag: 'UX' },
     ],
     designInsights: [
       { icon: '💡', title: '设计启示：密度即诚意', content: '首屏可承载多模块，但需清晰分区；用徽章、认证、销量建立信任链。' },
@@ -92,7 +92,7 @@ export const countriesData = [
     videos: [
       { title: '个人主义与集体主义（动画）', url: 'https://www.youtube.com/watch?v=jbBtMvG8eek', provider: 'YouTube', tag: '文化' },
       { title: '跨文化可用性设计准则', url: 'https://www.nngroup.com/articles/cross-cultural-design/', provider: 'NN/g', tag: 'UX' },
-      { title: '为什么美国网站爱留白', url: 'https://www.youtube.com/watch?v=ZftSjc1hY6U', provider: 'YouTube', tag: '案例' },
+      { title: '个人主义文化（学术讲解）', url: 'https://www.youtube.com/watch?v=jbBtMvG8eek', provider: 'YouTube', tag: '理论' },
     ],
     designInsights: [
       { icon: '💡', title: '设计启示：少即是尊重', content: '核心路径单一；提供跳过、自定义、隐私开关。' },
@@ -138,8 +138,8 @@ export const countriesData = [
       { title: 'Japanese UX: Attention to Detail', source: 'Baymard Institute', year: '—', url: 'https://baymard.com/blog/japanese-ecommerce-ux', tag: 'UX 研究', note: '电商页信息架构' },
     ],
     videos: [
-      { title: '日本文化研究（课堂案例）', url: 'https://www.bilibili.com/video/BV1YG4y1B7Jh/', provider: 'Bilibili', tag: '文化' },
-      { title: '日本 UX 设计为何极度讲究', url: 'https://www.youtube.com/watch?v=s8ETUOQM4Rk', provider: 'YouTube', tag: 'UX' },
+      { title: '日本电商 UX 研究（Baymard）', url: 'https://baymard.com/blog/japanese-ecommerce-ux', provider: 'Baymard', tag: 'UX' },
+      { title: '跨文化设计准则', url: 'https://www.nngroup.com/articles/cross-cultural-design/', provider: 'NN/g', tag: 'UX' },
       { title: '霍夫斯泰德：日本维度解读', url: 'https://www.hofstede-insights.com/country-comparison/japan/', provider: 'Hofstede', tag: '数据' },
     ],
     designInsights: [
@@ -187,7 +187,7 @@ export const countriesData = [
     ],
     videos: [
       { title: 'GDPR 与 Cookie 设计要点', url: 'https://gdpr.eu/cookies/', provider: 'GDPR.eu', tag: '合规' },
-      { title: '德国用户体验研究综述', url: 'https://www.youtube.com/watch?v=2X8I77XwJn4', provider: 'YouTube', tag: 'UX' },
+      { title: '为德国用户而设计', url: 'https://www.smashingmagazine.com/2010/03/how-to-design-for-germany/', provider: 'Smashing Magazine', tag: 'UX' },
       { title: '霍夫斯泰德：德国文化维度', url: 'https://www.hofstede-insights.com/country-comparison/germany/', provider: 'Hofstede', tag: '数据' },
     ],
     designInsights: [
@@ -234,8 +234,8 @@ export const countriesData = [
     ],
     videos: [
       { title: '文化与界面信任度（讲座）', url: 'https://www.nngroup.com/articles/trust-and-culture/', provider: 'NN/g', tag: 'UX' },
-      { title: '巴西数字市场与社交商务', url: 'https://www.youtube.com/watch?v=Gv8W9XkZ8eE', provider: 'YouTube', tag: '市场' },
-      { title: '拉美设计中的色彩与情绪', url: 'https://www.bilibili.com/video/BV1QK4y1r7SW/', provider: 'Bilibili', tag: '设计' },
+      { title: '巴西数字市场概览', url: 'https://datareportal.com/reports/digital-2024-brazil', provider: 'DataReportal', tag: '市场' },
+      { title: '巴西旅游与文化（官方）', url: 'https://www.visitbrasil.com/', provider: 'Visit Brasil', tag: '文化' },
       { title: '霍夫斯泰德：巴西维度', url: 'https://www.hofstede-insights.com/country-comparison/brazil/', provider: 'Hofstede', tag: '数据' },
     ],
     designInsights: [
@@ -281,7 +281,7 @@ export const countriesData = [
     ],
     videos: [
       { title: 'Material Design RTL 官方讲解', url: 'https://m3.material.io/styles/bidi/overview', provider: 'Google', tag: '开发' },
-      { title: '中东市场 UX 设计入门', url: 'https://www.youtube.com/watch?v=0_effGx1h5s', provider: 'YouTube', tag: 'UX' },
+      { title: '中东市场设计指南', url: 'https://www.smashingmagazine.com/2010/03/how-to-design-for-the-middle-east/', provider: 'Smashing Magazine', tag: 'UX' },
       { title: '霍夫斯泰德：沙特文化维度', url: 'https://www.hofstede-insights.com/country-comparison/saudi-arabia/', provider: 'Hofstede', tag: '数据' },
     ],
     designInsights: [
@@ -328,7 +328,7 @@ export const countriesData = [
     ],
     videos: [
       { title: '为印度用户而设计（长文配套思路）', url: 'https://www.smashingmagazine.com/2014/07/designing-for-the-indian-user/', provider: 'Smashing', tag: 'UX' },
-      { title: '印度科技市场概览', url: 'https://www.youtube.com/watch?v=3Pq9blTtKfE', provider: 'YouTube', tag: '市场' },
+      { title: '为印度用户而设计', url: 'https://www.smashingmagazine.com/2014/07/designing-for-the-indian-user/', provider: 'Smashing Magazine', tag: 'UX' },
       { title: '霍夫斯泰德：印度文化维度', url: 'https://www.hofstede-insights.com/country-comparison/india/', provider: 'Hofstede', tag: '数据' },
     ],
     designInsights: [
