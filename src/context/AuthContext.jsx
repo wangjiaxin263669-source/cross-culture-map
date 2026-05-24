@@ -83,11 +83,23 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
+    setAuthNotice('');
   }, []);
+
+  const clearAuthNotice = useCallback(() => setAuthNotice(''), []);
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, authConfig, authNotice, loginSuccess, logout, refreshUser }}
+      value={{
+        user,
+        loading,
+        authConfig,
+        authNotice,
+        clearAuthNotice,
+        loginSuccess,
+        logout,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

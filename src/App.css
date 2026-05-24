@@ -1541,6 +1541,42 @@ body, html, #root {
   text-align: center;
 }
 
+.app-wallet-notice {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+.app-wallet-notice-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a7f3d0;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.app-wallet-notice-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 /* —— 顶栏用户菜单（不改变原有胶囊布局） —— */
 .right-profile-wrap {
   position: relative;

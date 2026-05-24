@@ -11,6 +11,18 @@ function getExpirableCents(user) {
   return Number.isFinite(user.dailyBonusExpirableCents) ? user.dailyBonusExpirableCents : 0;
 }
 
+/** 兼容旧版：未记录 dailyBonusExpirableCents 时，按上次发放额推算可清零金额 */
+function resolveLegacyExpirableCents(user) {
+  if (Number.isFinite(user.lastDailyGrantCents) && user.lastDailyGrantCents > 0) {
+    return user.lastDailyGrantCents;
+  }
+  const earned = user.dailyLoginBonusEarnedCents;
+  if (Number.isFinite(earned) && earned > 0 && earned <= 20) {
+    return earned;
+  }
+  return 5;
+}
+
 function appendWalletTx(db, tx) {
   db.walletTransactions.push(tx);
   if (db.walletTransactions.length > 5000) {
@@ -23,10 +35,16 @@ function appendWalletTx(db, tx) {
  * @returns {{ expiredCents: number }}
  */
 export function expireDailyLoginBonusOnUser(user, today = getTodayShanghai(), db = null) {
-  const expirable = getExpirableCents(user);
   const bonusDay = user.lastDailyBonusDate || null;
+  if (!bonusDay || bonusDay >= today) {
+    return { expiredCents: 0 };
+  }
 
-  if (expirable <= 0 || !bonusDay || bonusDay >= today) {
+  let expirable = getExpirableCents(user);
+  if (expirable <= 0) {
+    expirable = resolveLegacyExpirableCents(user);
+  }
+  if (expirable <= 0) {
     return { expiredCents: 0 };
   }
 
@@ -34,6 +52,7 @@ export function expireDailyLoginBonusOnUser(user, today = getTodayShanghai(), db
   const deduct = Math.min(expirable, before);
   user.balanceCents = before - deduct;
   user.dailyBonusExpirableCents = 0;
+  user.dailyLoginBonusEarnedCents = 0;
 
   if (deduct > 0 && db) {
     appendWalletTx(db, {
@@ -106,6 +125,8 @@ export async function tryGrantDailyLoginBonus(userId) {
     user.balanceCents = before + grantCents;
     user.lastDailyBonusDate = today;
     user.dailyBonusExpirableCents = grantCents;
+    user.lastDailyGrantCents = grantCents;
+    user.dailyLoginBonusEarnedCents = 0;
 
     appendWalletTx(db, {
       id: randomUUID(),
