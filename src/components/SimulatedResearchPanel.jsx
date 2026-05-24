@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReportMarkdown from './ReportMarkdown';
+import InterviewReplay from './InterviewReplay';
 import {
+  searchCorpus,
   generatePersonas,
   runInterview,
   synthesizeReport,
+  buildSyncToThreeStepPayload,
 } from '../services/simulatedResearchApi';
 import { downloadResearchPdf } from '../utils/exportResearchPdf';
+import { downloadResearchWord } from '../utils/exportResearchWord';
+import {
+  listPersonas,
+  listSessions,
+  savePersonaToLibrary,
+  saveSessionToLibrary,
+  deletePersonaFromLibrary,
+  deleteSessionFromLibrary,
+  getSessionById,
+} from '../storage/researchStorage';
 
 const STEPS = [
   { id: 'setup', label: '1. 研究设定' },
@@ -21,25 +34,90 @@ const DEFAULT_GUIDE = [
   '价格、社交、品牌对您决策的影响？',
 ];
 
-export default function SimulatedResearchPanel({ market, marketTitle, aiConfigured }) {
+const CORPUS_OPTIONS = [
+  { id: 'xiaohongshu', label: '小红书（精选语料）' },
+  { id: 'weibo', label: '微博' },
+  { id: 'zhihu', label: '知乎' },
+  { id: 'reddit', label: 'Reddit/英文' },
+  { id: 'web', label: '全网搜索（需 SERPER_API_KEY）' },
+];
+
+export default function SimulatedResearchPanel({
+  market,
+  marketTitle,
+  aiConfigured,
+  onSyncToThreeStepReport,
+}) {
   const [step, setStep] = useState('setup');
   const [researchTopic, setResearchTopic] = useState('');
   const [audienceCriteria, setAudienceCriteria] = useState('');
   const [personaCount, setPersonaCount] = useState(3);
   const [guideQuestions, setGuideQuestions] = useState(DEFAULT_GUIDE.join('\n'));
+  const [corpusSources, setCorpusSources] = useState(['xiaohongshu', 'weibo', 'zhihu']);
 
+  const [corpusSnippets, setCorpusSnippets] = useState([]);
+  const [corpusMeta, setCorpusMeta] = useState(null);
   const [personas, setPersonas] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [report, setReport] = useState('');
+  const [sessionId, setSessionId] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [expandedInterview, setExpandedInterview] = useState(null);
+  const [replayInterview, setReplayInterview] = useState(null);
+
+  const [savedPersonas, setSavedPersonas] = useState([]);
+  const [savedSessions, setSavedSessions] = useState([]);
+  const [showLibrary, setShowLibrary] = useState(false);
+
+  const refreshLibrary = useCallback(() => {
+    setSavedPersonas(listPersonas());
+    setSavedSessions(listSessions());
+  }, []);
+
+  useEffect(() => {
+    refreshLibrary();
+  }, [refreshLibrary]);
 
   const guideList = guideQuestions
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
+
+  const marketId = market?.id || market?.parentId;
+
+  const toggleSource = (id) => {
+    setCorpusSources((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
+  const fetchCorpus = async () => {
+    if (!researchTopic.trim()) return [];
+    setProgress('检索小红书/微博/知乎等外部语料…');
+    const { snippets, meta } = await searchCorpus({
+      query: `${researchTopic} ${audienceCriteria}`.trim(),
+      marketId,
+      sources: corpusSources,
+    });
+    setCorpusSnippets(snippets);
+    setCorpusMeta(meta);
+    return snippets;
+  };
+
+  const persistSession = (payload) => {
+    const item = saveSessionToLibrary({
+      id: sessionId || undefined,
+      marketId,
+      marketTitle,
+      ...payload,
+    });
+    setSessionId(item.id);
+    refreshLibrary();
+    return item;
+  };
 
   const handleGeneratePersonas = async () => {
     if (!researchTopic.trim()) {
@@ -48,18 +126,30 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
     }
     setLoading(true);
     setError('');
-    setProgress('正在构建当地受访者人设…');
     try {
+      const snippets = await fetchCorpus();
+      setProgress('正在结合外部语料构建受访者人设…');
       const list = await generatePersonas({
         researchTopic,
         audienceCriteria,
         personaCount,
         country: market,
+        corpusSnippets: snippets,
       });
       setPersonas(list);
       setInterviews([]);
       setReport('');
       setStep('personas');
+      persistSession({
+        researchTopic,
+        audienceCriteria,
+        guideQuestions,
+        corpusSources,
+        corpusSnippets: snippets,
+        personas: list,
+        interviews: [],
+        report: '',
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -74,31 +164,46 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
     setError('');
     setInterviews([]);
     const results = [];
+    const corpusContext = corpusSnippets
+      .map((s) => `[${s.sourceLabel}] ${s.title}: ${s.content}`)
+      .join('\n');
 
     try {
       for (let i = 0; i < personas.length; i += 1) {
         const p = personas[i];
-        setProgress(`模拟访谈中 (${i + 1}/${personas.length})：${p.name}…`);
+        setProgress(`模拟访谈 (${i + 1}/${personas.length})：${p.name}…`);
         const interview = await runInterview({
           persona: p,
           researchTopic,
           guideQuestions: guideList,
           country: market,
+          corpusContext,
         });
         results.push(interview);
         setInterviews([...results]);
       }
       setStep('interviews');
-      setProgress('正在汇总洞察报告…');
+      setProgress('正在汇总调研报告…');
       const md = await synthesizeReport({
         researchTopic,
         audienceCriteria,
         personas,
         interviews: results,
         country: market,
+        corpusSnippets,
       });
       setReport(md);
       setStep('report');
+      persistSession({
+        researchTopic,
+        audienceCriteria,
+        guideQuestions,
+        corpusSources,
+        corpusSnippets,
+        personas,
+        interviews: results,
+        report: md,
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -107,8 +212,73 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
     }
   };
 
+  const handleSavePersona = (p) => {
+    savePersonaToLibrary({
+      persona: p,
+      marketId,
+      marketTitle,
+      researchTopic,
+      corpusSnippets,
+    });
+    refreshLibrary();
+  };
+
+  const handleLoadSession = (id) => {
+    const s = getSessionById(id);
+    if (!s) return;
+    setSessionId(s.id);
+    setResearchTopic(s.researchTopic || '');
+    setAudienceCriteria(s.audienceCriteria || '');
+    setGuideQuestions(s.guideQuestions || DEFAULT_GUIDE.join('\n'));
+    setCorpusSources(s.corpusSources || ['xiaohongshu', 'weibo', 'zhihu']);
+    setCorpusSnippets(s.corpusSnippets || []);
+    setPersonas(s.personas || []);
+    setInterviews(s.interviews || []);
+    setReport(s.report || '');
+    if (s.report) setStep('report');
+    else if (s.interviews?.length) setStep('interviews');
+    else if (s.personas?.length) setStep('personas');
+    else setStep('setup');
+    setShowLibrary(false);
+  };
+
+  const handleUseSavedPersona = (entry) => {
+    setPersonas((prev) => {
+      const exists = prev.some((p) => p.id === entry.persona.id);
+      if (exists) return prev;
+      return [...prev, entry.persona];
+    });
+    if (entry.researchTopic) setResearchTopic(entry.researchTopic);
+    setStep('personas');
+    setShowLibrary(false);
+  };
+
+  const handleSyncThreeStep = async (autoGenerate = false) => {
+    if (!report && !interviews.length) {
+      setError('请先完成模拟访谈或生成报告');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const payload = await buildSyncToThreeStepPayload({
+        researchTopic,
+        audienceCriteria,
+        marketTitle,
+        personas,
+        interviews,
+        simReport: report,
+        corpusSnippets,
+      });
+      onSyncToThreeStepReport?.(payload, { autoGenerate });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportPdf = () => {
-    if (!report) return;
     downloadResearchPdf({
       title: '模拟用户调研报告',
       subtitle: researchTopic,
@@ -117,11 +287,23 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
     });
   };
 
+  const handleExportWord = () => {
+    downloadResearchWord({
+      title: '模拟用户调研报告',
+      subtitle: researchTopic,
+      markdown: report,
+      marketLabel: marketTitle,
+      interviews,
+    });
+  };
+
   const resetAll = () => {
     setStep('setup');
     setPersonas([]);
     setInterviews([]);
     setReport('');
+    setCorpusSnippets([]);
+    setSessionId(null);
     setError('');
     setProgress('');
   };
@@ -134,9 +316,69 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
           模拟调研 · AI 人设访谈
         </h3>
         <p className="sim-research-desc">
-          参考 atypica.AI：为「主观世界」建模——先构建当地受访者人设，再模拟一对一深度访谈，最后生成可导出的调研报告。
+          参考 atypica.AI：外接小红书/微博/知乎语料 → 构建人设 → 模拟访谈回放 → 导出 PDF/Word → 一键联动右侧三步分析报告。
         </p>
+        <button
+          type="button"
+          className="sim-btn-ghost sim-library-toggle"
+          onClick={() => setShowLibrary(!showLibrary)}
+        >
+          {showLibrary ? '收起人设库' : `人设库 / 历史会话 (${savedPersonas.length + savedSessions.length})`}
+        </button>
       </div>
+
+      {showLibrary && (
+        <div className="sim-library-panel">
+          <h4 className="sim-library-title">已保存人设</h4>
+          {savedPersonas.length === 0 && <p className="sim-hint">暂无，可在人设卡片上点击「存入人设库」</p>}
+          {savedPersonas.map((entry) => (
+            <div key={entry.id} className="sim-library-item">
+              <span>
+                <strong>{entry.persona?.name}</strong> · {entry.marketTitle}
+              </span>
+              <div className="sim-library-actions">
+                <button type="button" className="sim-link-btn" onClick={() => handleUseSavedPersona(entry)}>
+                  选用
+                </button>
+                <button
+                  type="button"
+                  className="sim-link-btn danger"
+                  onClick={() => {
+                    deletePersonaFromLibrary(entry.id);
+                    refreshLibrary();
+                  }}
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          ))}
+          <h4 className="sim-library-title">历史调研会话</h4>
+          {savedSessions.map((s) => (
+            <div key={s.id} className="sim-library-item">
+              <span>
+                {s.researchTopic?.slice(0, 40)}… · {s.marketTitle} ·{' '}
+                {new Date(s.savedAt).toLocaleDateString()}
+              </span>
+              <div className="sim-library-actions">
+                <button type="button" className="sim-link-btn" onClick={() => handleLoadSession(s.id)}>
+                  加载
+                </button>
+                <button
+                  type="button"
+                  className="sim-link-btn danger"
+                  onClick={() => {
+                    deleteSessionFromLibrary(s.id);
+                    refreshLibrary();
+                  }}
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!aiConfigured && (
         <div className="ai-error">请先配置 DEEPSEEK_API_KEY 后使用模拟调研</div>
@@ -148,9 +390,7 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
           return (
             <span
               key={s.id}
-              className={`sim-step-tab ${step === s.id ? 'active' : ''} ${
-                currentIdx > idx ? 'done' : ''
-              }`}
+              className={`sim-step-tab ${step === s.id ? 'active' : ''} ${currentIdx > idx ? 'done' : ''}`}
             >
               {s.label}
             </span>
@@ -173,9 +413,38 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
             className="sim-textarea"
             value={audienceCriteria}
             onChange={(e) => setAudienceCriteria(e.target.value)}
-            placeholder="例：18–28 岁、玩过 ACG、有二手交易经验、主要用 iPhone"
+            placeholder="例：18–28 岁、玩过 ACG、有二手交易经验"
             rows={2}
           />
+          <label className="sim-label">外部语料来源（构建人设前自动检索）</label>
+          <div className="sim-corpus-sources">
+            {CORPUS_OPTIONS.map((opt) => (
+              <label key={opt.id} className="sim-corpus-check">
+                <input
+                  type="checkbox"
+                  checked={corpusSources.includes(opt.id)}
+                  onChange={() => toggleSource(opt.id)}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          {corpusMeta && (
+            <p className="sim-hint">
+              语料库 {corpusMeta.snippetCount ?? '—'} 条精选
+              {corpusMeta.serperConfigured ? ' · 全网搜索已启用' : ' · 配置 SERPER_API_KEY 可启用全网/小红书搜索'}
+            </p>
+          )}
+          {corpusSnippets.length > 0 && (
+            <div className="sim-corpus-preview">
+              <span className="sim-label">已检索语料 ({corpusSnippets.length})</span>
+              {corpusSnippets.slice(0, 3).map((s, i) => (
+                <p key={i} className="sim-corpus-snippet">
+                  [{s.sourceLabel}] {s.title}：{s.content.slice(0, 80)}…
+                </p>
+              ))}
+            </div>
+          )}
           <label className="sim-label">受访者人数（2–5）</label>
           <select
             className="sim-select"
@@ -188,7 +457,7 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
               </option>
             ))}
           </select>
-          <label className="sim-label">访谈提纲（每行一题，可改）</label>
+          <label className="sim-label">访谈提纲（每行一题）</label>
           <textarea
             className="sim-textarea sim-textarea-sm"
             value={guideQuestions}
@@ -201,14 +470,14 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
             disabled={loading || !aiConfigured}
             onClick={handleGeneratePersonas}
           >
-            {loading ? progress || '生成中…' : '生成受访者人设 →'}
+            {loading ? progress || '处理中…' : '检索语料并生成人设 →'}
           </button>
         </div>
       )}
 
       {step === 'personas' && (
         <div className="sim-step-body">
-          <p className="sim-hint">以下为 AI 构建的当地受访者，将依次进行模拟深度访谈。</p>
+          <p className="sim-hint">人设已结合外部语料与 {marketTitle} 文化数据生成。</p>
           <div className="sim-persona-grid">
             {personas.map((p) => (
               <article key={p.id} className="sim-persona-card">
@@ -221,15 +490,12 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
                 </h4>
                 <p className="sim-persona-oneliner">{p.oneLiner}</p>
                 <p className="sim-persona-bg">{p.background}</p>
-                {p.values?.length > 0 && (
-                  <p className="sim-tags">
-                    {p.values.map((v) => (
-                      <span key={v} className="sim-tag">
-                        {v}
-                      </span>
-                    ))}
-                  </p>
+                {p.corpusInspiration && (
+                  <p className="sim-corpus-inspire">📎 语料：{p.corpusInspiration}</p>
                 )}
+                <button type="button" className="sim-link-btn" onClick={() => handleSavePersona(p)}>
+                  存入人设库
+                </button>
               </article>
             ))}
           </div>
@@ -243,7 +509,7 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
               disabled={loading || !aiConfigured}
               onClick={handleRunInterviews}
             >
-              {loading ? progress || '访谈进行中…' : '开始模拟访谈并生成报告 →'}
+              {loading ? progress || '进行中…' : '开始模拟访谈并生成报告 →'}
             </button>
           </div>
         </div>
@@ -251,22 +517,29 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
 
       {(step === 'interviews' || step === 'report') && interviews.length > 0 && (
         <div className="sim-step-body">
-          <p className="sim-hint">
-            已完成 {interviews.length} 场模拟访谈（访谈员 ↔ 受访者对话）
-          </p>
+          <p className="sim-hint">已完成 {interviews.length} 场模拟访谈 · 可回放全过程</p>
           {interviews.map((iv) => (
             <article key={iv.personaId} className="sim-interview-card">
-              <button
-                type="button"
-                className="sim-interview-toggle"
-                onClick={() =>
-                  setExpandedInterview(expandedInterview === iv.personaId ? null : iv.personaId)
-                }
-              >
-                <strong>{iv.personaName}</strong>
-                <span>{iv.summary}</span>
-                <span className="sim-chevron">{expandedInterview === iv.personaId ? '▲' : '▼'}</span>
-              </button>
+              <div className="sim-interview-actions">
+                <button
+                  type="button"
+                  className="sim-link-btn"
+                  onClick={() => setReplayInterview(iv)}
+                >
+                  ▶ 回放访谈
+                </button>
+                <button
+                  type="button"
+                  className="sim-link-btn"
+                  onClick={() =>
+                    setExpandedInterview(expandedInterview === iv.personaId ? null : iv.personaId)
+                  }
+                >
+                  {expandedInterview === iv.personaId ? '收起笔录' : '查看笔录'}
+                </button>
+              </div>
+              <strong>{iv.personaName}</strong>
+              <span className="sim-interview-summary">{iv.summary}</span>
               {expandedInterview === iv.personaId && (
                 <div className="sim-transcript">
                   {(iv.transcript || []).map((t, i) => (
@@ -279,13 +552,6 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
                   ))}
                 </div>
               )}
-              {iv.keyQuotes?.length > 0 && (
-                <div className="sim-quotes">
-                  {iv.keyQuotes.map((q) => (
-                    <blockquote key={q}>{q}</blockquote>
-                  ))}
-                </div>
-              )}
             </article>
           ))}
         </div>
@@ -293,9 +559,28 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
 
       {step === 'report' && report && (
         <div className="sim-step-body">
-          <div className="sim-actions-row sim-actions-top">
+          <div className="sim-actions-row sim-actions-top sim-actions-wrap">
             <button type="button" className="sim-btn-primary sim-btn-pdf" onClick={handleExportPdf}>
-              导出 PDF 报告
+              导出 PDF
+            </button>
+            <button type="button" className="sim-btn-primary sim-btn-word" onClick={handleExportWord}>
+              导出 Word
+            </button>
+            <button
+              type="button"
+              className="sim-btn-primary sim-btn-sync"
+              disabled={loading}
+              onClick={() => handleSyncThreeStep(false)}
+            >
+              填入三步分析
+            </button>
+            <button
+              type="button"
+              className="sim-btn-primary sim-btn-sync-auto"
+              disabled={loading}
+              onClick={() => handleSyncThreeStep(true)}
+            >
+              联动并生成三步报告
             </button>
             <button type="button" className="sim-btn-ghost" onClick={resetAll}>
               新建调研
@@ -307,7 +592,7 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
         </div>
       )}
 
-      {loading && progress && step !== 'setup' && (
+      {loading && progress && (
         <div className="sim-progress-bar">
           <div className="sim-progress-pulse" />
           <span>{progress}</span>
@@ -315,6 +600,10 @@ export default function SimulatedResearchPanel({ market, marketTitle, aiConfigur
       )}
 
       {error && <div className="ai-error">{error}</div>}
+
+      {replayInterview && (
+        <InterviewReplay interview={replayInterview} onClose={() => setReplayInterview(null)} />
+      )}
     </section>
   );
 }
