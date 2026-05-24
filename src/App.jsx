@@ -17,7 +17,9 @@ import './App.css';
 
 function App() {
   const globeEl = useRef();
+  const threeStepSectionRef = useRef(null);
   const [selectedMarket, setSelectedMarket] = useState(null);
+  const [threeStepHighlight, setThreeStepHighlight] = useState(false);
 
   const [userIdea, setUserIdea] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -112,6 +114,29 @@ function App() {
     }
     if (country) {
       handleLabelClick(country);
+    }
+  };
+
+  const handleSyncFromSimResearch = async (productIdea, { autoGenerate = false } = {}) => {
+    setUserIdea(productIdea);
+    setAiError('');
+    setThreeStepHighlight(true);
+    setTimeout(() => setThreeStepHighlight(false), 4000);
+    threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (autoGenerate && productIdea?.trim() && selectedMarket) {
+      setIsGenerating(true);
+      setAiResult('');
+      try {
+        const report = await generateReport({
+          productIdea,
+          country: selectedMarket,
+        });
+        setAiResult(report);
+      } catch (err) {
+        setAiError(err.message || '报告生成失败');
+      } finally {
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -330,9 +355,14 @@ function App() {
             market={selectedMarket}
             marketTitle={displayTitle}
             aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
+            onSyncToThreeStepReport={handleSyncFromSimResearch}
           />
 
-          <div style={{ marginTop: '30px' }}>
+          <div
+            ref={threeStepSectionRef}
+            className={`three-step-section ${threeStepHighlight ? 'three-step-highlight' : ''}`}
+            style={{ marginTop: '30px' }}
+          >
             <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
               ✨ DeepSeek 跨文化智能分析
             </h3>
