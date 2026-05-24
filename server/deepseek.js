@@ -159,7 +159,7 @@ function wrapApiError(err, data) {
   return new Error(msg || 'AI 请求失败');
 }
 
-function buildCountryContext(country) {
+export function buildCountryContext(country) {
   if (!country) return '';
   const dims = country.radarData
     ?.map((d) => `${d.name}: ${d.score}`)
@@ -205,7 +205,7 @@ function normalizeHistory(history) {
     .slice(-20);
 }
 
-async function chatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS } = {}) {
+export async function runChatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS, temperature = 0.6 } = {}) {
   const apiKey = getApiKey();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -221,7 +221,7 @@ async function chatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS } = {}) {
       body: JSON.stringify({
         model: MODEL,
         messages,
-        temperature: 0.6,
+        temperature,
         max_tokens: maxTokens,
       }),
       signal: controller.signal,
@@ -265,7 +265,7 @@ export async function generateChatReply({ message, history = [], country = null 
   ];
 
   try {
-    return await chatCompletion(messages, { maxTokens: CHAT_MAX_TOKENS });
+    return await runChatCompletion(messages, { maxTokens: CHAT_MAX_TOKENS });
   } catch (err) {
     if (err.message?.startsWith('未配置') || err.message?.startsWith('DEEPSEEK')) throw err;
     throw wrapApiError(err);
@@ -304,7 +304,7 @@ ${productIdea}
     { role: 'user', content: userContent },
   ];
 
-  return chatCompletion(messages, { maxTokens: REPORT_SECTION_MAX_TOKENS });
+  return runChatCompletion(messages, { maxTokens: REPORT_SECTION_MAX_TOKENS });
 }
 
 /** Netlify：单次调用 + 精简 SKILL，控制在 60s 内 */
@@ -337,7 +337,7 @@ ${productIdea}
     { role: 'user', content: userContent },
   ];
 
-  return chatCompletion(messages, { maxTokens: REPORT_SINGLE_MAX_TOKENS });
+  return runChatCompletion(messages, { maxTokens: REPORT_SINGLE_MAX_TOKENS });
 }
 
 /** 本地：并行两段；Serverless：单次调用防 504 */
