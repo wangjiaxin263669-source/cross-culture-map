@@ -14,7 +14,7 @@ let cachedSkillBody = null;
 let cachedSkillSource = null;
 
 /** Serverless 下截断上限；整合版 SKILL 较长，前置章节优先保留 */
-const SERVERLESS_SKILL_MAX = 9500;
+const SERVERLESS_SKILL_MAX = 11000;
 
 function isServerlessRuntime() {
   return Boolean(
