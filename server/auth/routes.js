@@ -18,14 +18,14 @@ import { hashPassword, verifyPassword, validatePassword, validateUsername } from
 import { signToken } from './jwt.js';
 import { buildWechatLoginUrl, exchangeWechatCode, getWechatConfig } from './wechat.js';
 import { requireAuth } from './middleware.js';
-import { creditUserBalance } from '../db/store.js';
 import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
 import { tryGrantDailyLoginBonus } from '../wallet/dailyBonus.js';
 
 const router = Router();
 
 async function authResponse(user, extras = {}) {
-  const safe = await sanitizeUser(user);
+  const needsLookup = user?.passwordHash != null || !Number.isFinite(user?.balanceCents);
+  const safe = needsLookup ? await sanitizeUser(user) : user;
   const token = signToken(safe);
   return { user: safe, token, ...extras };
 }

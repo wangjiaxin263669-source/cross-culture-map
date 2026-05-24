@@ -142,12 +142,17 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
                 <span>（到账 ¥{payInfo.totalCreditYuan}）</span>
               )}
             </p>
-            <div className="recharge-qr-wrap">
-              <img
-                src={payInfo.qrImageUrl}
-                alt="微信收款码"
-                className="recharge-qr-img"
-              />
+            <div className="recharge-qr-card">
+              <p className="recharge-qr-title">扫码支付</p>
+              <div className="recharge-qr-wrap">
+                <img
+                  src={payInfo.qrImageUrl}
+                  alt="支付二维码"
+                  className="recharge-qr-img"
+                />
+                <span className="recharge-qr-mask" aria-hidden="true" />
+              </div>
+              <p className="recharge-qr-sub">请使用微信扫一扫完成付款</p>
             </div>
             <p className="recharge-remark">
               转账备注（必填）：

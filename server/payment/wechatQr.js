@@ -49,9 +49,9 @@ export function createWechatQrPayment({ req, order }) {
     totalCreditYuan: (order.totalCreditCents / 100).toFixed(2),
     ownerName: cfg.ownerName,
     instructions: [
-      `请用微信扫码，向「${cfg.ownerName}」支付 ¥${amountYuan}`,
-      `转账备注请填写：${buildPayRemark(order.id)}`,
-      '支付完成后点击「我已完成转账」，管理员核实后余额到账',
+      `请使用微信扫一扫，支付 ¥${amountYuan}`,
+      `转账备注请填写：${buildPayRemark(order.id)}（必填）`,
+      '支付完成后点击「我已完成转账」，核实到账后余额将更新',
     ],
   };
 }

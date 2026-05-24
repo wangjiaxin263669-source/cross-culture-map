@@ -72,7 +72,9 @@ export async function createUser({
 export async function sanitizeUser(user) {
   if (!user) return null;
   const { passwordHash, usernameLower, ...safe } = user;
-  const balanceCents = await getUserBalanceCents(user.id);
+  const balanceCents = Number.isFinite(user.balanceCents)
+    ? user.balanceCents
+    : await getUserBalanceCents(user.id);
   safe.balanceCents = balanceCents;
   safe.balanceYuan = (balanceCents / 100).toFixed(2);
   return safe;

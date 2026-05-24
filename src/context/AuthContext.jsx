@@ -65,9 +65,7 @@ export function AuthProvider({ children }) {
   const loginSuccess = useCallback((data) => {
     setToken(data.token);
     setUser(data.user);
-    if (data.newUserBonus?.granted) {
-      setAuthNotice(`新用户已赠送 ¥${data.newUserBonus.amountYuan} 体验额度`);
-    } else if (data.dailyBonus?.granted) {
+    if (data.dailyBonus?.granted) {
       setAuthNotice(`每日登录已赠送 ¥${(data.dailyBonus.amountCents / 100).toFixed(2)}`);
     }
   }, []);
