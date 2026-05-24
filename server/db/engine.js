@@ -1,5 +1,7 @@
 /**
- * 持久化引擎：Netlify Blobs（免费、线上永久） / 本地 JSON 文件
+ * 持久化引擎：
+ * - 本地 npm run dev → JSON 文件
+ * - Netlify 线上 → Netlify Blobs（需 connectLambda）
  */
 import fs from 'fs';
 import path from 'path';
@@ -34,17 +36,12 @@ function isLambda() {
   return Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
 }
 
-/** 线上 Netlify Functions 使用 Blobs；本地 npm run dev 用文件 */
+/** 本地开发一律用文件；仅 Lambda（Netlify Functions）用 Blobs */
 export function useNetlifyBlobs() {
   if (process.env.STORAGE_BACKEND === 'file') return false;
-  if (process.env.STORAGE_BACKEND === 'blobs') return true;
   if (!isLambda()) return false;
-  return Boolean(
-    process.env.NETLIFY === 'true' ||
-      process.env.NETLIFY ||
-      process.env.SITE_ID ||
-      process.env.NETLIFY_IMAGES_CDN_DOMAIN,
-  );
+  if (process.env.STORAGE_BACKEND === 'blobs') return true;
+  return Boolean(process.env.NETLIFY || process.env.SITE_ID || process.env.NETLIFY_BLOBS_CONTEXT);
 }
 
 export function getStorageBackend() {
@@ -78,16 +75,30 @@ function writeDbFile(data) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-async function readDbBlobs() {
+async function getBlobStore() {
   const { getStore } = await import('@netlify/blobs');
-  const store = getStore({ name: BLOB_STORE, consistency: 'strong' });
+
+  const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
+  const token =
+    process.env.NETLIFY_AUTH_TOKEN ||
+    process.env.NETLIFY_API_TOKEN ||
+    process.env.NETLIFY_PAT;
+
+  if (siteID && token) {
+    return getStore({ name: BLOB_STORE, siteID, token, consistency: 'strong' });
+  }
+
+  return getStore({ name: BLOB_STORE, consistency: 'strong' });
+}
+
+async function readDbBlobs() {
+  const store = await getBlobStore();
   const data = await store.get(BLOB_KEY, { type: 'json' });
   return normalizeDb(data);
 }
 
 async function writeDbBlobs(data) {
-  const { getStore } = await import('@netlify/blobs');
-  const store = getStore({ name: BLOB_STORE, consistency: 'strong' });
+  const store = await getBlobStore();
   await store.setJSON(BLOB_KEY, data);
 }
 
@@ -97,7 +108,9 @@ export async function readDb() {
       return await readDbBlobs();
     } catch (err) {
       console.error('[db] Netlify Blobs read failed:', err.message);
-      throw err;
+      throw new Error(
+        '数据存储暂时不可用。若为本机开发请使用 npm run dev；若为线上站点请重新部署后再试。',
+      );
     }
   }
   return readDbFile();

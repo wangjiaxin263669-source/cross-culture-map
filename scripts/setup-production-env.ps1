@@ -15,3 +15,6 @@ if ($content -notmatch 'JWT_SECRET=') {
 if ($content -notmatch 'PAYMENT_PROVIDER=') {
   Add-Content $envPath "`nPAYMENT_PROVIDER=mock"
 }
+if ($content -notmatch 'STORAGE_BACKEND=') {
+  Add-Content $envPath "`nSTORAGE_BACKEND=file"
+}
