@@ -31,7 +31,7 @@ function App() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'ai',
-      text: '您好！我是跨文化研究设计专家。点击地球上的国家标签，或中国省、美国州、日本县等地区标签，阅读文化故事与视频；再告诉我您的产品构想，我会结合当地文化为您分析。',
+      text: '您好！我是拥有 20 年经验的跨文化产品设计专家，专助中国团队出海。请先点击地球仪选定目标国家/地区，再说明：产品是什么、给谁用、什么场景、要达成什么。我将按「发现问题 → 分析文化根因（含语用学如面子理论）→ 应对策略/案例总结」三步为您分析。',
     },
   ]);
   const [aiHealth, setAiHealth] = useState(null);
@@ -339,7 +339,7 @@ function App() {
             <textarea
               value={userIdea}
               onChange={(e) => setUserIdea(e.target.value)}
-              placeholder={`描述您在${selectedMarket.title}市场的产品构想...`}
+              placeholder={`例：产品=二次元电商App；人群=18-25岁；场景=移动端购物；目标=进入${selectedMarket.title}市场。可补充沟通障碍或案例…`}
               style={{
                 width: '100%', height: '70px', borderRadius: '8px', padding: '12px',
                 boxSizing: 'border-box', background: 'rgba(0,0,0,0.4)', color: 'white',
@@ -359,7 +359,7 @@ function App() {
                 fontWeight: '600', fontSize: '13px', transition: 'all 0.3s',
               }}
             >
-              {isGenerating ? 'AI 生成报告中（约 20–40 秒，请勿关闭）…' : '生成本地化设计报告 ➔'}
+              {isGenerating ? 'AI 生成报告中（约 20–40 秒，请勿关闭）…' : '生成跨文化三步分析报告 ➔'}
             </button>
 
             {aiError && <div className="ai-error">{aiError}</div>}
