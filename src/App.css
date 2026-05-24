@@ -1693,3 +1693,74 @@ body, html, #root {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.recharge-wechat-step {
+  margin-bottom: 16px;
+}
+.recharge-wechat-amount {
+  text-align: center;
+  color: #e2e8f0;
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.recharge-wechat-amount strong {
+  color: #00f0ff;
+  font-size: 22px;
+}
+.recharge-qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.recharge-qr-img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+}
+.recharge-remark {
+  text-align: center;
+  font-size: 13px;
+  color: #cbd5e1;
+  margin: 0 0 12px;
+}
+.recharge-remark-code {
+  display: inline-block;
+  margin: 0 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.12);
+  color: #00f0ff;
+  font-weight: 700;
+  font-family: monospace;
+  cursor: pointer;
+}
+.recharge-instructions {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #8da4c4;
+  line-height: 1.6;
+}
+.recharge-pay-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.recharge-back {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.recharge-success-block {
+  font-size: 13px;
+  color: #6ee7b7;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}

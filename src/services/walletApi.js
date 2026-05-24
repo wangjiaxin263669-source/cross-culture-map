@@ -36,9 +36,20 @@ export async function fetchBalance() {
   return api('/api/wallet/balance');
 }
 
-export async function createRechargeOrder(packageId, payType = 'alipay') {
+export async function createRechargeOrder(packageId, payType = 'wxpay') {
   return api('/api/wallet/recharge/create', {
     method: 'POST',
     body: JSON.stringify({ packageId, payType }),
   });
+}
+
+export async function submitRechargePaid(orderId) {
+  return api('/api/wallet/recharge/submit-paid', {
+    method: 'POST',
+    body: JSON.stringify({ orderId }),
+  });
+}
+
+export async function fetchRechargeStatus(orderId) {
+  return api(`/api/wallet/recharge/status/${orderId}`);
 }

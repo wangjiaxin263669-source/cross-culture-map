@@ -11,9 +11,9 @@ export function AuthProvider({ children }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const { user: u } = await fetchMe();
-      setUser(u);
-      return u;
+      const data = await fetchMe();
+      setUser(data.user);
+      return data;
     } catch {
       setToken(null);
       setUser(null);
@@ -38,6 +38,10 @@ export function AuthProvider({ children }) {
       window.history.replaceState({}, '', window.location.pathname);
       setAuthNotice('充值成功，余额已更新');
     }
+    if (params.get('daily_bonus') === '1') {
+      window.history.replaceState({}, '', window.location.pathname);
+      setAuthNotice('每日登录已赠送 ¥0.50 到您的账户');
+    }
 
     (async () => {
       try {
@@ -48,7 +52,12 @@ export function AuthProvider({ children }) {
       } catch {
         /* ignore */
       }
-      await refreshUser();
+      const meData = await refreshUser();
+      if (meData?.dailyBonus?.granted) {
+        setAuthNotice(
+          `每日登录已赠送 ¥${(meData.dailyBonus.amountCents / 100).toFixed(2)}`,
+        );
+      }
       setLoading(false);
     })();
   }, [refreshUser]);
@@ -56,6 +65,11 @@ export function AuthProvider({ children }) {
   const loginSuccess = useCallback((data) => {
     setToken(data.token);
     setUser(data.user);
+    if (data.newUserBonus?.granted) {
+      setAuthNotice(`新用户已赠送 ¥${data.newUserBonus.amountYuan} 体验额度`);
+    } else if (data.dailyBonus?.granted) {
+      setAuthNotice(`每日登录已赠送 ¥${(data.dailyBonus.amountCents / 100).toFixed(2)}`);
+    }
   }, []);
 
   const logout = useCallback(() => {

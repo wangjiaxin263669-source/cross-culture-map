@@ -1,0 +1,13 @@
+请将您的微信收款码图片命名为 wechat-pay-qr.png 放在本目录（public/）。
+
+或在项目根目录运行：
+  .\scripts\setup-wechat-pay.ps1
+
+然后 Netlify 环境变量设置：
+  PAYMENT_PROVIDER=wechat_qr
+  WECHAT_PAY_QR_URL=/wechat-pay-qr.png
+  RECHARGE_ADMIN_SECRET=随机长字符串（用于确认入账）
+  NEW_USER_BONUS_CENTS=500
+  DAILY_LOGIN_BONUS_CENTS=50
+
+（若 Netlify 里已有 NEW_USER_BONUS_CENTS=50，请删除或改为 500）

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createUser,
+  findUserById,
   findUserByUsername,
   findUserByWechatOpenId,
   sanitizeUser,
@@ -19,13 +20,14 @@ import { buildWechatLoginUrl, exchangeWechatCode, getWechatConfig } from './wech
 import { requireAuth } from './middleware.js';
 import { creditUserBalance } from '../db/store.js';
 import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
+import { tryGrantDailyLoginBonus } from '../wallet/dailyBonus.js';
 
 const router = Router();
 
-async function authResponse(user) {
+async function authResponse(user, extras = {}) {
   const safe = await sanitizeUser(user);
   const token = signToken(safe);
-  return { user: safe, token };
+  return { user: safe, token, ...extras };
 }
 
 router.post('/register', async (req, res) => {
@@ -45,11 +47,18 @@ router.post('/register', async (req, res) => {
     if (NEW_USER_BONUS_CENTS > 0) {
       await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
         type: 'bonus',
-        note: '新用户赠送额度',
+        note: '新用户注册赠送 ¥5',
       });
     }
     const fresh = await findUserByUsername(username);
-    res.json(await authResponse(fresh));
+    res.json(
+      await authResponse(fresh, {
+        newUserBonus:
+          NEW_USER_BONUS_CENTS > 0
+            ? { granted: true, amountYuan: (NEW_USER_BONUS_CENTS / 100).toFixed(2) }
+            : null,
+      }),
+    );
   } catch (err) {
     res.status(400).json({ error: err.message || '注册失败' });
   }
@@ -69,14 +78,20 @@ router.post('/login', async (req, res) => {
     if (!ok) {
       return res.status(401).json({ error: '账号或密码错误' });
     }
-    res.json(await authResponse(user));
+    const dailyBonus = await tryGrantDailyLoginBonus(user.id);
+    const fresh = await findUserById(user.id);
+    res.json(await authResponse(fresh, { dailyBonus }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/me', requireAuth, (req, res) => {
-  res.json({ user: req.user });
+router.get('/me', requireAuth, async (req, res) => {
+  const dailyBonus = await tryGrantDailyLoginBonus(req.user.id);
+  const user = dailyBonus.granted
+    ? await sanitizeUser(await findUserById(req.user.id))
+    : req.user;
+  res.json({ user, dailyBonus });
 });
 
 router.get('/wechat/url', (_req, res) => {
@@ -119,13 +134,18 @@ router.get('/wechat/callback', async (req, res) => {
       if (NEW_USER_BONUS_CENTS > 0) {
         await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
           type: 'bonus',
-          note: '新用户赠送额度',
+          note: '新用户注册赠送 ¥5',
         });
         user = await findUserByWechatOpenId(wx.openid);
       }
     }
-    const token = signToken(await sanitizeUser(user));
-    res.redirect(`${frontend}?token=${encodeURIComponent(token)}`);
+    const dailyBonus = await tryGrantDailyLoginBonus(user.id);
+    const freshUser = dailyBonus.granted
+      ? await findUserById(user.id)
+      : user;
+    const token = signToken(await sanitizeUser(freshUser));
+    const bonusQuery = dailyBonus.granted ? '&daily_bonus=1' : '';
+    res.redirect(`${frontend}?token=${encodeURIComponent(token)}${bonusQuery}`);
   } catch (err) {
     res.redirect(`${frontend}?auth_error=${encodeURIComponent(err.message)}`);
   }

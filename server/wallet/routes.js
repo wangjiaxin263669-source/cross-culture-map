@@ -3,7 +3,11 @@ import {
   listWalletTransactions,
   findRechargeOrder,
   createRechargeOrder,
+  markRechargeOrderAwaitingConfirm,
+  listRechargeOrdersForAdmin,
+  completeRechargeOrder,
 } from '../db/store.js';
+import { requireRechargeAdmin } from './admin.js';
 import { requireAuth } from '../auth/middleware.js';
 import { getWalletPublicConfig, RECHARGE_PACKAGES } from './config.js';
 import { getWalletSnapshot } from './billing.js';
@@ -49,6 +53,20 @@ router.post('/recharge/create', requireAuth, async (req, res) => {
 
     const payment = await createPayment({ req, order, payType });
 
+    if (payment.mode === 'wechat_qr') {
+      return res.json({
+        orderId: order.id,
+        mode: 'wechat_qr',
+        qrImageUrl: payment.qrImageUrl,
+        payRemark: payment.payRemark,
+        amountYuan: payment.amountYuan,
+        totalCreditYuan: payment.totalCreditYuan,
+        ownerName: payment.ownerName,
+        instructions: payment.instructions,
+        status: 'pending',
+      });
+    }
+
     if (payment.mode === 'mock') {
       const result = await completeMockOrder(order.id);
       const snapshot = await getWalletSnapshot(req.user.id);
@@ -79,6 +97,42 @@ router.get('/recharge/status/:orderId', requireAuth, async (req, res) => {
     return res.status(404).json({ error: '订单不存在' });
   }
   res.json({ order });
+});
+
+/** 用户扫码付款后提交，等待管理员核实入账 */
+router.post('/recharge/submit-paid', requireAuth, async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ error: '缺少订单号' });
+    const order = await markRechargeOrderAwaitingConfirm(orderId, req.user.id);
+    res.json({
+      order,
+      message: '已提交，请等待管理员核实微信到账后入账（通常几分钟内）',
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** 管理员：待核实充值列表 */
+router.get('/recharge/admin/pending', requireRechargeAdmin, async (_req, res) => {
+  const orders = await listRechargeOrdersForAdmin('all_pending');
+  res.json({ orders });
+});
+
+/** 管理员：确认入账（核对微信收款后调用） */
+router.post('/recharge/admin/confirm/:orderId', requireRechargeAdmin, async (req, res) => {
+  try {
+    const result = await completeRechargeOrder(req.params.orderId, 'wechat-qr-manual');
+    res.json({
+      ok: true,
+      order: result.order,
+      alreadyPaid: result.alreadyPaid,
+      message: result.alreadyPaid ? '订单此前已入账' : '已入账',
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 router.post('/recharge/notify', async (req, res) => {

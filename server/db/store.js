@@ -158,6 +158,30 @@ export async function findRechargeOrder(orderId) {
   return db.rechargeOrders.find((o) => o.id === orderId) || null;
 }
 
+export async function markRechargeOrderAwaitingConfirm(orderId, userId) {
+  const db = await readDb();
+  const order = db.rechargeOrders.find((o) => o.id === orderId && o.userId === userId);
+  if (!order) throw new Error('订单不存在');
+  if (order.status === 'paid') throw new Error('订单已完成');
+  if (order.status !== 'awaiting_confirm') {
+    order.status = 'awaiting_confirm';
+    order.submittedAt = new Date().toISOString();
+    await writeDb(db);
+  }
+  return order;
+}
+
+export async function listRechargeOrdersForAdmin(status = 'awaiting_confirm') {
+  const db = await readDb();
+  const list = db.rechargeOrders.filter((o) => {
+    if (status === 'all_pending') {
+      return o.status === 'pending' || o.status === 'awaiting_confirm';
+    }
+    return o.status === status;
+  });
+  return list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+}
+
 export async function completeRechargeOrder(orderId, providerTradeNo = null) {
   const db = await readDb();
   const order = db.rechargeOrders.find((o) => o.id === orderId);

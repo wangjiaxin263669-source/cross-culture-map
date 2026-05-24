@@ -1,7 +1,15 @@
 import crypto from 'crypto';
 import { completeRechargeOrder } from '../db/store.js';
+import { createWechatQrPayment, getWechatQrConfig } from './wechatQr.js';
 
-const PROVIDER = (process.env.PAYMENT_PROVIDER || 'mock').trim().toLowerCase();
+function resolveProvider() {
+  const explicit = process.env.PAYMENT_PROVIDER?.trim().toLowerCase();
+  if (explicit) return explicit;
+  if (process.env.WECHAT_PAY_QR_URL?.trim()) return 'wechat_qr';
+  return 'mock';
+}
+
+const PROVIDER = resolveProvider();
 
 function getBaseUrl(req) {
   const fromEnv = process.env.API_PUBLIC_URL?.trim() || process.env.FRONTEND_URL?.trim();
@@ -36,6 +44,10 @@ export async function createPayment({ req, order, payType = 'alipay' }) {
 
   if (PROVIDER === 'mock') {
     return { mode: 'mock', payUrl: null, notifyUrl };
+  }
+
+  if (PROVIDER === 'wechat_qr') {
+    return createWechatQrPayment({ req, order });
   }
 
   if (PROVIDER === 'zpay') {
@@ -92,11 +104,15 @@ export async function handlePaymentNotify(body) {
 
 export function getPaymentPublicConfig() {
   const zpay = getZpayConfig();
+  const wechatQr = getWechatQrConfig();
   return {
     provider: PROVIDER,
     mockMode: PROVIDER === 'mock',
+    wechatQrMode: PROVIDER === 'wechat_qr',
+    wechatQrConfigured: wechatQr.configured,
+    wechatQrOwnerName: wechatQr.ownerName,
     zpayConfigured: zpay.configured,
-    payTypes: ['alipay', 'wxpay'],
+    payTypes: PROVIDER === 'wechat_qr' ? ['wxpay'] : ['alipay', 'wxpay'],
   };
 }
 

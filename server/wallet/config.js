@@ -13,7 +13,11 @@ export const WALLET_COSTS = {
   sim_report: centsFromEnv('WALLET_SIM_REPORT_COST_CENTS', 10),
 };
 
-export const NEW_USER_BONUS_CENTS = centsFromEnv('NEW_USER_BONUS_CENTS', 50);
+/** 新用户注册赠送，默认 5 元 */
+export const NEW_USER_BONUS_CENTS = centsFromEnv('NEW_USER_BONUS_CENTS', 500);
+
+/** 每日登录赠送，默认 0.5 元 */
+export const DAILY_LOGIN_BONUS_CENTS = centsFromEnv('DAILY_LOGIN_BONUS_CENTS', 50);
 
 /** 充值档位（元 → 分） */
 export const RECHARGE_PACKAGES = [
@@ -45,5 +49,6 @@ export function getWalletPublicConfig() {
       totalYuan: formatYuan(p.amountCents + p.bonusCents),
     })),
     newUserBonusYuan: formatYuan(NEW_USER_BONUS_CENTS),
+    dailyLoginBonusYuan: formatYuan(DAILY_LOGIN_BONUS_CENTS),
   };
 }
