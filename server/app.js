@@ -10,7 +10,16 @@ import {
   synthesizeResearchReport,
   buildSimResearchSyncPayload,
 } from './simulatedResearch.js';
-import { searchCorpus, formatCorpusForPrompt, getCorpusMeta } from './corpus/index.js';
+import {
+  searchCorpus,
+  formatCorpusForPrompt,
+  getCorpusMeta,
+  getOpenPlatformStatus,
+  getAuthorizeUrls,
+} from './corpus/index.js';
+import { exchangeXhsCodeForToken, refreshXhsToken } from './corpus/providers/xiaohongshu-ark.js';
+import { exchangeWeiboCodeForToken } from './corpus/providers/weibo-official.js';
+import { clearPlatformTokens } from './corpus/openPlatformStore.js';
 import {
   listPersonaLibrary,
   savePersona,
@@ -108,6 +117,90 @@ export function createApp(options = {}) {
       model: getModelName(),
       mode: isServerless ? 'netlify' : isProd || hasDist ? 'production' : 'development',
     });
+  });
+
+  app.get('/api/open-platform/status', (_req, res) => {
+    res.json({
+      platforms: getOpenPlatformStatus(),
+      authorizeUrls: getAuthorizeUrls(),
+      netlifyNote: isServerless
+        ? '线上环境请用环境变量注入 Token，OAuth 回调请在本地完成授权后复制到 Netlify'
+        : null,
+    });
+  });
+
+  app.get('/api/open-platform/xhs/authorize', (_req, res) => {
+    const url = getAuthorizeUrls().xiaohongshu;
+    if (!url) {
+      return res.status(400).json({
+        error: '请先在 .env 配置 XHS_ARK_APP_ID、XHS_ARK_APP_SECRET、XHS_ARK_REDIRECT_URI',
+      });
+    }
+    res.redirect(url);
+  });
+
+  app.get('/api/open-platform/xhs/callback', async (req, res) => {
+    try {
+      const { code, error: oauthErr } = req.query;
+      if (oauthErr) {
+        return res.status(400).send(`小红书授权失败: ${oauthErr}`);
+      }
+      if (!code) {
+        return res.status(400).send('缺少授权 code');
+      }
+      const data = await exchangeXhsCodeForToken(String(code));
+      res.send(
+        `<html><body style="font-family:sans-serif;padding:40px"><h2>小红书开放平台授权成功</h2><p>商家：${data.sellerName || '—'}</p><p>可关闭此页，返回 CROSS-CULTURE 继续模拟调研。</p><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
+      );
+    } catch (err) {
+      res.status(500).send(`授权失败: ${err.message}`);
+    }
+  });
+
+  app.post('/api/open-platform/xhs/refresh', async (_req, res) => {
+    try {
+      const data = await refreshXhsToken();
+      res.json({ ok: true, sellerName: data.sellerName });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/open-platform/weibo/authorize', (_req, res) => {
+    const url = getAuthorizeUrls().weibo;
+    if (!url) {
+      return res.status(400).json({
+        error: '请先在 .env 配置 WEIBO_APP_KEY、WEIBO_APP_SECRET、WEIBO_REDIRECT_URI',
+      });
+    }
+    res.redirect(url);
+  });
+
+  app.get('/api/open-platform/weibo/callback', async (req, res) => {
+    try {
+      const { code, error: oauthErr } = req.query;
+      if (oauthErr) {
+        return res.status(400).send(`微博授权失败: ${oauthErr}`);
+      }
+      if (!code) {
+        return res.status(400).send('缺少授权 code');
+      }
+      const data = await exchangeWeiboCodeForToken(String(code));
+      res.send(
+        `<html><body style="font-family:sans-serif;padding:40px"><h2>微博开放平台授权成功</h2><p>UID：${data.uid || '—'}</p><p>可关闭此页，返回 CROSS-CULTURE。</p></body></html>`,
+      );
+    } catch (err) {
+      res.status(500).send(`授权失败: ${err.message}`);
+    }
+  });
+
+  app.post('/api/open-platform/disconnect', (req, res) => {
+    const { platform } = req.body;
+    if (!platform) {
+      return res.status(400).json({ error: '请指定 platform' });
+    }
+    clearPlatformTokens(platform);
+    res.json({ ok: true });
   });
 
   app.post('/api/corpus/search', async (req, res) => {
