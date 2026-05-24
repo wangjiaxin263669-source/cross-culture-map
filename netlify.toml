@@ -8,7 +8,8 @@
   included_files = ["server/data/**", "server/prompts/**"]
 
 [functions.api]
-  timeout = 26
+  # 报告生成需调用 DeepSeek，尽量拉长（Pro 最高 60s；超时会在前端显示 502/504）
+  timeout = 60
 
 [[redirects]]
   from = "/api/*"
