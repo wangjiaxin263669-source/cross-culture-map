@@ -33,6 +33,7 @@ import { getServerDir } from './paths.js';
 import authRoutes from './auth/routes.js';
 import { getWechatConfig } from './auth/wechat.js';
 import { isDbWritable } from './db/store.js';
+import { getStorageBackend } from './db/engine.js';
 import walletRoutes from './wallet/routes.js';
 import { withWalletCharge } from './wallet/middleware.js';
 import { getWalletPublicConfig } from './wallet/config.js';
@@ -131,6 +132,7 @@ export function createApp(options = {}) {
       mode: isServerless ? 'netlify' : isProd || hasDist ? 'production' : 'development',
       auth: {
         dbWritable: isDbWritable(),
+        storage: getStorageBackend(),
         wechatLogin: wx.configured,
       },
       wallet: getWalletPublicConfig(),

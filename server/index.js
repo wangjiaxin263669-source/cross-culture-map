@@ -3,6 +3,7 @@ import { isConfigured } from './deepseek.js';
 import { getKnowledgeMeta } from './knowledge.js';
 import { getSkillMeta } from './loadSkill.js';
 import { isDbWritable } from './db/store.js';
+import { getStorageBackend } from './db/engine.js';
 import { getPaymentPublicConfig } from './payment/index.js';
 
 const PORT = Number(process.env.PORT || process.env.API_PORT || 3001);
@@ -16,8 +17,9 @@ const server = app.listen(PORT, () => {
   console.log(`   DeepSeek: ${isConfigured() ? '已配置 ✓' : '⚠ 未配置 DEEPSEEK_API_KEY'}`);
   console.log(`   智能体: ${skill.skill}（${skill.skillSource}）`);
   const pay = getPaymentPublicConfig();
+  const storage = getStorageBackend();
   console.log(
-    `   账号/历史/余额: ${isDbWritable() ? '持久化 ✓' : '⚠ 当前环境无持久化（请用 VPS/Docker）'}`,
+    `   账号/历史/余额: ${isDbWritable() ? `持久化 ✓ (${storage})` : '⚠ 未就绪'}`,
   );
   console.log(`   支付: ${pay.provider}${pay.mockMode ? '（模拟）' : ''}\n`);
 });

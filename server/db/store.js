@@ -1,67 +1,29 @@
 /**
- * 用户与历史记录存储（JSON 文件，适合 VPS/本地；上线请用持久化磁盘或后续接 Postgres）
+ * 用户 / 历史 / 钱包 — 统一数据层（Netlify Blobs 或本地文件）
  */
-import fs from 'fs';
-import path from 'path';
 import { randomUUID } from 'crypto';
-import { getServerDir } from '../paths.js';
+import { readDb, writeDb, isDbWritable, getStorageBackend } from './engine.js';
 
-const DB_PATH = path.join(getServerDir(), 'data', 'platform-db.json');
+export { isDbWritable, getStorageBackend };
 
-const EMPTY = {
-  users: [],
-  chatSessions: [],
-  reports: [],
-  rechargeOrders: [],
-  walletTransactions: [],
-};
-
-function readDb() {
-  if (!fs.existsSync(DB_PATH)) {
-    return structuredClone(EMPTY);
-  }
-  try {
-    const raw = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-    return {
-      users: raw.users || [],
-      chatSessions: raw.chatSessions || [],
-      reports: raw.reports || [],
-      rechargeOrders: raw.rechargeOrders || [],
-      walletTransactions: raw.walletTransactions || [],
-    };
-  } catch {
-    return structuredClone(EMPTY);
-  }
-}
-
-function writeDb(data) {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-export function isDbWritable() {
-  return !process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FORCE_FILE_DB === '1';
-}
-
-// —— Users ——
-
-export function findUserByUsername(username) {
-  const db = readDb();
+export async function findUserByUsername(username) {
+  const db = await readDb();
   const key = String(username).trim().toLowerCase();
   return db.users.find((u) => u.usernameLower === key) || null;
 }
 
-export function findUserById(id) {
-  return readDb().users.find((u) => u.id === id) || null;
+export async function findUserById(id) {
+  const db = await readDb();
+  return db.users.find((u) => u.id === id) || null;
 }
 
-export function findUserByWechatOpenId(openId) {
-  return readDb().users.find((u) => u.wechatOpenId === openId) || null;
+export async function findUserByWechatOpenId(openId) {
+  const db = await readDb();
+  return db.users.find((u) => u.wechatOpenId === openId) || null;
 }
 
-export function createUser({ username, passwordHash, displayName, wechatOpenId, avatar }) {
-  const db = readDb();
+export async function createUser({ username, passwordHash, displayName, wechatOpenId, avatar }) {
+  const db = await readDb();
   const usernameLower = username.trim().toLowerCase();
   if (db.users.some((u) => u.usernameLower === usernameLower)) {
     throw new Error('该账号已被注册');
@@ -78,22 +40,21 @@ export function createUser({ username, passwordHash, displayName, wechatOpenId, 
     createdAt: new Date().toISOString(),
   };
   db.users.push(user);
-  writeDb(db);
-  return sanitizeUser(user);
+  await writeDb(db);
+  return await sanitizeUser(user);
 }
 
-export function sanitizeUser(user) {
+export async function sanitizeUser(user) {
   if (!user) return null;
   const { passwordHash, usernameLower, ...safe } = user;
-  safe.balanceCents = getUserBalanceCents(user.id);
-  safe.balanceYuan = (safe.balanceCents / 100).toFixed(2);
+  const balanceCents = await getUserBalanceCents(user.id);
+  safe.balanceCents = balanceCents;
+  safe.balanceYuan = (balanceCents / 100).toFixed(2);
   return safe;
 }
 
-// —— 钱包余额 ——
-
-export function getUserBalanceCents(userId) {
-  const user = findUserById(userId);
+export async function getUserBalanceCents(userId) {
+  const user = await findUserById(userId);
   if (!user) return 0;
   return Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
 }
@@ -105,9 +66,9 @@ function appendWalletTx(db, tx) {
   }
 }
 
-export function chargeUserBalance(userId, amountCents, meta = {}) {
+export async function chargeUserBalance(userId, amountCents, meta = {}) {
   if (amountCents <= 0) throw new Error('扣费金额无效');
-  const db = readDb();
+  const db = await readDb();
   const user = db.users.find((u) => u.id === userId);
   if (!user) throw new Error('用户不存在');
   const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
@@ -132,13 +93,13 @@ export function chargeUserBalance(userId, amountCents, meta = {}) {
     createdAt: new Date().toISOString(),
   };
   appendWalletTx(db, tx);
-  writeDb(db);
+  await writeDb(db);
   return tx;
 }
 
-export function creditUserBalance(userId, amountCents, meta = {}) {
+export async function creditUserBalance(userId, amountCents, meta = {}) {
   if (amountCents <= 0) throw new Error('充值金额无效');
-  const db = readDb();
+  const db = await readDb();
   const user = db.users.find((u) => u.id === userId);
   if (!user) throw new Error('用户不存在');
   const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
@@ -156,25 +117,24 @@ export function creditUserBalance(userId, amountCents, meta = {}) {
     createdAt: new Date().toISOString(),
   };
   appendWalletTx(db, tx);
-  writeDb(db);
+  await writeDb(db);
   return tx;
 }
 
-export function refundUserBalance(userId, amountCents, meta = {}) {
+export async function refundUserBalance(userId, amountCents, meta = {}) {
   return creditUserBalance(userId, amountCents, { ...meta, type: meta.type || 'refund' });
 }
 
-export function listWalletTransactions(userId, limit = 30) {
-  return readDb()
-    .walletTransactions.filter((t) => t.userId === userId)
+export async function listWalletTransactions(userId, limit = 30) {
+  const db = await readDb();
+  return db.walletTransactions
+    .filter((t) => t.userId === userId)
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     .slice(0, limit);
 }
 
-// —— 充值订单 ——
-
-export function createRechargeOrder({ userId, packageId, amountCents, bonusCents, payChannel }) {
-  const db = readDb();
+export async function createRechargeOrder({ userId, packageId, amountCents, bonusCents, payChannel }) {
+  const db = await readDb();
   const order = {
     id: randomUUID(),
     userId,
@@ -189,16 +149,17 @@ export function createRechargeOrder({ userId, packageId, amountCents, bonusCents
     paidAt: null,
   };
   db.rechargeOrders.push(order);
-  writeDb(db);
+  await writeDb(db);
   return order;
 }
 
-export function findRechargeOrder(orderId) {
-  return readDb().rechargeOrders.find((o) => o.id === orderId) || null;
+export async function findRechargeOrder(orderId) {
+  const db = await readDb();
+  return db.rechargeOrders.find((o) => o.id === orderId) || null;
 }
 
-export function completeRechargeOrder(orderId, providerTradeNo = null) {
-  const db = readDb();
+export async function completeRechargeOrder(orderId, providerTradeNo = null) {
+  const db = await readDb();
   const order = db.rechargeOrders.find((o) => o.id === orderId);
   if (!order) throw new Error('订单不存在');
   if (order.status === 'paid') {
@@ -207,8 +168,8 @@ export function completeRechargeOrder(orderId, providerTradeNo = null) {
   order.status = 'paid';
   order.paidAt = new Date().toISOString();
   if (providerTradeNo) order.providerTradeNo = providerTradeNo;
-  writeDb(db);
-  const tx = creditUserBalance(order.userId, order.totalCreditCents, {
+  await writeDb(db);
+  const tx = await creditUserBalance(order.userId, order.totalCreditCents, {
     type: 'recharge',
     orderId: order.id,
     note: `充值 ${order.packageId || ''}`,
@@ -216,23 +177,22 @@ export function completeRechargeOrder(orderId, providerTradeNo = null) {
   return { order, transaction: tx, alreadyPaid: false };
 }
 
-// —— Chat sessions ——
-
-export function listChatSessions(userId, limit = 50) {
-  return readDb()
-    .chatSessions.filter((s) => s.userId === userId)
+export async function listChatSessions(userId, limit = 50) {
+  const db = await readDb();
+  return db.chatSessions
+    .filter((s) => s.userId === userId)
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
     .slice(0, limit)
     .map(({ messages, ...meta }) => meta);
 }
 
-export function getChatSession(userId, sessionId) {
-  const s = readDb().chatSessions.find((x) => x.id === sessionId && x.userId === userId);
-  return s || null;
+export async function getChatSession(userId, sessionId) {
+  const db = await readDb();
+  return db.chatSessions.find((x) => x.id === sessionId && x.userId === userId) || null;
 }
 
-export function saveChatSession(userId, payload) {
-  const db = readDb();
+export async function saveChatSession(userId, payload) {
+  const db = await readDb();
   const now = new Date().toISOString();
   let session = payload.id
     ? db.chatSessions.find((s) => s.id === payload.id && s.userId === userId)
@@ -255,32 +215,32 @@ export function saveChatSession(userId, payload) {
     };
     db.chatSessions.push(session);
   }
-  writeDb(db);
+  await writeDb(db);
   return session;
 }
 
-export function deleteChatSession(userId, sessionId) {
-  const db = readDb();
+export async function deleteChatSession(userId, sessionId) {
+  const db = await readDb();
   db.chatSessions = db.chatSessions.filter((s) => !(s.id === sessionId && s.userId === userId));
-  writeDb(db);
+  await writeDb(db);
 }
 
-// —— Reports ——
-
-export function listReports(userId, limit = 50) {
-  return readDb()
-    .reports.filter((r) => r.userId === userId)
+export async function listReports(userId, limit = 50) {
+  const db = await readDb();
+  return db.reports
+    .filter((r) => r.userId === userId)
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     .slice(0, limit)
     .map(({ content, ...meta }) => meta);
 }
 
-export function getReport(userId, reportId) {
-  return readDb().reports.find((r) => r.id === reportId && r.userId === userId) || null;
+export async function getReport(userId, reportId) {
+  const db = await readDb();
+  return db.reports.find((r) => r.id === reportId && r.userId === userId) || null;
 }
 
-export function saveReport(userId, payload) {
-  const db = readDb();
+export async function saveReport(userId, payload) {
+  const db = await readDb();
   const report = {
     id: payload.id || randomUUID(),
     userId,
@@ -294,12 +254,12 @@ export function saveReport(userId, payload) {
   const idx = db.reports.findIndex((r) => r.id === report.id && r.userId === userId);
   if (idx >= 0) db.reports[idx] = report;
   else db.reports.push(report);
-  writeDb(db);
+  await writeDb(db);
   return report;
 }
 
-export function deleteReport(userId, reportId) {
-  const db = readDb();
+export async function deleteReport(userId, reportId) {
+  const db = await readDb();
   db.reports = db.reports.filter((r) => !(r.id === reportId && r.userId === userId));
-  writeDb(db);
+  await writeDb(db);
 }

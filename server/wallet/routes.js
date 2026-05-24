@@ -24,18 +24,18 @@ router.get('/config', requireAuth, (_req, res) => {
   });
 });
 
-router.get('/balance', requireAuth, (req, res) => {
-  res.json(getWalletSnapshot(req.user.id));
+router.get('/balance', requireAuth, async (req, res) => {
+  res.json(await getWalletSnapshot(req.user.id));
 });
 
-router.get('/transactions', requireAuth, (req, res) => {
-  res.json({ transactions: listWalletTransactions(req.user.id) });
+router.get('/transactions', requireAuth, async (req, res) => {
+  res.json({ transactions: await listWalletTransactions(req.user.id) });
 });
 
 router.post('/recharge/create', requireAuth, async (req, res) => {
   try {
     if (!isDbWritable()) {
-      return res.status(503).json({ error: '当前环境不支持充值，请使用 VPS 部署' });
+      return res.status(503).json({ error: '当前环境不支持充值' });
     }
     const { packageId, payType = 'alipay' } = req.body;
     const pkg = RECHARGE_PACKAGES.find((p) => p.id === packageId);
@@ -43,7 +43,7 @@ router.post('/recharge/create', requireAuth, async (req, res) => {
       return res.status(400).json({ error: '无效的充值档位' });
     }
 
-    const order = createRechargeOrder({
+    const order = await createRechargeOrder({
       userId: req.user.id,
       packageId: pkg.id,
       amountCents: pkg.amountCents,
@@ -54,8 +54,8 @@ router.post('/recharge/create', requireAuth, async (req, res) => {
     const payment = await createPayment({ req, order, payType });
 
     if (payment.mode === 'mock') {
-      const result = completeMockOrder(order.id);
-      const snapshot = getWalletSnapshot(req.user.id);
+      const result = await completeMockOrder(order.id);
+      const snapshot = await getWalletSnapshot(req.user.id);
       return res.json({
         order: result.order,
         mock: true,
@@ -77,19 +77,18 @@ router.post('/recharge/create', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/recharge/status/:orderId', requireAuth, (req, res) => {
-  const order = findRechargeOrder(req.params.orderId);
+router.get('/recharge/status/:orderId', requireAuth, async (req, res) => {
+  const order = await findRechargeOrder(req.params.orderId);
   if (!order || order.userId !== req.user.id) {
     return res.status(404).json({ error: '订单不存在' });
   }
   res.json({ order });
 });
 
-/** 支付平台异步通知（无需登录） */
-router.post('/recharge/notify', (req, res) => {
+router.post('/recharge/notify', async (req, res) => {
   try {
     const payload = { ...req.query, ...req.body };
-    const result = handlePaymentNotify(payload);
+    const result = await handlePaymentNotify(payload);
     if (result?.skipped) {
       return res.send('success');
     }
@@ -100,9 +99,9 @@ router.post('/recharge/notify', (req, res) => {
   }
 });
 
-router.get('/recharge/notify', (req, res) => {
+router.get('/recharge/notify', async (req, res) => {
   try {
-    handlePaymentNotify(req.query);
+    await handlePaymentNotify(req.query);
     res.send('success');
   } catch (err) {
     console.error('[wallet notify GET]', err.message);

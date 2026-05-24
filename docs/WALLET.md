@@ -41,4 +41,5 @@ FRONTEND_URL=https://你的前端域名
 ## 说明
 
 - 用户充值的钱进入**你的支付商户账户**；DeepSeek 费用在**你的 DeepSeek 账户**扣款。需定期用收款余额为 DeepSeek 充值 API 额度。
-- Netlify Serverless **不支持**文件数据库持久化，充值与余额请用 VPS 或后续接入 Postgres/Supabase。
+- **Netlify 部署**：余额与账号数据保存在 **Netlify Blobs**（免费），无需 VPS。
+- **本地开发**：数据在 `server/data/platform-db.json`，与线上分开。

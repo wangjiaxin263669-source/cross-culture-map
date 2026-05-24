@@ -10,10 +10,10 @@ export function withWalletCharge(operation, handler) {
     requireAuth,
     async (req, res) => {
       let charged = null;
-      const maybeRefund = () => {
+      const maybeRefund = async () => {
         if (charged?.costCents) {
           try {
-            refundOperation(req.user.id, charged.costCents, operation, 'request_failed');
+            await refundOperation(req.user.id, charged.costCents, operation, 'request_failed');
           } catch {
             /* ignore */
           }
@@ -21,14 +21,14 @@ export function withWalletCharge(operation, handler) {
         }
       };
       res.on('finish', () => {
-        if (charged && res.statusCode >= 400) maybeRefund();
+        if (charged && res.statusCode >= 400) void maybeRefund();
       });
       try {
-        charged = chargeForOperation(req.user.id, operation);
+        charged = await chargeForOperation(req.user.id, operation);
         req.walletCharge = charged;
         await handler(req, res);
       } catch (err) {
-        maybeRefund();
+        await maybeRefund();
         if (err instanceof InsufficientBalanceError || err.statusCode === 402) {
           return res.status(402).json({
             error: err.message,

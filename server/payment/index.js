@@ -63,11 +63,11 @@ export async function createPayment({ req, order, payType = 'alipay' }) {
 }
 
 /** 支付回调验签并入账 */
-export function handlePaymentNotify(body) {
+export async function handlePaymentNotify(body) {
   if (PROVIDER === 'mock') {
     const orderId = body?.out_trade_no || body?.orderId;
     if (!orderId) throw new Error('缺少订单号');
-    return completeRechargeOrder(orderId, 'mock');
+    return await completeRechargeOrder(orderId, 'mock');
   }
 
   if (PROVIDER === 'zpay') {
@@ -84,7 +84,7 @@ export function handlePaymentNotify(body) {
       return { skipped: true, reason: status };
     }
     const orderId = params.out_trade_no;
-    return completeRechargeOrder(orderId, params.trade_no || params.transaction_id);
+    return await completeRechargeOrder(orderId, params.trade_no || params.transaction_id);
   }
 
   throw new Error('支付未配置');
@@ -101,6 +101,6 @@ export function getPaymentPublicConfig() {
 }
 
 /** mock 模式：创建订单后立即入账 */
-export function completeMockOrder(orderId) {
+export async function completeMockOrder(orderId) {
   return completeRechargeOrder(orderId, 'mock-auto');
 }

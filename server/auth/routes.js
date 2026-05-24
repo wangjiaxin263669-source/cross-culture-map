@@ -23,19 +23,17 @@ import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
 
 const router = Router();
 
-function authResponse(user) {
-  const safe = sanitizeUser(user);
+async function authResponse(user) {
+  const safe = await sanitizeUser(user);
   const token = signToken(safe);
   return { user: safe, token };
 }
-
-// —— 注册 / 登录 ——
 
 router.post('/register', async (req, res) => {
   try {
     if (!isDbWritable()) {
       return res.status(503).json({
-        error: '当前部署环境不支持注册，请使用 VPS/Railway 等持久化主机，或联系管理员配置数据库',
+        error: '数据存储未就绪，请稍后重试或联系管理员',
       });
     }
     const { username, password, displayName } = req.body;
@@ -45,19 +43,19 @@ router.post('/register', async (req, res) => {
     if (pErr) return res.status(400).json({ error: pErr });
 
     const passwordHash = await hashPassword(password);
-    const user = createUser({
+    const user = await createUser({
       username,
       passwordHash,
       displayName: displayName?.trim() || username.trim(),
     });
     if (NEW_USER_BONUS_CENTS > 0) {
-      creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
+      await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
         type: 'bonus',
         note: '新用户赠送额度',
       });
     }
-    const fresh = findUserByUsername(username);
-    res.json(authResponse(fresh));
+    const fresh = await findUserByUsername(username);
+    res.json(await authResponse(fresh));
   } catch (err) {
     res.status(400).json({ error: err.message || '注册失败' });
   }
@@ -69,7 +67,7 @@ router.post('/login', async (req, res) => {
     if (!username?.trim() || !password) {
       return res.status(400).json({ error: '请输入账号和密码' });
     }
-    const user = findUserByUsername(username);
+    const user = await findUserByUsername(username);
     if (!user || !user.passwordHash) {
       return res.status(401).json({ error: '账号或密码错误' });
     }
@@ -77,7 +75,7 @@ router.post('/login', async (req, res) => {
     if (!ok) {
       return res.status(401).json({ error: '账号或密码错误' });
     }
-    res.json(authResponse(user));
+    res.json(await authResponse(user));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -86,8 +84,6 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
-
-// —— 微信登录 ——
 
 router.get('/wechat/url', (_req, res) => {
   const cfg = getWechatConfig();
@@ -110,16 +106,16 @@ router.get('/wechat/callback', async (req, res) => {
       return res.redirect(`${frontend}?auth_error=missing_code`);
     }
     const wx = await exchangeWechatCode(String(code));
-    let user = findUserByWechatOpenId(wx.openid);
+    let user = await findUserByWechatOpenId(wx.openid);
     if (!user) {
       const base = `wx_${wx.openid.slice(-8)}`;
       let username = base;
       let n = 0;
-      while (findUserByUsername(username)) {
+      while (await findUserByUsername(username)) {
         n += 1;
         username = `${base}_${n}`;
       }
-      user = createUser({
+      user = await createUser({
         username,
         passwordHash: null,
         displayName: wx.nickname,
@@ -127,75 +123,71 @@ router.get('/wechat/callback', async (req, res) => {
         avatar: wx.avatar,
       });
       if (NEW_USER_BONUS_CENTS > 0) {
-        creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
+        await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
           type: 'bonus',
           note: '新用户赠送额度',
         });
-        user = findUserByWechatOpenId(wx.openid);
+        user = await findUserByWechatOpenId(wx.openid);
       }
     }
-    const token = signToken(sanitizeUser(user));
+    const token = signToken(await sanitizeUser(user));
     res.redirect(`${frontend}?token=${encodeURIComponent(token)}`);
   } catch (err) {
     res.redirect(`${frontend}?auth_error=${encodeURIComponent(err.message)}`);
   }
 });
 
-// —— 对话历史 ——
-
-router.get('/history/chats', requireAuth, (req, res) => {
-  res.json({ sessions: listChatSessions(req.user.id) });
+router.get('/history/chats', requireAuth, async (req, res) => {
+  res.json({ sessions: await listChatSessions(req.user.id) });
 });
 
-router.get('/history/chats/:id', requireAuth, (req, res) => {
-  const session = getChatSession(req.user.id, req.params.id);
+router.get('/history/chats/:id', requireAuth, async (req, res) => {
+  const session = await getChatSession(req.user.id, req.params.id);
   if (!session) return res.status(404).json({ error: '对话不存在' });
   res.json({ session });
 });
 
-router.post('/history/chats', requireAuth, (req, res) => {
+router.post('/history/chats', requireAuth, async (req, res) => {
   if (!isDbWritable()) {
     return res.status(503).json({ error: '历史记录无法保存到当前环境' });
   }
   try {
-    const session = saveChatSession(req.user.id, req.body);
+    const session = await saveChatSession(req.user.id, req.body);
     res.json({ session });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-router.delete('/history/chats/:id', requireAuth, (req, res) => {
-  deleteChatSession(req.user.id, req.params.id);
+router.delete('/history/chats/:id', requireAuth, async (req, res) => {
+  await deleteChatSession(req.user.id, req.params.id);
   res.json({ ok: true });
 });
 
-// —— 报告历史 ——
-
-router.get('/history/reports', requireAuth, (req, res) => {
-  res.json({ reports: listReports(req.user.id) });
+router.get('/history/reports', requireAuth, async (req, res) => {
+  res.json({ reports: await listReports(req.user.id) });
 });
 
-router.get('/history/reports/:id', requireAuth, (req, res) => {
-  const report = getReport(req.user.id, req.params.id);
+router.get('/history/reports/:id', requireAuth, async (req, res) => {
+  const report = await getReport(req.user.id, req.params.id);
   if (!report) return res.status(404).json({ error: '报告不存在' });
   res.json({ report });
 });
 
-router.post('/history/reports', requireAuth, (req, res) => {
+router.post('/history/reports', requireAuth, async (req, res) => {
   if (!isDbWritable()) {
     return res.status(503).json({ error: '历史记录无法保存到当前环境' });
   }
   try {
-    const report = saveReport(req.user.id, req.body);
+    const report = await saveReport(req.user.id, req.body);
     res.json({ report });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-router.delete('/history/reports/:id', requireAuth, (req, res) => {
-  deleteReport(req.user.id, req.params.id);
+router.delete('/history/reports/:id', requireAuth, async (req, res) => {
+  await deleteReport(req.user.id, req.params.id);
   res.json({ ok: true });
 });
 

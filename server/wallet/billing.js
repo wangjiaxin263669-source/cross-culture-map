@@ -22,14 +22,13 @@ export function getCostCents(operation) {
   return cost;
 }
 
-/** 扣费；失败抛 InsufficientBalanceError */
-export function chargeForOperation(userId, operation, meta = {}) {
+export async function chargeForOperation(userId, operation, meta = {}) {
   const costCents = getCostCents(operation);
-  const balanceBefore = getUserBalanceCents(userId);
+  const balanceBefore = await getUserBalanceCents(userId);
   if (balanceBefore < costCents) {
     throw new InsufficientBalanceError(balanceBefore, costCents);
   }
-  const tx = chargeUserBalance(userId, costCents, {
+  const tx = await chargeUserBalance(userId, costCents, {
     type: 'consume',
     operation,
     ...meta,
@@ -37,8 +36,7 @@ export function chargeForOperation(userId, operation, meta = {}) {
   return { costCents, balanceCents: tx.balanceAfter, transactionId: tx.id };
 }
 
-/** AI 调用失败时退回 */
-export function refundOperation(userId, costCents, operation, reason = 'api_failed') {
+export async function refundOperation(userId, costCents, operation, reason = 'api_failed') {
   if (!costCents || costCents <= 0) return null;
   return refundUserBalance(userId, costCents, {
     type: 'refund',
@@ -47,12 +45,13 @@ export function refundOperation(userId, costCents, operation, reason = 'api_fail
   });
 }
 
-export function getWalletSnapshot(userId) {
-  const user = findUserById(userId);
+export async function getWalletSnapshot(userId) {
+  const user = await findUserById(userId);
   if (!user) return null;
+  const balanceCents = await getUserBalanceCents(userId);
   return {
-    balanceCents: getUserBalanceCents(userId),
-    balanceYuan: (getUserBalanceCents(userId) / 100).toFixed(2),
+    balanceCents,
+    balanceYuan: (balanceCents / 100).toFixed(2),
     costs: WALLET_COSTS,
   };
 }

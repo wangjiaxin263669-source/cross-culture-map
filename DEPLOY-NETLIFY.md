@@ -1,4 +1,8 @@
-# Netlify 部署指南（你想用的这个平台）
+# Netlify 部署指南
+
+> **最终版（账号 + 历史 + 充值）** 已支持 Netlify 免费持久化（Netlify Blobs），见 [DEPLOY-FINAL.md](./DEPLOY-FINAL.md)。
+
+# Netlify 部署指南（轻量演示）（你想用的这个平台）
 
 > ⚠️ **不要用页面底部的「拖拽文件夹 Drop」** —— 那只会上传静态文件，**AI 接口不会运行**。  
 > 请按下面 **「连接 GitHub」** 方式部署。
