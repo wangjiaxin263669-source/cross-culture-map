@@ -42,6 +42,7 @@ export async function generateResearchPersonas({
   audienceCriteria,
   personaCount = 3,
   country,
+  corpusContext = '',
 }) {
   const market = getMarketLabel(country);
   const count = Math.min(5, Math.max(2, Number(personaCount) || 3));
@@ -50,11 +51,15 @@ export async function generateResearchPersonas({
   const system = `你是跨文化用户研究专家，擅长为【${market}】市场构建高保真受访者人设（Persona）。
 人设需体现当地文化维度、消费心理与真实口语，避免刻板印象。输出必须是合法 JSON，不要 markdown 包裹外多余文字。`;
 
+  const corpusBlock = corpusContext
+    ? `\n## 外部语料（小红书/微博/知乎等，构建人设时请吸收真实口吻与痛点）\n${corpusContext}\n`
+    : '';
+
   const user = `调研主题：${researchTopic}
 目标人群：${audienceCriteria || '由你根据主题合理设定'}
 市场：${market}
 ${countryCtx}
-
+${corpusBlock}
 请生成 ${count} 位差异化受访者，JSON 格式：
 {
   "personas": [
@@ -69,7 +74,8 @@ ${countryCtx}
       "values": ["价值观1","价值观2"],
       "painPoints": ["痛点1","痛点2"],
       "decisionStyle": "如何做购买/使用决策",
-      "culturalNotes": "与${market}文化相关的1-2句特征"
+      "culturalNotes": "与${market}文化相关的1-2句特征",
+      "corpusInspiration": "吸收了哪条外部语料观点（可选）"
     }
   ]
 }`;
@@ -101,6 +107,7 @@ export async function runSimulatedInterview({
   researchTopic,
   guideQuestions = [],
   country,
+  corpusContext = '',
 }) {
   const market = getMarketLabel(country);
   const countryCtx = country ? buildCountryContext(country) : '';
@@ -115,10 +122,14 @@ export async function runSimulatedInterview({
 
 模拟真实一对一深度访谈，不要写成问卷。输出合法 JSON。`;
 
+  const corpusBlock = corpusContext
+    ? `\n## 外部语料参考\n${corpusContext}\n`
+    : '';
+
   const user = `市场：${market}
 调研主题：${researchTopic}
 ${countryCtx}
-
+${corpusBlock}
 受访者人设：
 - ${persona.name}，${persona.age}岁，${persona.occupation}，${persona.city || market}
 - 背景：${persona.background}
@@ -168,6 +179,7 @@ export async function synthesizeResearchReport({
   personas,
   interviews,
   country,
+  corpusSnippets = [],
 }) {
   const market = getMarketLabel(country);
   const countryCtx = country ? buildCountryContext(country) : '';
@@ -187,10 +199,16 @@ ${lines}`;
     })
     .join('\n\n');
 
+  const corpusBlock =
+    corpusSnippets?.length > 0
+      ? `\n# 外部语料来源\n${corpusSnippets.map((s) => `- [${s.sourceLabel || s.source}] ${s.title}：${s.content}`).join('\n')}\n`
+      : '';
+
   const system = `你是商业与用户研究总监，擅长把定性访谈转化为可交付的调研报告。
 语言：中文，产品团队可读。结合跨文化视角（中国团队出海场景）。`;
 
   const user = `请基于以下【模拟访谈】材料，撰写完整调研报告（Markdown）。
+${corpusBlock}
 
 # 基本信息
 - 市场：${market}
@@ -225,4 +243,43 @@ ${interviewBlock}
   );
 
   return report.trim();
+}
+
+/** 供三步分析报告联动的摘要 */
+export function buildSimResearchSyncPayload({
+  researchTopic,
+  audienceCriteria,
+  marketTitle,
+  personas,
+  interviews,
+  simReport,
+  corpusSnippets,
+}) {
+  const interviewSummary = (interviews || [])
+    .map(
+      (iv) =>
+        `【${iv.personaName}】${iv.summary}\n金句：${(iv.keyQuotes || []).join('；')}\n洞察：${(iv.insights || []).join('；')}`,
+    )
+    .join('\n\n');
+
+  const corpusNote =
+    corpusSnippets?.length > 0
+      ? `\n外部语料（${corpusSnippets.length} 条）：${corpusSnippets.map((s) => s.title).join('、')}`
+      : '';
+
+  return `【模拟调研结论 · 请纳入跨文化三步分析】
+调研主题：${researchTopic}
+目标人群：${audienceCriteria || '见模拟人设'}
+目标市场：${marketTitle}${corpusNote}
+
+受访者：${(personas || []).map((p) => `${p.name}(${p.occupation})`).join('、')}
+
+模拟访谈摘要：
+${interviewSummary}
+
+模拟调研报告（节选）：
+${(simReport || '').slice(0, 3500)}
+
+---
+请基于以上模拟调研证据，完成：①发现问题 ②分析根因（含 Hofstede/跨文化）③应对策略与 P0/P1/P2，并指出模拟调研与真实落地仍需验证的点。`;
 }
