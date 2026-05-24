@@ -12,7 +12,11 @@
   DAILY_LOGIN_BONUS_CENTS = "5"
   DAILY_LOGIN_BONUS_CAP_CENTS = "70"
   RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
-  # 手机号登录：auto=有短信宝/UniSMS密钥则真发短信，否则 mock（验证码自动填入登录框）
+  # 手机号登录（真实短信）：在 Netlify 控制台 → Environment variables 自行添加，勿提交到 Git：
+  #   SMS_PROVIDER=unisms
+  #   UNISMS_ACCESS_KEY_ID=你的AccessKey（https://unisms.apistd.com 注册充值，约￥0.04/条）
+  #   UNISMS_SIGNATURE=跨文化平台
+  # 配置后删除或设 SMS_EXPOSE_DEV_CODE=false
   SMS_PROVIDER = "auto"
   SMS_EXPOSE_DEV_CODE = "true"
 

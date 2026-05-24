@@ -88,7 +88,8 @@ router.post('/sms/login', async (req, res) => {
         initialBalanceCents: NEW_USER_BONUS_CENTS,
         initialBonusNote: '新用户注册赠送 ¥0.50',
       });
-      user = await findUserById(created.id);
+      // 优先用写入事务返回的用户，避免 Netlify Blobs 读后写延迟导致误判未绑定
+      user = userHasBoundPhone(created) ? created : await findUserById(created.id);
       if (NEW_USER_BONUS_CENTS > 0) {
         newUserBonus = {
           granted: true,
