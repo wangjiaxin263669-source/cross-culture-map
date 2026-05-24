@@ -4,7 +4,7 @@ import { loadSkillPrompt } from './loadSkill.js';
 const API_BASE = process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com';
 const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 const CHAT_MAX_TOKENS = Number(process.env.DEEPSEEK_CHAT_MAX_TOKENS || 3000);
-const REPORT_SECTION_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_MAX_TOKENS || 1400);
+const REPORT_SECTION_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_MAX_TOKENS || 1600);
 const API_TIMEOUT_MS = Number(process.env.DEEPSEEK_TIMEOUT_MS || 55000);
 
 const PLATFORM_APPENDIX = `
@@ -27,11 +27,15 @@ const PLATFORM_APPENDIX = `
 
 **数据**：Hofstede + 文化故事/文献/视频 + 课程 RAG（注明「据课程资料」）。
 
-**表达**：中文；【因】→【果】；🔴🟡🟢；案例具体；六条工作原则。
+**表达（给中国产品设计师）**：
+- **说人话**：像产品总监汇报，不要论文腔
+- 文化概念必须用「人话定义 + 例子 + 对产品意味着什么」四行降维
+- 第三步含 **产品全链路清单**（洞察→需求→设计→开发→测试→上线→迭代），每阶段写注意点与交付物
+- 【因】→【果】；🔴🟡🟢；P0/P1/P2 对应到具体阶段
 
 ## 对话模式
 
-文化背景（+Fit Gap 一句）→ 发现问题 → 分析问题（六维+对照+语用学）→ 应对/总结（含四步法落地）→ 验证。
+文化背景（人话）→ 发现问题 → 分析问题（降维讲解，非术语堆砌）→ 应对/总结（含全链路要点）→ 验证。
 `;
 
 function buildAgentSystemPrompt({ knowledge, country, mode = 'chat' }) {
@@ -85,14 +89,14 @@ function appendReportSectionGuide(prompt, section) {
 ## 3. 应对策略或案例总结
 （求同存异；P0/P1/P2；不宜给方案时仅案例归纳）
 
-## 4. 适应性设计方案（文化民族志四步法 · Step 4）
-（信息架构/视觉/文案/信任；【因】→【果】）
+## 4. 适应性设计方案（P0/P1/P2，产品语言，【因】→【果】）
 
-## 5. 风险评级（🔴🟡🟢）与关键发现摘要
+## 5. 产品全链路落地清单（7 阶段表格）
+洞察→需求→交互视觉→开发→测试→上线→迭代；每阶段：做什么/文化注意/易踩坑/交付物
 
-## 6. 验证方法（文化探针/访谈/A/B/审阅等）
+## 6. 风险评级（🔴🟡🟢）与验证方法（产品可执行）
 
-## 7. 收束：跨文化同理心（1–2 句）`;
+## 7. 收束（1–2 句，给产品团队的行动建议）`;
   }
   return `${prompt}
 
@@ -264,9 +268,10 @@ async function generateReportSection({ productIdea, country, section }) {
 ${productIdea}
 
 要求：
-- 使用 **整合版 SKILL 全部能力**（三步主干 + 六维度 + 四步法 + 场景A-D + 五大视角 + Fit Gap），站在中国团队视角
-- 分析问题：Hofstede + 中外对照 + 语用学（如面子理论）；第三步含四步法适应性方案
-- 引用平台文化故事与课程资料；每条建议【因】→【果】；篇幅精炼`;
+- 整合版 SKILL 全部能力；**语言面向中国产品设计师**：通俗、可执行，理论用「四行降维」
+- 分析问题：Hofstede/语用学必须解释「对产品意味着什么」
+- 第三步必须含 **7 阶段产品全链路清单**（构思到上线迭代）+ P0/P1/P2
+- 引用平台文化故事与课程资料；篇幅精炼，可直接当 PRD 文化附录`;
 
   const messages = [
     { role: 'system', content: systemContent },
