@@ -132,41 +132,56 @@ export async function readDb() {
   return readDbFile();
 }
 
+async function persistDb(data) {
+  if (useFileStorage()) {
+    writeDbFile(data);
+    return;
+  }
+
+  if (usePostgres() && hasPostgresUrl()) {
+    try {
+      await writeDbPostgres(data);
+      return;
+    } catch (err) {
+      console.warn('[db] postgres write failed, try blobs:', err.message);
+    }
+  }
+
+  let lastErr;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      await ensureBlobsReady(getLambdaEvent());
+      await writeDbBlobs(data);
+      return;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[db] blobs write retry ${i + 1}:`, err.message);
+    }
+  }
+
+  if (useFileStorage() || !isLambda()) {
+    writeDbFile(data);
+    return;
+  }
+  throw lastErr || new Error('数据保存失败，请稍后重试');
+}
+
 export async function writeDb(data) {
-  const run = async () => {
-    if (useFileStorage()) {
-      writeDbFile(data);
-      return;
-    }
-
-    if (usePostgres() && hasPostgresUrl()) {
-      try {
-        await writeDbPostgres(data);
-        return;
-      } catch (err) {
-        console.warn('[db] postgres write failed, try blobs:', err.message);
-      }
-    }
-
-    let lastErr;
-    for (let i = 0; i < 3; i += 1) {
-      try {
-        await ensureBlobsReady(getLambdaEvent());
-        await writeDbBlobs(data);
-        return;
-      } catch (err) {
-        lastErr = err;
-        console.warn(`[db] blobs write retry ${i + 1}:`, err.message);
-      }
-    }
-
-    if (useFileStorage() || !isLambda()) {
-      writeDbFile(data);
-      return;
-    }
-    throw lastErr || new Error('数据保存失败，请稍后重试');
-  };
-
+  const run = () => persistDb(data);
   writeQueue = writeQueue.then(run, run);
   return writeQueue;
+}
+
+/** 串行读-改-写，避免 Blobs 下连续两次 write 之间 read 到旧数据 */
+export async function runDbUpdate(mutator) {
+  let result;
+  const run = async () => {
+    const db = await readDb();
+    result = await mutator(db);
+    await persistDb(db);
+    return result;
+  };
+  writeQueue = writeQueue.then(run, run);
+  await writeQueue;
+  return result;
 }

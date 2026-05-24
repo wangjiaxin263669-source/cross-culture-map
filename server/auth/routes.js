@@ -43,16 +43,11 @@ router.post('/register', async (req, res) => {
       username,
       passwordHash,
       displayName: displayName?.trim() || username.trim(),
+      initialBalanceCents: NEW_USER_BONUS_CENTS,
+      initialBonusNote: '新用户注册赠送 ¥0.50',
     });
-    if (NEW_USER_BONUS_CENTS > 0) {
-      await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
-        type: 'bonus',
-        note: '新用户注册赠送 ¥0.50',
-      });
-    }
-    const fresh = await findUserByUsername(username);
     res.json(
-      await authResponse(fresh, {
+      await authResponse(user, {
         newUserBonus:
           NEW_USER_BONUS_CENTS > 0
             ? { granted: true, amountYuan: (NEW_USER_BONUS_CENTS / 100).toFixed(2) }
@@ -130,14 +125,9 @@ router.get('/wechat/callback', async (req, res) => {
         displayName: wx.nickname,
         wechatOpenId: wx.openid,
         avatar: wx.avatar,
+        initialBalanceCents: NEW_USER_BONUS_CENTS,
+        initialBonusNote: '新用户注册赠送 ¥0.50',
       });
-      if (NEW_USER_BONUS_CENTS > 0) {
-        await creditUserBalance(user.id, NEW_USER_BONUS_CENTS, {
-          type: 'bonus',
-          note: '新用户注册赠送 ¥0.50',
-        });
-        user = await findUserByWechatOpenId(wx.openid);
-      }
     }
     const dailyBonus = await tryGrantDailyLoginBonus(user.id);
     const freshUser = dailyBonus.granted

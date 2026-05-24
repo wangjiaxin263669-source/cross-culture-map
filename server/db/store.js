@@ -2,7 +2,7 @@
  * 用户 / 历史 / 钱包 — 统一数据层（Netlify Blobs 或本地文件）
  */
 import { randomUUID } from 'crypto';
-import { readDb, writeDb, isDbWritable, getStorageBackend } from './engine.js';
+import { readDb, writeDb, runDbUpdate, isDbWritable, getStorageBackend } from './engine.js';
 
 export { isDbWritable, getStorageBackend };
 
@@ -22,26 +22,51 @@ export async function findUserByWechatOpenId(openId) {
   return db.users.find((u) => u.wechatOpenId === openId) || null;
 }
 
-export async function createUser({ username, passwordHash, displayName, wechatOpenId, avatar }) {
-  const db = await readDb();
-  const usernameLower = username.trim().toLowerCase();
-  if (db.users.some((u) => u.usernameLower === usernameLower)) {
-    throw new Error('该账号已被注册');
-  }
-  const user = {
-    id: randomUUID(),
-    username: username.trim(),
-    usernameLower,
-    passwordHash: passwordHash || null,
-    displayName: displayName || username.trim(),
-    wechatOpenId: wechatOpenId || null,
-    avatar: avatar || null,
-    balanceCents: 0,
-    createdAt: new Date().toISOString(),
-  };
-  db.users.push(user);
-  await writeDb(db);
-  return await sanitizeUser(user);
+export async function createUser({
+  username,
+  passwordHash,
+  displayName,
+  wechatOpenId,
+  avatar,
+  initialBalanceCents = 0,
+  initialBonusNote = '新用户注册赠送',
+}) {
+  return runDbUpdate((db) => {
+    const usernameLower = username.trim().toLowerCase();
+    if (db.users.some((u) => u.usernameLower === usernameLower)) {
+      throw new Error('该账号已被注册');
+    }
+    const user = {
+      id: randomUUID(),
+      username: username.trim(),
+      usernameLower,
+      passwordHash: passwordHash || null,
+      displayName: displayName || username.trim(),
+      wechatOpenId: wechatOpenId || null,
+      avatar: avatar || null,
+      balanceCents: Math.max(0, initialBalanceCents),
+      dailyLoginBonusEarnedCents: 0,
+      createdAt: new Date().toISOString(),
+    };
+    db.users.push(user);
+    if (initialBalanceCents > 0) {
+      appendWalletTx(db, {
+        id: randomUUID(),
+        userId: user.id,
+        type: 'bonus',
+        amountCents: initialBalanceCents,
+        balanceBefore: 0,
+        balanceAfter: user.balanceCents,
+        operation: null,
+        orderId: null,
+        note: initialBonusNote,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    const { passwordHash: _ph, usernameLower: _ul, ...safe } = user;
+    safe.balanceYuan = (user.balanceCents / 100).toFixed(2);
+    return safe;
+  });
 }
 
 export async function sanitizeUser(user) {
@@ -68,57 +93,57 @@ function appendWalletTx(db, tx) {
 
 export async function chargeUserBalance(userId, amountCents, meta = {}) {
   if (amountCents <= 0) throw new Error('扣费金额无效');
-  const db = await readDb();
-  const user = db.users.find((u) => u.id === userId);
-  if (!user) throw new Error('用户不存在');
-  const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
-  if (before < amountCents) {
-    const err = new Error('余额不足');
-    err.code = 'INSUFFICIENT_BALANCE';
-    err.balanceCents = before;
-    err.costCents = amountCents;
-    throw err;
-  }
-  user.balanceCents = before - amountCents;
-  const tx = {
-    id: randomUUID(),
-    userId,
-    type: meta.type || 'consume',
-    amountCents: -amountCents,
-    balanceBefore: before,
-    balanceAfter: user.balanceCents,
-    operation: meta.operation || null,
-    orderId: meta.orderId || null,
-    note: meta.note || '',
-    createdAt: new Date().toISOString(),
-  };
-  appendWalletTx(db, tx);
-  await writeDb(db);
-  return tx;
+  return runDbUpdate((db) => {
+    const user = db.users.find((u) => u.id === userId);
+    if (!user) throw new Error('用户不存在');
+    const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
+    if (before < amountCents) {
+      const err = new Error('余额不足');
+      err.code = 'INSUFFICIENT_BALANCE';
+      err.balanceCents = before;
+      err.costCents = amountCents;
+      throw err;
+    }
+    user.balanceCents = before - amountCents;
+    const tx = {
+      id: randomUUID(),
+      userId,
+      type: meta.type || 'consume',
+      amountCents: -amountCents,
+      balanceBefore: before,
+      balanceAfter: user.balanceCents,
+      operation: meta.operation || null,
+      orderId: meta.orderId || null,
+      note: meta.note || '',
+      createdAt: new Date().toISOString(),
+    };
+    appendWalletTx(db, tx);
+    return tx;
+  });
 }
 
 export async function creditUserBalance(userId, amountCents, meta = {}) {
   if (amountCents <= 0) throw new Error('充值金额无效');
-  const db = await readDb();
-  const user = db.users.find((u) => u.id === userId);
-  if (!user) throw new Error('用户不存在');
-  const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
-  user.balanceCents = before + amountCents;
-  const tx = {
-    id: randomUUID(),
-    userId,
-    type: meta.type || 'recharge',
-    amountCents,
-    balanceBefore: before,
-    balanceAfter: user.balanceCents,
-    operation: meta.operation || null,
-    orderId: meta.orderId || null,
-    note: meta.note || '',
-    createdAt: new Date().toISOString(),
-  };
-  appendWalletTx(db, tx);
-  await writeDb(db);
-  return tx;
+  return runDbUpdate((db) => {
+    const user = db.users.find((u) => u.id === userId);
+    if (!user) throw new Error('用户不存在');
+    const before = Number.isFinite(user.balanceCents) ? user.balanceCents : 0;
+    user.balanceCents = before + amountCents;
+    const tx = {
+      id: randomUUID(),
+      userId,
+      type: meta.type || 'recharge',
+      amountCents,
+      balanceBefore: before,
+      balanceAfter: user.balanceCents,
+      operation: meta.operation || null,
+      orderId: meta.orderId || null,
+      note: meta.note || '',
+      createdAt: new Date().toISOString(),
+    };
+    appendWalletTx(db, tx);
+    return tx;
+  });
 }
 
 export async function refundUserBalance(userId, amountCents, meta = {}) {
