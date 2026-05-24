@@ -31,10 +31,6 @@ export const brazilStates = [
       ],
       designLink: '【因】商务密度 + 分期消费文化 →【果】parcelamento 展示、即时支付、多元模特、清晰发票/税务信息。',
     },
-    videos: [
-      { title: '圣保罗城市文化', url: 'https://www.youtube.com/watch?v=Gv8W9XkZ8eE', provider: 'YouTube', tag: '文化' },
-      { title: '拉美电商支付习惯', url: 'https://www.nngroup.com/articles/trust-and-culture/', provider: 'NN/g', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '分期付款；Pix 支付；葡语优先。' }],
   }),
   r({
@@ -60,9 +56,6 @@ export const brazilStates = [
       ],
       designLink: '【因】节庆文化 + 旅游社交 →【果】鲜艳视觉、分享激励、安全提示、活动日历。',
     },
-    videos: [
-      { title: '里约狂欢节与文化', url: 'https://www.bilibili.com/video/BV1QK4y1r7SW/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '社交分享；活动票务；安全/区域提示。' }],
   }),
   r({
@@ -88,9 +81,6 @@ export const brazilStates = [
       ],
       designLink: '【因】非裔文化 + 音乐社交 →【果】音乐/视频整合、尊重符号、社区创作者合作。',
     },
-    videos: [
-      { title: '巴伊亚非裔文化', url: 'https://www.youtube.com/watch?v=Gv8W9XkZ8eE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '音乐营销；文化敏感；非裔代表。' }],
   }),
   r({
@@ -116,9 +106,6 @@ export const brazilStates = [
       ],
       designLink: '【因】物流约束 + 生态叙事 →【果】轻量页面、配送透明、环保认证、文化敏感 imagery。',
     },
-    videos: [
-      { title: '亚马孙雨林与原住民', url: 'https://www.youtube.com/watch?v=Gv8W9XkZ8eE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '轻量模式；物流追踪；环保认证。' }],
   }),
   r({
@@ -144,9 +131,6 @@ export const brazilStates = [
       ],
       designLink: '【因】关系型信任 →【果】WhatsApp 入口、口碑评价、温暖视觉、耐心客服。',
     },
-    videos: [
-      { title: '米纳斯吉拉斯文化', url: 'https://www.bilibili.com/video/BV1QK4y1r7SW/', provider: 'Bilibili', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: 'WhatsApp 下单；评价与推荐；温暖语气。' }],
   }),
   r({
@@ -172,9 +156,6 @@ export const brazilStates = [
       ],
       designLink: '【因】生态务实 + 农业 B2B →【果】环保信息、数据工具、季节模块、清晰规格。',
     },
-    videos: [
-      { title: '库里蒂巴生态城市', url: 'https://www.youtube.com/watch?v=Gv8W9XkZ8eE', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '环保标签；B2B 数据；季节品类。' }],
   }),
 ];
