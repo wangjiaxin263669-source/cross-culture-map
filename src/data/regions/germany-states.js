@@ -31,10 +31,6 @@ export const germanyStates = [
       ],
       designLink: '【因】传统 + 工程文化 →【果】德语本地化、规格详尽、季节旅游模块、稳重视觉。',
     },
-    videos: [
-      { title: '巴伐利亚文化与啤酒节', url: 'https://www.youtube.com/watch?v=2X8I77XwJn4', provider: 'YouTube', tag: '文化' },
-      { title: '德国 UX 设计', url: 'https://www.smashingmagazine.com/2010/03/how-to-design-for-germany/', provider: 'Smashing', tag: 'UX' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '德语精准；汽车级参数展示；传统节庆运营。' }],
   }),
   r({
@@ -60,9 +56,6 @@ export const germanyStates = [
       ],
       designLink: '【因】创意开放 + 历史敏感 →【果】英语可选、透明定价、真诚 CSR、实验性 UI 可试点。',
     },
-    videos: [
-      { title: '柏林墙与当代文化', url: 'https://www.youtube.com/watch?v=2X8I77XwJn4', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '英德双语；透明定价；CSR 真诚。' }],
   }),
   r({
@@ -88,9 +81,6 @@ export const germanyStates = [
       ],
       designLink: '【因】工业 B2B + 节庆 →【果】展会预约、文档下载、狂欢节主题、跨境物流说明。',
     },
-    videos: [
-      { title: '鲁尔区工业文化', url: 'https://www.youtube.com/watch?v=2X8I77XwJn4', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: 'B2B 线索表单；展会模块；节庆皮肤。' }],
   }),
   r({
@@ -116,9 +106,6 @@ export const germanyStates = [
       ],
       designLink: '【因】港口贸易 + 媒体素养 →【果】物流追踪、订阅透明、国际运输条款、清晰排版。',
     },
-    videos: [
-      { title: '汉堡港口文化', url: 'https://www.youtube.com/watch?v=2X8I77XwJn4', provider: 'YouTube', tag: '文化' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '物流与海关信息；订阅模式清晰。' }],
   }),
   r({
@@ -144,9 +131,6 @@ export const germanyStates = [
       ],
       designLink: '【因】精密制造文化 →【果】专业 B2B、配置器、长期保修信息、德英技术双语。',
     },
-    videos: [
-      { title: '德国汽车工业文化', url: 'https://www.youtube.com/watch?v=2X8I77XwJn4', provider: 'YouTube', tag: '产业' },
-    ],
     designInsights: [{ icon: '💡', title: '设计启示', content: '配置对比；技术白皮书；B2B 专业语气。' }],
   }),
 ];
