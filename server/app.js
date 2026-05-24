@@ -32,7 +32,7 @@ import { getSkillMeta } from './loadSkill.js';
 import { getServerDir } from './paths.js';
 import authRoutes from './auth/routes.js';
 import { getWechatConfig } from './auth/wechat.js';
-import { getSmsConfig, isSmsSendConfigured } from './auth/sms.js';
+import { resolveSmsRuntime, isSmsSendConfigured } from './auth/sms.js';
 import { isDbWritable } from './db/store.js';
 import { getStorageBackend } from './db/engine.js';
 import { ensureBlobsReady } from './db/blobContext.js';
@@ -132,9 +132,9 @@ export function createApp(options = {}) {
     next();
   });
 
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
     const wx = getWechatConfig();
-    const sms = getSmsConfig();
+    const sms = await resolveSmsRuntime();
     res.json({
       ok: true,
       aiConfigured: isConfigured(),
@@ -155,7 +155,7 @@ export function createApp(options = {}) {
         smsConfigured: isSmsSendConfigured(),
         smsMock: sms.mock,
         smsProvider: sms.provider,
-        smsExposeDevCode: sms.exposeDevCode || sms.mock,
+        smsExposeDevCode: Boolean(sms.exposeDevCode && sms.mock),
       },
       wallet: getWalletPublicConfig(),
       payment: getPaymentPublicConfig(),

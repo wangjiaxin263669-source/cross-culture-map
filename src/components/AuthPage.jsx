@@ -36,8 +36,12 @@ export default function AuthPage() {
     try {
       const data = await sendSmsCode({ phone, purpose: smsPurpose });
       setCountdown(60);
-      if (data.devHint) setDevHint(data.devHint);
-      else if (data.devCode) setDevHint(`开发模式验证码：${data.devCode}`);
+      if (data.devCode) {
+        setCode(String(data.devCode));
+        setDevHint(data.devHint || `验证码：${data.devCode}`);
+      } else {
+        setDevHint('');
+      }
     } catch (err) {
       setError(err.message || '发送失败');
     } finally {

@@ -6,6 +6,8 @@ import {
   markRechargeOrderAwaitingConfirm,
   listRechargeOrdersForAdmin,
   completeRechargeOrder,
+  getSmsPlatformSettings,
+  saveSmsPlatformSettings,
 } from '../db/store.js';
 import { requireRechargeAdmin } from './admin.js';
 import { requireAuth, requirePhoneBound } from '../auth/middleware.js';
@@ -109,6 +111,54 @@ router.post('/recharge/submit-paid', requireAuth, requirePhoneBound, async (req,
       order,
       message: '已提交，请等待管理员核实微信到账后入账（通常几分钟内）',
     });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** 管理员：配置真实短信（写入 Netlify Blobs，立即生效） */
+router.get('/admin/sms', requireRechargeAdmin, async (_req, res) => {
+  const settings = await getSmsPlatformSettings();
+  const safe = settings
+    ? {
+        ...settings,
+        smsbao: settings.smsbao
+          ? { user: settings.smsbao.user, sign: settings.smsbao.sign, passwordSet: Boolean(settings.smsbao.password) }
+          : null,
+      }
+    : null;
+  res.json({ settings: safe });
+});
+
+router.post('/admin/sms', requireRechargeAdmin, async (req, res) => {
+  try {
+    const { provider, smsbao, unisms, exposeDevCode } = req.body || {};
+    const next = {
+      provider: provider || 'smsbao',
+      exposeDevCode: exposeDevCode === true,
+    };
+    if (smsbao?.user) {
+      next.smsbao = {
+        user: String(smsbao.user).trim(),
+        password: String(smsbao.password || '').trim(),
+        sign: String(smsbao.sign || '跨文化平台').trim(),
+      };
+      if (!next.smsbao.password) {
+        const prev = await getSmsPlatformSettings();
+        next.smsbao.password = prev?.smsbao?.password || '';
+      }
+      if (!next.smsbao.password) {
+        return res.status(400).json({ error: '请提供短信宝密码' });
+      }
+    }
+    if (unisms?.accessKeyId) {
+      next.unisms = {
+        accessKeyId: String(unisms.accessKeyId).trim(),
+        signature: String(unisms.signature || '跨文化平台').trim(),
+      };
+    }
+    await saveSmsPlatformSettings(next);
+    res.json({ ok: true, message: '短信配置已保存并生效', provider: next.provider });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

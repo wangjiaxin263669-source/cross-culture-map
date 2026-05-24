@@ -90,6 +90,18 @@ export async function createUser({
   });
 }
 
+export async function getSmsPlatformSettings() {
+  const db = await readDb();
+  return db.smsSettings || null;
+}
+
+export async function saveSmsPlatformSettings(settings) {
+  return runDbUpdate((db) => {
+    db.smsSettings = settings;
+    return settings;
+  });
+}
+
 export async function bindPhoneToUser(userId, phone) {
   return runDbUpdate((db) => {
     assertPhoneAvailable(db, phone, userId);

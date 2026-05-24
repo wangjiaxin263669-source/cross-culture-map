@@ -1,7 +1,9 @@
 /**
- * 短信发送：mock / 短信宝 smsbao / http webhook / 阿里云
+ * 短信发送：mock / 短信宝 / UniSMS / http / 阿里云
+ * 支持环境变量 + 平台数据库 smsSettings（管理员 API 写入，无需重新部署）
  */
 import crypto from 'crypto';
+import { getSmsPlatformSettings } from '../db/store.js';
 
 const SMSBAO_ERRORS = {
   '30': '短信宝密码错误',
@@ -13,19 +15,20 @@ const SMSBAO_ERRORS = {
   '51': '手机号码不正确',
 };
 
-export function getSmsConfig() {
-  const provider = (process.env.SMS_PROVIDER || 'mock').trim().toLowerCase();
-  const exposeDevCode = process.env.SMS_EXPOSE_DEV_CODE === 'true';
+function envSms() {
   return {
-    provider,
-    mock: provider === 'mock',
-    exposeDevCode,
+    provider: (process.env.SMS_PROVIDER || 'auto').trim().toLowerCase(),
+    exposeDevCode: process.env.SMS_EXPOSE_DEV_CODE === 'true',
     devCode: process.env.SMS_DEV_CODE?.trim() || '',
     webhookUrl: process.env.SMS_WEBHOOK_URL?.trim() || '',
     smsbao: {
       user: process.env.SMSBAO_USER?.trim() || '',
       password: process.env.SMSBAO_PASSWORD?.trim() || '',
       sign: process.env.SMSBAO_SIGN?.trim() || '跨文化平台',
+    },
+    unisms: {
+      accessKeyId: process.env.UNISMS_ACCESS_KEY_ID?.trim() || '',
+      signature: process.env.UNISMS_SIGNATURE?.trim() || '跨文化平台',
     },
     aliyun: {
       accessKeyId: process.env.ALIYUN_SMS_ACCESS_KEY_ID?.trim() || '',
@@ -36,13 +39,42 @@ export function getSmsConfig() {
   };
 }
 
-export function isSmsSendConfigured() {
-  const cfg = getSmsConfig();
+export async function resolveSmsRuntime() {
+  const env = envSms();
+  const db = (await getSmsPlatformSettings()) || {};
+  const merged = {
+    provider: db.provider || env.provider,
+    exposeDevCode: db.exposeDevCode ?? env.exposeDevCode,
+    devCode: db.devCode || env.devCode,
+    webhookUrl: db.webhookUrl || env.webhookUrl,
+    smsbao: { ...env.smsbao, ...(db.smsbao || {}) },
+    unisms: { ...env.unisms, ...(db.unisms || {}) },
+    aliyun: { ...env.aliyun, ...(db.aliyun || {}) },
+  };
+
+  let provider = merged.provider;
+  if (provider === 'auto') {
+    if (merged.smsbao.user && merged.smsbao.password) provider = 'smsbao';
+    else if (merged.unisms.accessKeyId) provider = 'unisms';
+    else provider = 'mock';
+  }
+
+  return {
+    ...merged,
+    provider,
+    mock: provider === 'mock',
+  };
+}
+
+export async function isSmsSendConfigured() {
+  const cfg = await resolveSmsRuntime();
   if (cfg.mock) return true;
   if (cfg.provider === 'http' && cfg.webhookUrl) return true;
   if (cfg.provider === 'smsbao') {
-    const s = cfg.smsbao;
-    return Boolean(s.user && s.password);
+    return Boolean(cfg.smsbao.user && cfg.smsbao.password);
+  }
+  if (cfg.provider === 'unisms') {
+    return Boolean(cfg.unisms.accessKeyId);
   }
   if (cfg.provider === 'aliyun') {
     const a = cfg.aliyun;
@@ -51,12 +83,16 @@ export function isSmsSendConfigured() {
   return false;
 }
 
-export function shouldExposeDevCodeInApi() {
-  const cfg = getSmsConfig();
+export async function shouldExposeDevCodeInApi() {
+  const cfg = await resolveSmsRuntime();
   if (cfg.mock && (cfg.exposeDevCode || process.env.NODE_ENV !== 'production')) {
     return true;
   }
   return false;
+}
+
+export function getSmsConfig() {
+  return envSms();
 }
 
 async function sendViaWebhook(url, phone, code) {
@@ -71,14 +107,13 @@ async function sendViaWebhook(url, phone, code) {
   }
 }
 
-async function sendViaSmsBao(phone, code) {
-  const cfg = getSmsConfig().smsbao;
-  if (!cfg.user || !cfg.password) {
-    throw new Error('未配置 SMSBAO_USER / SMSBAO_PASSWORD');
+async function sendViaSmsBao(phone, code, smsbao) {
+  if (!smsbao.user || !smsbao.password) {
+    throw new Error('短信服务未配置');
   }
-  const p = crypto.createHash('md5').update(cfg.password).digest('hex');
-  const content = `【${cfg.sign}】您的验证码是${code}，5分钟内有效。`;
-  const url = `https://api.smsbao.com/sms?u=${encodeURIComponent(cfg.user)}&p=${p}&m=${phone}&c=${encodeURIComponent(content)}`;
+  const p = crypto.createHash('md5').update(smsbao.password).digest('hex');
+  const content = `【${smsbao.sign || '跨文化平台'}】您的验证码是${code}，5分钟内有效。`;
+  const url = `https://api.smsbao.com/sms?u=${encodeURIComponent(smsbao.user)}&p=${p}&m=${phone}&c=${encodeURIComponent(content)}`;
   const res = await fetch(url);
   const body = (await res.text()).trim();
   if (body !== '0') {
@@ -86,19 +121,33 @@ async function sendViaSmsBao(phone, code) {
   }
 }
 
-async function sendViaAliyun(phone, code) {
-  const cfg = getSmsConfig().aliyun;
+async function sendViaUniSms(phone, code, unisms) {
+  if (!unisms.accessKeyId) throw new Error('短信服务未配置');
+  const content = `【${unisms.signature}】您的验证码是${code}，5分钟内有效。`;
+  const url = `https://uni.apistd.com/?action=sms.message.send&accessKeyId=${encodeURIComponent(unisms.accessKeyId)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: phone, signature: unisms.signature, content }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (data.code !== '0' && data.code !== 0) {
+    throw new Error(data.message || '短信发送失败');
+  }
+}
+
+async function sendViaAliyun(phone, code, aliyun) {
   const params = {
-    AccessKeyId: cfg.accessKeyId,
+    AccessKeyId: aliyun.accessKeyId,
     Action: 'SendSms',
     Format: 'JSON',
     PhoneNumbers: phone,
     RegionId: 'cn-hangzhou',
-    SignName: cfg.signName,
+    SignName: aliyun.signName,
     SignatureMethod: 'HMAC-SHA1',
     SignatureNonce: crypto.randomBytes(16).toString('hex'),
     SignatureVersion: '1.0',
-    TemplateCode: cfg.templateCode,
+    TemplateCode: aliyun.templateCode,
     TemplateParam: JSON.stringify({ code }),
     Timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     Version: '2017-05-25',
@@ -109,7 +158,7 @@ async function sendViaAliyun(phone, code) {
     .join('&');
   const stringToSign = `GET&${encodeURIComponent('/')}&${encodeURIComponent(sorted)}`;
   const signature = crypto
-    .createHmac('sha1', `${cfg.accessKeySecret}&`)
+    .createHmac('sha1', `${aliyun.accessKeySecret}&`)
     .update(stringToSign)
     .digest('base64');
   const query = `${sorted}&Signature=${encodeURIComponent(signature)}`;
@@ -122,16 +171,21 @@ async function sendViaAliyun(phone, code) {
 
 /** @returns {{ mockCode?: string }} */
 export async function sendVerificationSms(phone, code) {
-  const cfg = getSmsConfig();
+  const cfg = await resolveSmsRuntime();
 
   if (cfg.mock) {
     console.log(`[SMS mock] ${phone} 验证码: ${code}`);
     const mockCode = cfg.devCode || code;
-    return shouldExposeDevCodeInApi() ? { mockCode } : {};
+    return (await shouldExposeDevCodeInApi()) ? { mockCode } : {};
   }
 
   if (cfg.provider === 'smsbao') {
-    await sendViaSmsBao(phone, code);
+    await sendViaSmsBao(phone, code, cfg.smsbao);
+    return {};
+  }
+
+  if (cfg.provider === 'unisms') {
+    await sendViaUniSms(phone, code, cfg.unisms);
     return {};
   }
 
@@ -142,9 +196,9 @@ export async function sendVerificationSms(phone, code) {
   }
 
   if (cfg.provider === 'aliyun') {
-    await sendViaAliyun(phone, code);
+    await sendViaAliyun(phone, code, cfg.aliyun);
     return {};
   }
 
-  throw new Error('未配置短信服务，请设置 SMS_PROVIDER');
+  throw new Error('未配置短信服务');
 }

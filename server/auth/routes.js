@@ -25,7 +25,7 @@ import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
 import { tryGrantDailyLoginBonus } from '../wallet/dailyBonus.js';
 import { normalizePhone, validatePhone, userHasBoundPhone } from './phone.js';
 import { sendOtp, verifyOtp } from './otp.js';
-import { getSmsConfig, isSmsSendConfigured, shouldExposeDevCodeInApi } from './sms.js';
+import { resolveSmsRuntime, isSmsSendConfigured, shouldExposeDevCodeInApi } from './sms.js';
 
 const router = Router();
 
@@ -58,8 +58,8 @@ router.post('/sms/send', async (req, res) => {
       message: '验证码已发送',
       expiresInSec: result.expiresInSec,
     };
-    if (result.mockCode && shouldExposeDevCodeInApi()) {
-      payload.devHint = `验证码：${result.mockCode}（测试模式，正式运营请配置短信宝）`;
+    if (result.mockCode && (await shouldExposeDevCodeInApi())) {
+      payload.devHint = `验证码：${result.mockCode}`;
       payload.devCode = result.mockCode;
     }
     res.json(payload);
