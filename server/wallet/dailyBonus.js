@@ -1,4 +1,5 @@
-import { readDb, writeDb, creditUserBalance } from '../db/store.js';
+import { readDb, writeDb } from '../db/engine.js';
+import { creditUserBalance } from '../db/store.js';
 import {
   DAILY_LOGIN_BONUS_CENTS,
   DAILY_LOGIN_BONUS_CAP_CENTS,
