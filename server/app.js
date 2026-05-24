@@ -31,6 +31,21 @@ export function createApp(options = {}) {
   app.use(cors());
   app.use(express.json({ limit: '2mb' }));
 
+  /** 防止请求挂死导致 Vite/Netlify 返回 504 */
+  const API_DEADLINE_MS = Number(process.env.API_DEADLINE_MS || 52000);
+  app.use('/api', (req, res, next) => {
+    const timer = setTimeout(() => {
+      if (!res.headersSent) {
+        res.status(504).json({
+          error:
+            'AI 处理超时。请缩短描述后重试；本地请重启 npm run dev；线上请确认 Netlify 已配置 DEEPSEEK_API_KEY。',
+        });
+      }
+    }, API_DEADLINE_MS);
+    res.on('finish', () => clearTimeout(timer));
+    next();
+  });
+
   // Netlify Functions：部分环境下 express.json 解析不到 body，从 Lambda event 补读
   app.use((req, _res, next) => {
     const hasFields = (b) =>
