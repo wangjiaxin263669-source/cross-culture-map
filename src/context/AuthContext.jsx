@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     }
     if (params.get('daily_bonus') === '1') {
       window.history.replaceState({}, '', window.location.pathname);
-      setAuthNotice('每日登录已赠送 ¥0.50 到您的账户');
+      setAuthNotice('每日登录奖励已到账');
     }
 
     (async () => {
