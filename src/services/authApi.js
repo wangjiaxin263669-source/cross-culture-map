@@ -31,24 +31,43 @@ async function authFetch(path, options = {}) {
     /* ignore */
   }
   if (!res.ok) {
-    throw new Error(data.error || `请求失败 (${res.status})`);
+    const err = new Error(data.error || `请求失败 (${res.status})`);
+    err.code = data.code;
+    err.requiresPhoneBinding = data.requiresPhoneBinding;
+    throw err;
   }
   return data;
 }
 
-export async function register({ username, password, displayName }) {
-  const data = await authFetch('/api/auth/register', {
+export async function sendSmsCode({ phone, purpose = 'login' }) {
+  return authFetch('/api/auth/sms/send', {
     method: 'POST',
-    body: JSON.stringify({ username, password, displayName }),
+    body: JSON.stringify({ phone, purpose }),
+  });
+}
+
+export async function smsLogin({ phone, code }) {
+  const data = await authFetch('/api/auth/sms/login', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code }),
   });
   setToken(data.token);
   return data;
 }
 
-export async function login({ username, password }) {
-  const data = await authFetch('/api/auth/login', {
+export async function legacyBindPhone({ username, password, phone, code }) {
+  const data = await authFetch('/api/auth/legacy/bind-phone', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, phone, code }),
+  });
+  setToken(data.token);
+  return data;
+}
+
+export async function bindPhone({ phone, code }) {
+  const data = await authFetch('/api/auth/bind-phone', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code }),
   });
   setToken(data.token);
   return data;

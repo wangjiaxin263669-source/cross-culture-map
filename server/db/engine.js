@@ -13,6 +13,7 @@ export const EMPTY_DB = {
   reports: [],
   rechargeOrders: [],
   walletTransactions: [],
+  otpRecords: [],
 };
 
 const BLOB_STORE = 'cross-culture-platform';
@@ -29,6 +30,7 @@ function normalizeDb(raw) {
     reports: raw.reports || [],
     rechargeOrders: raw.rechargeOrders || [],
     walletTransactions: raw.walletTransactions || [],
+    otpRecords: raw.otpRecords || [],
   };
 }
 

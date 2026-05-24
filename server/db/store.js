@@ -22,12 +22,27 @@ export async function findUserByWechatOpenId(openId) {
   return db.users.find((u) => u.wechatOpenId === openId) || null;
 }
 
+export async function findUserByPhone(phone) {
+  const db = await readDb();
+  const key = String(phone).trim();
+  return db.users.find((u) => u.phone === key && u.phoneVerified) || null;
+}
+
+function assertPhoneAvailable(db, phone, exceptUserId = null) {
+  const taken = db.users.some(
+    (u) => u.phone === phone && u.phoneVerified && u.id !== exceptUserId,
+  );
+  if (taken) throw new Error('该手机号已被其他账号绑定');
+}
+
 export async function createUser({
   username,
   passwordHash,
   displayName,
   wechatOpenId,
   avatar,
+  phone = null,
+  phoneVerified = false,
   initialBalanceCents = 0,
   initialBonusNote = '新用户注册赠送',
 }) {
@@ -35,6 +50,9 @@ export async function createUser({
     const usernameLower = username.trim().toLowerCase();
     if (db.users.some((u) => u.usernameLower === usernameLower)) {
       throw new Error('该账号已被注册');
+    }
+    if (phone && phoneVerified) {
+      assertPhoneAvailable(db, phone);
     }
     const user = {
       id: randomUUID(),
@@ -44,6 +62,9 @@ export async function createUser({
       displayName: displayName || username.trim(),
       wechatOpenId: wechatOpenId || null,
       avatar: avatar || null,
+      phone: phoneVerified ? phone : null,
+      phoneVerified: Boolean(phone && phoneVerified),
+      phoneVerifiedAt: phone && phoneVerified ? new Date().toISOString() : null,
       balanceCents: Math.max(0, initialBalanceCents),
       dailyLoginBonusEarnedCents: 0,
       createdAt: new Date().toISOString(),
@@ -69,14 +90,54 @@ export async function createUser({
   });
 }
 
+export async function bindPhoneToUser(userId, phone) {
+  return runDbUpdate((db) => {
+    assertPhoneAvailable(db, phone, userId);
+    const user = db.users.find((u) => u.id === userId);
+    if (!user) throw new Error('用户不存在');
+    user.phone = phone;
+    user.phoneVerified = true;
+    user.phoneVerifiedAt = new Date().toISOString();
+    const { passwordHash: _ph, usernameLower: _ul, ...safe } = user;
+    safe.balanceYuan = ((user.balanceCents || 0) / 100).toFixed(2);
+    return safe;
+  });
+}
+
+export async function createUserByPhone(phone, { initialBalanceCents = 0, initialBonusNote } = {}) {
+  const suffix = phone.slice(-4);
+  let username = `u${suffix}`;
+  let n = 0;
+  while (await findUserByUsername(username)) {
+    n += 1;
+    username = `u${suffix}_${n}`;
+  }
+  return createUser({
+    username,
+    passwordHash: null,
+    displayName: `用户${suffix}`,
+    phone,
+    phoneVerified: true,
+    initialBalanceCents,
+    initialBonusNote: initialBonusNote || '新用户注册赠送',
+  });
+}
+
 export async function sanitizeUser(user) {
   if (!user) return null;
-  const { passwordHash, usernameLower, ...safe } = user;
+  const { passwordHash, usernameLower, phone: rawPhone, ...safe } = user;
   const balanceCents = Number.isFinite(user.balanceCents)
     ? user.balanceCents
     : await getUserBalanceCents(user.id);
   safe.balanceCents = balanceCents;
   safe.balanceYuan = (balanceCents / 100).toFixed(2);
+  safe.phoneBound = Boolean(user.phone && user.phoneVerified);
+  safe.requiresPhoneBinding = !safe.phoneBound;
+  if (user.phone && user.phoneVerified) {
+    safe.phoneMasked = `${user.phone.slice(0, 3)}****${user.phone.slice(7)}`;
+  } else {
+    safe.phoneMasked = null;
+  }
   return safe;
 }
 

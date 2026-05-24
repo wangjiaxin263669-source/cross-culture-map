@@ -1369,6 +1369,50 @@ body, html, #root {
 .auth-form input:focus {
   border-color: rgba(0, 240, 255, 0.45);
 }
+.auth-code-row .auth-code-inputs {
+  display: flex;
+  gap: 8px;
+}
+.auth-code-row .auth-code-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+.auth-code-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.08);
+  color: #00f0ff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.auth-code-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.auth-inline-hint {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: -6px 0 12px;
+}
+.auth-link-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: #8da4c4;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+.auth-link-btn:hover {
+  color: #fff;
+}
 .auth-error {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.35);

@@ -12,6 +12,9 @@
   DAILY_LOGIN_BONUS_CENTS = "5"
   DAILY_LOGIN_BONUS_CAP_CENTS = "70"
   RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
+  # 手机号登录：暂无短信账号时用 mock，验证码显示在登录页（正式运营改 smsbao）
+  SMS_PROVIDER = "mock"
+  SMS_EXPOSE_DEV_CODE = "true"
 
 [functions]
   directory = "netlify/functions"

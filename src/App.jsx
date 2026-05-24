@@ -6,6 +6,7 @@ import CulturalStoryPanel from './components/CulturalStoryPanel';
 import RegionPicker from './components/RegionPicker';
 import SimulatedResearchPanel from './components/SimulatedResearchPanel';
 import AuthPage from './components/AuthPage';
+import BindPhonePage from './components/BindPhonePage';
 import HistoryDrawer from './components/HistoryDrawer';
 import RechargeModal from './components/RechargeModal';
 import { useAuth } from './context/AuthContext';
@@ -314,6 +315,10 @@ function App() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  if (user.requiresPhoneBinding) {
+    return <BindPhonePage />;
   }
 
   const avatarLetter = (user.displayName || user.username || '?').charAt(0).toUpperCase();
