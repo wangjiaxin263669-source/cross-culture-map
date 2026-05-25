@@ -199,6 +199,7 @@ const REGION_WORDS =
  */
 export async function runCultureLinkAudit(options = {}) {
   const { checkDesignerValue = true } = options;
+  const isCi = process.env.CI === 'true';
   const { markets } = await loadAllMarkets();
   const cache = new Map();
   const issues = [];
@@ -354,7 +355,10 @@ export async function runCultureLinkAudit(options = {}) {
   };
 
   const critical = issues.filter((i) => i.severity === 'critical' || i.severity === 'high');
-  const passed = critical.length === 0 && titleMismatch === 0;
+  const passed =
+    critical.length === 0 &&
+    designerValueFail === 0 &&
+    (isCi ? failAccess === 0 : titleMismatch === 0 && failAccess === 0);
 
   return { issues, stats, passed, cache };
 }
