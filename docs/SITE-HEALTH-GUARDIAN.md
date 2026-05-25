@@ -19,12 +19,22 @@
 
 仅 `netlify_rebuild`（运维动作，零文件变更）。
 
-## Secrets（建议配置，否则重建步骤跳过）
+## Secrets 一键配置
+
+本机已 `netlify login` 且能 `git push` 时，在项目根目录执行：
+
+```powershell
+.\scripts\setup-github-netlify-secret.ps1
+```
+
+会自动创建 Netlify Build Hook，并写入 GitHub Secrets：
+
+- `NETLIFY_BUILD_HOOK` — 自动重建正式站  
+- `NETLIFY_AUTH_TOKEN` — 备用 API 触发部署  
 
 | Secret | 作用 |
 |--------|------|
-| `DEEPSEEK_API_KEY` | CI 内跑 AI 冒烟 |
-| `NETLIFY_BUILD_HOOK` 或 `NETLIFY_AUTH_TOKEN` | 自动触发正式站部署 |
+| `DEEPSEEK_API_KEY` | CI 内跑 AI 冒烟（需在 GitHub 手动加） |
 
 工作流：`.github/workflows/site-health-guardian.yml`  
 推送 `main` 即上线，无需手动 Run workflow。
