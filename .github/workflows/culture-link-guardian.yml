@@ -38,7 +38,6 @@ jobs:
 
       - name: Auto audit and fix culture links
         run: npm run guardian
-        continue-on-error: true
         id: guardian
 
       - name: Commit and push auto-fixes
@@ -80,9 +79,3 @@ jobs:
             scripts/guardian-reports/latest.json
             scripts/guardian-reports/auto-fix-log.json
           retention-days: 90
-
-      - name: Fail if guardian audit did not pass
-        if: steps.guardian.outcome == 'failure'
-        run: |
-          echo "::error::文化链接巡检未通过，见 Artifact 报告"
-          exit 1
