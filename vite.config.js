@@ -15,7 +15,7 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_PROXY || 'http://localhost:3001',
         changeOrigin: true,
         timeout: 120000,
         proxyTimeout: 120000,
