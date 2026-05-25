@@ -38,10 +38,10 @@ jobs:
 
       - name: Auto audit and fix culture links
         run: npm run guardian
-        continue-on-error: true
         id: guardian
 
       - name: Commit and push auto-fixes
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -75,8 +75,14 @@ jobs:
             scripts/guardian-reports/auto-fix-log.json
           retention-days: 90
 
+      - name: Re-verify after commit
+        run: |
+          git pull --rebase origin main || true
+          npm run guardian
+        id: verify
+
       - name: Fail if still broken after auto-fix
-        if: steps.guardian.outcome == 'failure'
+        if: steps.verify.outcome == 'failure'
         run: |
           echo "::error::全自动修复后仍有严重问题，见 Artifact"
           exit 1

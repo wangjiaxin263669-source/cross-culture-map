@@ -34,7 +34,12 @@ function escapeRegExp(s) {
  */
 export async function buildFixPlan(auditResult) {
   const plan = new Map();
-  const fixable = auditResult.issues.filter((i) => FIXABLE_SEVERITY.has(i.severity));
+  /** 仅自动修复「确认失效」；标题错位在 B 站可访问时不乱换地方纪录片 */
+  const fixable = auditResult.issues.filter((i) => {
+    if (i.severity === 'critical' || i.severity === 'high') return true;
+    if (i.severity === 'medium' && i.issue === '链接不可访问') return true;
+    return false;
+  });
 
   for (const issue of fixable) {
     const key = `${issue.url}|${issue.type}`;
@@ -53,16 +58,12 @@ export async function buildFixPlan(auditResult) {
 }
 
 function applyUrlSwap(content, oldUrl, newUrl) {
-  const variants = [
-    oldUrl,
-    oldUrl.replace(/\/$/, ''),
-    oldUrl.endsWith('/') ? oldUrl : `${oldUrl}/`,
-  ];
-  let out = content;
-  for (const v of [...new Set(variants)]) {
-    if (v && out.includes(v)) out = out.split(v).join(newUrl);
-  }
-  return out;
+  const o = normalizeUrl(oldUrl);
+  const n = normalizeUrl(newUrl);
+  if (!o || o === n) return content;
+  const target = `${n}/`;
+  const re = new RegExp(`${escapeRegExp(o)}/+`, 'g');
+  return content.replace(re, target);
 }
 
 function applyBilibiliSwap(content, oldUrl, newUrl, newTitle, oldTitle) {

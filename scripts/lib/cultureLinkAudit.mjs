@@ -138,7 +138,8 @@ const TRUSTED_HOSTS =
   /design\.google|woshipm|zcool|bilibili|starbucks|gdpr|roomie|smokeybear|oag\.ca|apple\.com|geert-hofstede\.com/i;
 
 /** 境外经典源在部分网络下 fetch 会失败，不应与「确认下架」同等对待 */
-const NETWORK_FLAKY_HOSTS = /design\.google|geert-hofstede\.com|gdpr\.eu|starbucks\.com|apple\.com/i;
+const NETWORK_FLAKY_HOSTS =
+  /design\.google|geert-hofstede\.com|gdpr\.eu|starbucks\.com|apple\.com|roomie\.tw|smokeybear\.com|oag\.ca\.gov/i;
 
 export async function fetchCheck(url, cache = new Map()) {
   if (cache.has(url)) return cache.get(url);
@@ -294,7 +295,10 @@ export async function runCultureLinkAudit(options = {}) {
           `${item.title} ${check.pageTitle}`,
         );
 
-      if (check.ok && !aligned) {
+      const bilibiliOk =
+        item.type === '视频' && /bilibili\.com/i.test(item.url) && check.ok;
+
+      if (check.ok && !aligned && !bilibiliOk) {
         titleMismatch++;
         issues.push({
           severity: 'medium',

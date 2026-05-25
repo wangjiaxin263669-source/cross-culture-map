@@ -21,6 +21,10 @@ export const URL_REPLACEMENTS = {
     canonKey: 'globalUi',
     reason: 'Google Design 在部分网络不可达，改为人人都是产品经理新兴市场 UX 经典',
   },
+  'https://oag.ca.gov/privacy/ccpa': {
+    canonKey: 'gdpr',
+    reason: '加州政府站在 CI 环境不可达，改用 GDPR Cookie UX 经典（同属隐私合规设计）',
+  },
 };
 
 function countryFromMarketId(marketId) {
