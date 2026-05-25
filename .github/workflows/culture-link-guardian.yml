@@ -81,15 +81,8 @@ jobs:
             scripts/guardian-reports/auto-fix-log.json
           retention-days: 90
 
-      - name: Re-verify after commit
-        if: always()
+      - name: Fail if guardian audit did not pass
+        if: steps.guardian.outcome == 'failure'
         run: |
-          git pull --rebase origin main || true
-          npm run guardian
-        id: verify
-
-      - name: Fail if still broken after auto-fix
-        if: steps.verify.outcome == 'failure'
-        run: |
-          echo "::error::全自动修复后仍有严重问题，见 Artifact"
+          echo "::error::文化链接巡检未通过，见 Artifact 报告"
           exit 1
