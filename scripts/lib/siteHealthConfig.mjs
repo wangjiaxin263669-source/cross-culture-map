@@ -1,5 +1,5 @@
 /**
- * 站点健康守护 · 配置（只读巡检，禁止自动改业务数据）
+ * 站点健康守护 · 全自动托管配置（永不自动改业务数据文件）
  */
 
 export const DEFAULT_PROD_URL =
@@ -7,7 +7,10 @@ export const DEFAULT_PROD_URL =
   process.env.FRONTEND_URL?.trim() ||
   'https://ephemeral-bubblegum-a79332.netlify.app';
 
-/** 绝不允许自动修改的路径前缀（与视频换链事故隔离） */
+export const NETLIFY_SITE_ID =
+  process.env.NETLIFY_SITE_ID?.trim() || '6c06b462-2090-44e3-8234-e6d929d01674';
+
+/** 绝不允许自动修改的路径前缀 */
 export const PROTECTED_PATH_PREFIXES = [
   'src/data/',
   'src/',
@@ -19,13 +22,14 @@ export const PROTECTED_PATH_PREFIXES = [
   'package-lock.json',
 ];
 
-/** 允许写入的唯一目录 */
 export const REPORT_DIR = 'scripts/guardian-reports';
-
 export const REPORT_FILE = 'site-health-latest.json';
 
-/** 从文化数据文件中抽样检测的外链数量上限（只读 HEAD/GET） */
 export const MAX_CURATED_LINK_SAMPLES = 24;
-
-/** CI 中 AI 调用超时（毫秒） */
 export const AI_TIMEOUT_MS = Number(process.env.GUARDIAN_AI_TIMEOUT_MS || 120000);
+
+/** 全自动：复检前等待 Netlify 重建（毫秒） */
+export const REBUILD_WAIT_MS = Number(process.env.GUARDIAN_REBUILD_WAIT_MS || 120000);
+
+/** 全自动最大巡检轮次（含重建后复检） */
+export const MAX_AUTO_ROUNDS = 3;

@@ -23,9 +23,9 @@
     "guardian:check": "node scripts/culture-link-guardian.mjs",
     "guardian:audit": "node scripts/audit-all-markets.mjs",
     "guardian:validate-urls": "node scripts/validate-curated-links.mjs",
-    "site-health": "node scripts/site-health-guardian.mjs",
-    "site-health:fix": "node scripts/site-health-guardian.mjs --apply-safe-fixes",
-    "site-health:ci": "node scripts/site-health-guardian.mjs --ci",
+    "site-health": "node scripts/site-health-guardian.mjs --quiet",
+    "site-health:ci": "node scripts/site-health-guardian.mjs --ci --quiet",
+    "site-health:dry": "node scripts/site-health-guardian.mjs --dry-run",
     "site-health:validate": "node scripts/validate-site-health-guardian.mjs"
   },
   "dependencies": {

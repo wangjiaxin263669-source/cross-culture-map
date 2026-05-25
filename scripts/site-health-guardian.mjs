@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 /**
- * 站点健康守护 · 每 3 天巡检正式站（只读 + 极保守安全修复）
+ * 站点健康守护 · 全自动托管（每 3 天）
  *
- * 绝不自动修改：src/data、业务源码、文化链接、视频 BV 等
- * 允许的安全修复：仅触发 Netlify Build Hook（无文件变更）
- *
- * 用法:
- *   node scripts/site-health-guardian.mjs              # 巡检 + 报告
- *   node scripts/site-health-guardian.mjs --ci         # CI：仅正式站
- *   node scripts/site-health-guardian.mjs --apply-safe-fixes
+ * - 自动巡检正式站：登录/钱包/AI/链接抽样
+ * - 自动安全修复：仅 Netlify 重建（绝不改 src/data、不批量换链、不 git commit）
+ * - 失败自动重试 + 重建后复检，无需人工查看
  */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { DEFAULT_PROD_URL, REPORT_DIR, REPORT_FILE } from './lib/siteHealthConfig.mjs';
+import {
+  DEFAULT_PROD_URL,
+  REPORT_DIR,
+  REPORT_FILE,
+  MAX_AUTO_ROUNDS,
+  REBUILD_WAIT_MS,
+} from './lib/siteHealthConfig.mjs';
 import { runProductionSuite } from './lib/siteHealthChecks.mjs';
 import { applySafeFixes, assertNoProtectedWrites } from './lib/siteHealthSafeFix.mjs';
 
@@ -21,73 +23,94 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 const args = process.argv.slice(2);
-const isCi = args.includes('--ci');
-const applyFixes = args.includes('--apply-safe-fixes');
+const isCi = args.includes('--ci') || process.env.CI === 'true';
+const dryRun = args.includes('--dry-run');
+const applyFixes = !dryRun;
+const quiet = isCi || args.includes('--quiet');
 const prodUrl = process.env.SITE_URL?.trim() || DEFAULT_PROD_URL;
 
+function log(...a) {
+  if (!quiet) console.log(...a);
+}
+
 function summarize(checks) {
-  const failed = checks.filter((c) => !c.ok && c.severity === 'critical');
-  const warned = checks.filter((c) => !c.ok && c.severity === 'warn');
-  const passed = checks.filter((c) => c.ok);
-  return { failed, warned, passed, total: checks.length };
+  return {
+    failed: checks.filter((c) => !c.ok && c.severity === 'critical'),
+    warned: checks.filter((c) => !c.ok && c.severity === 'warn'),
+    passed: checks.filter((c) => c.ok),
+    total: checks.length,
+  };
+}
+
+async function runRound(runAi) {
+  return runProductionSuite(prodUrl, { runAi });
 }
 
 async function main() {
-  console.log('═'.repeat(60));
-  console.log('  Cross-Culture · 站点健康守护（只读巡检）');
-  console.log('═'.repeat(60));
-  console.log(`正式站: ${prodUrl}`);
-  console.log(`模式: ${isCi ? 'CI' : 'local'} | 安全修复: ${applyFixes ? '开启' : '关闭'}`);
-  console.log('受保护: 不自动改 src/data、不批量换链、不提交代码\n');
+  log('[site-health] auto start', prodUrl);
 
-  const suite = await runProductionSuite(prodUrl, {
-    runAi: isCi ? Boolean(process.env.DEEPSEEK_API_KEY) : true,
-  });
+  const fixEnv = {
+    applyFixes,
+    NETLIFY_BUILD_HOOK: process.env.NETLIFY_BUILD_HOOK,
+    NETLIFY_AUTH_TOKEN: process.env.NETLIFY_AUTH_TOKEN,
+  };
 
-  let report = {
-    version: 1,
+  let lastSuite = null;
+  let allSafeFixes = [];
+  let round = 0;
+
+  for (round = 1; round <= MAX_AUTO_ROUNDS; round += 1) {
+    log(`[site-health] round ${round}/${MAX_AUTO_ROUNDS}`);
+    const runAi = round === 1 && (isCi ? Boolean(process.env.DEEPSEEK_API_KEY) : true);
+    lastSuite = await runRound(runAi);
+
+    const summary = summarize(lastSuite.checks);
+    if (summary.failed.length === 0) {
+      log('[site-health] all critical checks passed');
+      break;
+    }
+
+    if (!applyFixes || round >= MAX_AUTO_ROUNDS) break;
+
+    const partialReport = {
+      checks: lastSuite.checks,
+      suggestedFixes: lastSuite.suggestedFixes,
+    };
+    const fixes = await applySafeFixes(partialReport, fixEnv);
+    allSafeFixes.push({ round, ...fixes });
+
+    const rebuilt = fixes.applied?.some((a) => a.type === 'netlify_rebuild' && a.ok);
+    if (rebuilt) {
+      log(`[site-health] rebuild triggered, wait ${REBUILD_WAIT_MS / 1000}s`);
+      await new Promise((r) => setTimeout(r, REBUILD_WAIT_MS));
+    } else {
+      await new Promise((r) => setTimeout(r, 15000));
+    }
+  }
+
+  const report = {
+    version: 2,
+    mode: 'full_auto',
     at: new Date().toISOString(),
     prodUrl,
-    ci: isCi,
+    rounds: round,
     policy: {
       autoEditSource: false,
       autoEditCultureData: false,
+      autoGitCommit: false,
       allowedFixes: ['netlify_rebuild'],
     },
-    checks: suite.checks,
-    suggestedFixes: suite.suggestedFixes,
-    deadLinksSample: (suite.deadLinks || []).slice(0, 10),
-    summary: null,
-    safeFixes: null,
+    checks: lastSuite.checks,
+    suggestedFixes: lastSuite.suggestedFixes,
+    deadLinksSample: (lastSuite.deadLinks || []).slice(0, 10),
+    safeFixes: allSafeFixes,
+    summary: summarize(lastSuite.checks),
   };
 
-  report.summary = summarize(suite.checks);
-
-  for (const c of suite.checks) {
-    const icon = c.ok ? '✅' : c.severity === 'warn' ? '⚠️' : '❌';
-    console.log(`${icon} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
-  }
-
-  if (applyFixes) {
-    report.safeFixes = await applySafeFixes(report, {
-      applyFixes: true,
-      NETLIFY_BUILD_HOOK: process.env.NETLIFY_BUILD_HOOK,
-    });
-    console.log('\n--- 安全修复 ---');
-    for (const a of report.safeFixes.applied) {
-      console.log(`  ✓ ${a.type}: ${a.note || a.status || JSON.stringify(a)}`);
-    }
-    for (const s of report.safeFixes.skipped) {
-      console.log(`  · 跳过 ${s.type}: ${s.reason}`);
-    }
-
-    if (report.safeFixes.applied.some((a) => a.type === 'netlify_rebuild' && a.ok)) {
-      console.log('\n等待 90s 后复检 health…');
-      await new Promise((r) => setTimeout(r, 90000));
-      const retry = await runProductionSuite(prodUrl, { runAi: false });
-      const h = retry.checks.find((x) => x.id === 'health');
-      console.log(h?.ok ? '✅ 复检 health 通过' : `⚠️ 复检仍异常: ${h?.detail}`);
-      report.recheckHealth = h;
+  if (!quiet) {
+    for (const c of lastSuite.checks) {
+      const icon = c.ok ? '✅' : c.severity === 'warn' ? '⚠️' : '❌';
+      console.log(`${icon} ${c.name} — ${c.detail || ''}`);
     }
   }
 
@@ -95,15 +118,15 @@ async function main() {
   assertNoProtectedWrites(reportPath);
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
-  console.log(`\n报告已写入: ${REPORT_DIR}/${REPORT_FILE}`);
 
   const { failed, warned } = report.summary;
-  console.log(`\n--- 汇总: ${failed.length} 严重失败, ${warned.length} 警告, ${report.summary.passed.length} 通过 ---`);
+  log(`[site-health] done: critical=${failed.length} warn=${warned.length} pass=${report.summary.passed.length}`);
 
   if (failed.length > 0) {
-    console.log('\n严重项需人工处理（本守护不会自动改数据文件）:');
-    for (const f of failed) {
-      console.log(`  · ${f.name}: ${f.detail}`);
+    if (quiet) {
+      console.error(
+        `[site-health] FAILED: ${failed.map((f) => f.name).join(', ')}`,
+      );
     }
     process.exit(1);
   }
@@ -112,6 +135,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[site-health-guardian]', err);
+  console.error('[site-health-guardian]', err.message);
   process.exit(1);
 });
