@@ -7,9 +7,10 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "node scripts/kill-api-port.mjs && concurrently -k false -n api,web -c cyan,green \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "node scripts/kill-api-port.mjs && concurrently -k -n api,web --restart-tries 10 --restart-after 3000 -c cyan,green \"npm run dev:server\" \"npm run dev:client:wait\"",
+    "dev:client:wait": "node scripts/write-vite-proxy.mjs && vite",
     "dev:client": "vite",
-    "dev:server": "node server/index.js",
+    "dev:server": "node scripts/dev-server.mjs",
     "build": "vite build",
     "build:knowledge": "node server/scripts/build-knowledge.mjs",
     "predeploy": "node scripts/predeploy.mjs",
