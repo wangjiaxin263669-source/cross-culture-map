@@ -799,6 +799,11 @@ body, html, #root {
   color: #94a3b8;
   margin: 0 0 14px;
 }
+
+.sim-flow-cost-hint {
+  color: #7dd3fc;
+  white-space: nowrap;
+}
 .sim-step-tabs {
   display: flex;
   flex-wrap: wrap;

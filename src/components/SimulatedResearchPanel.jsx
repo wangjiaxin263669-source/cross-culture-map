@@ -43,10 +43,19 @@ const CORPUS_OPTIONS = [
   { id: 'web', label: '全网搜索（需 SERPER_API_KEY）' },
 ];
 
+function simFlowCostYuan(costsYuan, personaCount) {
+  const personas = Number(costsYuan?.sim_personas ?? 0.35);
+  const interview = Number(costsYuan?.sim_interview ?? 0);
+  const report = Number(costsYuan?.sim_report ?? 0);
+  const total = personas + interview * personaCount + report;
+  return total.toFixed(2);
+}
+
 export default function SimulatedResearchPanel({
   market,
   marketTitle,
   aiConfigured,
+  walletCostsYuan,
   onSyncToThreeStepReport,
   onReportGenerated,
 }) {
@@ -322,6 +331,10 @@ export default function SimulatedResearchPanel({
         </h3>
         <p className="sim-research-desc">
           参考 atypica.AI：外接小红书/微博/知乎语料 → 构建人设 → 模拟访谈回放 → 导出 PDF/Word → 一键联动右侧三步分析报告。
+          <span className="sim-flow-cost-hint">
+            {' '}
+            · 完整流程约 ¥{simFlowCostYuan(walletCostsYuan, personaCount)}/次
+          </span>
         </p>
         <button
           type="button"

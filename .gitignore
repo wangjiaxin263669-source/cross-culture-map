@@ -30,3 +30,6 @@ dist-ssr
 # 守护巡检报告（由 CI/本机生成，不入库）
 scripts/guardian-reports/*.json
 !scripts/guardian-reports/.gitkeep
+
+# Local Netlify folder
+.netlify

@@ -541,6 +541,7 @@ function App() {
             market={selectedMarket}
             marketTitle={displayTitle}
             aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
+            walletCostsYuan={aiHealth?.wallet?.costsYuan}
             onSyncToThreeStepReport={handleSyncFromSimResearch}
             onReportGenerated={(content, topic) =>
               persistAnalysisReport(content, topic, 'sim_research', '模拟调研')

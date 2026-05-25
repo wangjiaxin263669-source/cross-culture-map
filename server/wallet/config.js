@@ -9,9 +9,11 @@ export const WALLET_COSTS = {
   /** 跨文化研究专家 · DeepSeek 对话，默认 ¥0.02/次 */
   chat: centsFromEnv('WALLET_CHAT_COST_CENTS', 2),
   report: centsFromEnv('WALLET_REPORT_COST_CENTS', 10),
-  sim_personas: centsFromEnv('WALLET_SIM_PERSONAS_COST_CENTS', 10),
-  sim_interview: centsFromEnv('WALLET_SIM_INTERVIEW_COST_CENTS', 10),
-  sim_report: centsFromEnv('WALLET_SIM_REPORT_COST_CENTS', 10),
+  /** 模拟调研 · 完整流程（语料检索+人设+多场访谈+报告），默认 ¥0.35/次 */
+  sim_personas: centsFromEnv('WALLET_SIM_PERSONAS_COST_CENTS', 35),
+  /** 已含在人设扣费中，默认不再重复扣费 */
+  sim_interview: centsFromEnv('WALLET_SIM_INTERVIEW_COST_CENTS', 0),
+  sim_report: centsFromEnv('WALLET_SIM_REPORT_COST_CENTS', 0),
 };
 
 /** 新用户注册赠送，默认 0.5 元 */
