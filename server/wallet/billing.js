@@ -25,6 +25,17 @@ export function getCostCents(operation) {
 export async function chargeForOperation(userId, operation, meta = {}) {
   const costCents = getCostCents(operation);
   const balanceBefore = await getUserBalanceCents(userId);
+
+  /** 模拟调研：访谈/报告已含在人设扣费中，0 元不再走扣款 */
+  if (costCents <= 0) {
+    return {
+      costCents: 0,
+      balanceCents: balanceBefore,
+      transactionId: null,
+      skipped: true,
+    };
+  }
+
   if (balanceBefore < costCents) {
     throw new InsufficientBalanceError(balanceBefore, costCents);
   }
