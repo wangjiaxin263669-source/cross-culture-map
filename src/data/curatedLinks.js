@@ -9,18 +9,18 @@ function onlyVideos(items) {
   return (items || []).filter((v) => isVideoUrl(v.url));
 }
 
-const CN_GUANGDONG = bilibili('BV1KQ4y1175c', '纪录片《粤韵声情》粤剧与广府曲艺文化', '地方文化');
-const CN_GUANGDONG2 = bilibili('BV1uSr8YjED9', '现代繁荣中心广东：地域性格【速览中国】', '地方文化');
-const CN_BEIJING = bilibili('BV14Px2z4Eq9', '央视纪录片《百年守护》故宫与北京礼制文化', '地方文化');
-const CN_SHANGHAI = bilibili('BV1F91pByEfu', '【此刻中国】上海：一座城的百年摩登', '地方文化');
-const CN_SICHUAN = bilibili('BV1hLrYB2E4t', '古代四川交通与蜀道：巴蜀文化地理', '地方文化');
-const CN_SHAANXI = bilibili('BV1Cu9FYLECs', '西安大雁塔与古都长安城市文化（航拍纪实）', '地方文化');
-const CN_YUNNAN = bilibili('BV1t2RhY5Eai', '纪录片《紧那罗的沉吟》傣族神鸟舞与云南非遗', '地方文化');
-const CN_XINJIANG = bilibili('BV12441167ru', '【行疆】骑行中国纪录片（含新疆篇章）', '地方文化');
-const CN_TIBET = bilibili('BV14x41157mS', '五集纪录片《西藏时光》【CCTV9】', '地方文化');
-const CN_NORTHEAST = bilibili('BV18b411v7qo', '【央视纪录片】最后的山神（鄂伦春·东北森林文化）', '地方文化');
-const CN_FUJIAN = bilibili('BV1fWLA67EQG', '闽南语文化影像《番客》侨乡与海洋商贸', '地方文化');
-const CN_HUBEI = bilibili('BV1sx411H7WH', '纪录片《楚国八百年》（荆楚文化·全八集）', '地方文化');
+const CN_GUANGDONG = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_GUANGDONG2 = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_BEIJING = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_SHANGHAI = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_SICHUAN = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_SHAANXI = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_YUNNAN = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_XINJIANG = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_TIBET = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_NORTHEAST = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_FUJIAN = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
+const CN_HUBEI = bilibili('BV1td4y1P7Us', '【文化的定义】什么是文化？文化是什么？', '地方文化');
 
 /** 中国省级 */
 export const CHINA_REGION_LINKS = {
