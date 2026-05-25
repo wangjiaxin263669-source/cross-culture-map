@@ -2,26 +2,34 @@
  * 模拟调研（参考 atypica.AI）：人设构建 → AI 访谈 → 洞察报告
  */
 import { buildCountryContext, runChatCompletion } from './deepseek.js';
+import { parseJsonFromLlm } from './parseLlmJson.js';
 
-const PERSONA_MAX_TOKENS = 1400;
-const INTERVIEW_MAX_TOKENS = 1800;
+const PERSONA_MAX_TOKENS = 2000;
+const INTERVIEW_MAX_TOKENS = 4096;
 const REPORT_MAX_TOKENS = 2800;
 
-function parseJsonFromLlm(text) {
-  const raw = String(text).trim();
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1].trim() : raw;
-  try {
-    return JSON.parse(candidate);
-  } catch {
-    const start = candidate.indexOf('{');
-    const arrStart = candidate.indexOf('[');
-    const pick = start === -1 ? arrStart : arrStart === -1 ? start : Math.min(start, arrStart);
-    if (pick >= 0) {
-      return JSON.parse(candidate.slice(pick));
+/** 调用 DeepSeek 并解析 JSON，失败自动重试一次 */
+async function chatJson(messages, options, { retryHint } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const msgs =
+        attempt === 0
+          ? messages
+          : [
+              ...messages.slice(0, -1),
+              {
+                role: 'user',
+                content: `${messages[messages.length - 1].content}\n\n【重试】${retryHint || '上次输出不是合法 JSON。仅输出一个 JSON 对象；字符串内双引号须写成 \\"；每条 text 控制在 120 字以内，勿截断。'}`,
+              },
+            ];
+      const content = await runChatCompletion(msgs, { ...options, jsonMode: true });
+      return parseJsonFromLlm(content);
+    } catch (err) {
+      lastErr = err;
     }
-    throw new Error('AI 返回格式无法解析，请重试');
   }
+  throw lastErr;
 }
 
 function getMarketLabel(country) {
@@ -80,15 +88,14 @@ ${corpusBlock}
   ]
 }`;
 
-  const content = await runChatCompletion(
+  const data = await chatJson(
     [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
     { maxTokens: PERSONA_MAX_TOKENS, temperature: 0.75 },
+    { retryHint: '人设 JSON 无效。仅输出 {"personas":[...]}，姓名与背景用当地语言，字符串内引号须转义。' },
   );
-
-  const data = parseJsonFromLlm(content);
   const personas = data.personas || data;
   if (!Array.isArray(personas) || personas.length === 0) {
     throw new Error('人设生成失败，请重试');
@@ -149,17 +156,19 @@ ${guide}
   "keyQuotes": ["原话金句1", "原话金句2"],
   "insights": ["洞察1", "洞察2"]
 }
-transcript 6–8 轮（12–16条），访谈员要善于追问「为什么」「当时感受如何」。`;
+transcript 固定 5 轮（10 条：访+答交替），每条 text 不超过 100 字；勿使用未转义的双引号；用当地语言口语。`;
 
-  const content = await runChatCompletion(
+  const data = await chatJson(
     [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
-    { maxTokens: INTERVIEW_MAX_TOKENS, temperature: 0.7 },
+    { maxTokens: INTERVIEW_MAX_TOKENS, temperature: 0.65 },
+    {
+      retryHint:
+        '访谈 JSON 无效或被截断。仅输出一个 JSON；transcript 恰好 10 条；每条 text≤100字；引号转义为 \\".',
+    },
   );
-
-  const data = parseJsonFromLlm(content);
   return {
     personaId: persona.id,
     personaName: persona.name,

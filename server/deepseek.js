@@ -205,7 +205,10 @@ function normalizeHistory(history) {
     .slice(-20);
 }
 
-export async function runChatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS, temperature = 0.6 } = {}) {
+export async function runChatCompletion(
+  messages,
+  { maxTokens = CHAT_MAX_TOKENS, temperature = 0.6, jsonMode = false } = {},
+) {
   const apiKey = getApiKey();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -223,6 +226,7 @@ export async function runChatCompletion(messages, { maxTokens = CHAT_MAX_TOKENS,
         messages,
         temperature,
         max_tokens: maxTokens,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
       }),
       signal: controller.signal,
     });
