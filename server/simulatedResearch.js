@@ -3,6 +3,9 @@
  */
 import { buildCountryContext, runChatCompletion } from './deepseek.js';
 import { parseJsonFromLlm } from './parseLlmJson.js';
+import { formatResearchMaterialsForPrompt } from './simulatedResearch/materialsPrompt.js';
+
+const USER_MIND_RULE = `【用户思维原则】所有发现、痛点、建议必须来自受访者自发表达、犹豫、表情与语气落差，可结合外部语料印证；禁止用产品经理逻辑推演或替用户下结论。`;
 
 const PERSONA_MAX_TOKENS = 2000;
 const INTERVIEW_MAX_TOKENS = 4096;
@@ -51,6 +54,7 @@ export async function generateResearchPersonas({
   personaCount = 3,
   country,
   corpusContext = '',
+  researchMaterials = null,
 }) {
   const market = getMarketLabel(country);
   const count = Math.min(5, Math.max(2, Number(personaCount) || 3));
@@ -62,8 +66,11 @@ export async function generateResearchPersonas({
   const corpusBlock = corpusContext
     ? `\n## 外部语料（小红书/微博/知乎等，构建人设时请吸收真实口吻与痛点）\n${corpusContext}\n`
     : '';
+  const materialsBlock = formatResearchMaterialsForPrompt(researchMaterials);
 
-  const user = `调研主题：${researchTopic}
+  const user = `${USER_MIND_RULE}
+${materialsBlock}
+调研主题：${researchTopic}
 目标人群：${audienceCriteria || '由你根据主题合理设定'}
 市场：${market}
 ${countryCtx}
@@ -115,6 +122,7 @@ export async function runSimulatedInterview({
   guideQuestions = [],
   country,
   corpusContext = '',
+  researchMaterials = null,
 }) {
   const market = getMarketLabel(country);
   const countryCtx = country ? buildCountryContext(country) : '';
@@ -123,17 +131,21 @@ export async function runSimulatedInterview({
       ? `须覆盖以下问题方向：\n${guideQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`
       : '自拟 5–6 个深度追问（含行为、情绪、决策、文化相关）';
 
-  const system = `你同时扮演：
-1) 资深定性访谈员（专业、共情、会追问）
-2) 受访者「${persona.name}」——严格按人设回答，用第一人称、口语化、带情绪细节
+  const system = `你同时协调两位研究专员（输出一份 JSON）：
+1) **访谈笔录专员**：资深定性访谈员，与受访者对话、追问
+2) **表情与情绪观察专员**（静默不发言）：记录受访者在使用软件、进入某场景、看到某界面时的微表情、语气变化、情绪落差（嘴上说 OK 但表情犹豫等）
+3) 受访者「${persona.name}」——严格按人设第一人称回答，口语化
 
-模拟真实一对一深度访谈，不要写成问卷。输出合法 JSON。`;
+模拟真实一对一深度访谈；若有 UI 流程素材，访谈员须按步骤追问自发感受。输出合法 JSON。`;
 
   const corpusBlock = corpusContext
-    ? `\n## 外部语料参考\n${corpusContext}\n`
+    ? `\n## 外部语料（真实用户口吻参考，勿逻辑推演）\n${corpusContext}\n`
     : '';
+  const materialsBlock = formatResearchMaterialsForPrompt(researchMaterials);
 
-  const user = `市场：${market}
+  const user = `${USER_MIND_RULE}
+${materialsBlock}
+市场：${market}
 调研主题：${researchTopic}
 ${countryCtx}
 ${corpusBlock}
@@ -148,15 +160,25 @@ ${guide}
 
 输出 JSON：
 {
-  "summary": "本场访谈 2 句摘要",
+  "summary": "本场访谈 2 句摘要（强调用户自发问题）",
   "transcript": [
     { "role": "interviewer", "text": "访谈员问题" },
-    { "role": "participant", "text": "受访者回答（可含情绪与具体场景）" }
+    { "role": "participant", "text": "受访者回答" }
   ],
-  "keyQuotes": ["原话金句1", "原话金句2"],
-  "insights": ["洞察1", "洞察2"]
+  "observationLog": [
+    {
+      "transcriptIndex": 1,
+      "scene": "场景如：打开支付页/到店取货",
+      "expression": "微表情描述",
+      "emotion": "情绪状态",
+      "gapNote": "言语与表情/情绪的落差",
+      "userMindInsight": "用户自发顾虑（非逻辑推演）"
+    }
+  ],
+  "keyQuotes": ["原话金句"],
+  "insights": ["基于自发反应的洞察"]
 }
-transcript 固定 5 轮（10 条：访+答交替），每条 text 不超过 100 字；勿使用未转义的双引号；用当地语言口语。`;
+transcript 固定 5 轮（10 条访+答）；每条 text≤100字。observationLog 在每条 participant 回答后至少 1 条（transcriptIndex 指向该条 transcript 下标）。用当地语言。`;
 
   const data = await chatJson(
     [
@@ -174,6 +196,7 @@ transcript 固定 5 轮（10 条：访+答交替），每条 text 不超过 100 
     personaName: persona.name,
     summary: data.summary || '',
     transcript: Array.isArray(data.transcript) ? data.transcript : [],
+    observationLog: Array.isArray(data.observationLog) ? data.observationLog : [],
     keyQuotes: data.keyQuotes || [],
     insights: data.insights || [],
   };
@@ -189,6 +212,7 @@ export async function synthesizeResearchReport({
   interviews,
   country,
   corpusSnippets = [],
+  researchMaterials = null,
 }) {
   const market = getMarketLabel(country);
   const countryCtx = country ? buildCountryContext(country) : '';
@@ -199,10 +223,18 @@ export async function synthesizeResearchReport({
         .slice(0, 16)
         .map((t) => `${t.role === 'interviewer' ? '访' : '答'}：${t.text}`)
         .join('\n');
+      const obs = (iv.observationLog || [])
+        .map(
+          (o) =>
+            `[观察] ${o.scene || ''} ${o.expression || ''} 情绪:${o.emotion || ''} 落差:${o.gapNote || ''} 自发:${o.userMindInsight || ''}`,
+        )
+        .join('\n');
       return `### 受访者 ${idx + 1}：${iv.personaName}
 摘要：${iv.summary}
 金句：${(iv.keyQuotes || []).join('；')}
 洞察：${(iv.insights || []).join('；')}
+表情/情绪观察：
+${obs || '（无）'}
 笔录节选：
 ${lines}`;
     })
@@ -216,8 +248,12 @@ ${lines}`;
   const system = `你是商业与用户研究总监，擅长把定性访谈转化为可交付的调研报告。
 语言：中文，产品团队可读。结合跨文化视角（中国团队出海场景）。`;
 
-  const user = `请基于以下【模拟访谈】材料，撰写完整调研报告（Markdown）。
+  const materialsBlock = formatResearchMaterialsForPrompt(researchMaterials);
+
+  const user = `${USER_MIND_RULE}
+请基于以下【模拟访谈】材料，撰写完整调研报告（Markdown）。
 ${corpusBlock}
+${materialsBlock}
 
 # 基本信息
 - 市场：${market}
@@ -235,11 +271,12 @@ ${interviewBlock}
 ## 1. 执行摘要
 ## 2. 研究背景与目标
 ## 3. 受访者画像概览
-## 4. 核心发现（分点，标注 🔴🟡🟢 优先级）
-## 5. 用户原话摘录（引用块 > 格式）
-## 6. 跨文化洞察（与${market}本地习惯、中国团队假设的差异）
-## 7. 对产品/设计的建议（P0/P1/P2）
-## 8. 局限性与下一步验证建议
+## 4. 核心发现（分点，标注 🔴🟡🟢；须来自用户自发反应与观察专员记录，非逻辑推演）
+## 5. 非语言与情绪观察摘要（微表情、情绪落差、使用软件时的自发顾虑）
+## 6. 用户原话摘录（引用块 > 格式）
+## 7. 跨文化洞察（与${market}本地习惯、中国团队假设的差异）
+## 8. 对产品/设计的建议（P0/P1/P2，对应用户自发问题）
+## 9. 局限性与下一步验证建议
 
 要求：有数据感、有引用、可贴进 PRD；总字数 1500–2500 字。`;
 
@@ -263,13 +300,18 @@ export function buildSimResearchSyncPayload({
   interviews,
   simReport,
   corpusSnippets,
+  researchMaterials,
 }) {
   const interviewSummary = (interviews || [])
-    .map(
-      (iv) =>
-        `【${iv.personaName}】${iv.summary}\n金句：${(iv.keyQuotes || []).join('；')}\n洞察：${(iv.insights || []).join('；')}`,
-    )
+    .map((iv) => {
+      const obs = (iv.observationLog || [])
+        .map((o) => `${o.scene}: ${o.userMindInsight || o.gapNote}`)
+        .filter(Boolean)
+        .join('；');
+      return `【${iv.personaName}】${iv.summary}\n金句：${(iv.keyQuotes || []).join('；')}\n观察：${obs || '—'}\n洞察：${(iv.insights || []).join('；')}`;
+    })
     .join('\n\n');
+  const materialsNote = formatResearchMaterialsForPrompt(researchMaterials);
 
   const corpusNote =
     corpusSnippets?.length > 0
@@ -277,9 +319,11 @@ export function buildSimResearchSyncPayload({
       : '';
 
   return `【模拟调研结论 · 请纳入跨文化三步分析】
+${USER_MIND_RULE}
 调研主题：${researchTopic}
 目标人群：${audienceCriteria || '见模拟人设'}
 目标市场：${marketTitle}${corpusNote}
+${materialsNote}
 
 受访者：${(personas || []).map((p) => `${p.name}(${p.occupation})`).join('、')}
 

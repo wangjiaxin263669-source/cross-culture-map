@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 
+function observationForLine(observationLog, lineIndex) {
+  return (observationLog || []).find((o) => Number(o.transcriptIndex) === lineIndex);
+}
+
 /**
- * 逐步回放模拟访谈笔录（atypica 式「回放」）
+ * 逐步回放：访谈笔录专员 + 表情情绪观察专员
  */
 export default function InterviewReplay({ interview, onClose }) {
   const [lineIndex, setLineIndex] = useState(0);
@@ -35,9 +39,10 @@ export default function InterviewReplay({ interview, onClose }) {
 
   return (
     <div className="sim-replay-overlay" role="dialog" aria-modal="true">
-      <div className="sim-replay-modal">
+      <div className="sim-replay-modal sim-replay-modal-wide">
         <div className="sim-replay-header">
           <h4>访谈回放 · {interview.personaName}</h4>
+          <span className="sim-replay-dual-badge">笔录专员 + 表情观察专员</span>
           <button type="button" className="sim-replay-close" onClick={onClose}>
             ✕
           </button>
@@ -68,18 +73,33 @@ export default function InterviewReplay({ interview, onClose }) {
             {Math.min(lineIndex + 1, lines.length)} / {lines.length}
           </span>
         </div>
-        <div className="sim-replay-transcript">
-          {visible.map((t, i) => (
-            <div
-              key={i}
-              className={`sim-transcript-line ${t.role} ${i === lineIndex ? 'sim-line-active' : ''}`}
-            >
-              <span className="sim-transcript-role">
-                {t.role === 'interviewer' ? '访谈员' : '受访者'}
-              </span>
-              <p>{t.text}</p>
-            </div>
-          ))}
+        <div className="sim-replay-transcript sim-transcript-dual">
+          {visible.map((t, i) => {
+            const obs = t.role === 'participant' ? observationForLine(interview.observationLog, i) : null;
+            return (
+              <div key={i} className="sim-transcript-row">
+                <div
+                  className={`sim-transcript-line ${t.role} ${i === lineIndex ? 'sim-line-active' : ''}`}
+                >
+                  <span className="sim-transcript-role sim-role-transcript">
+                    {t.role === 'interviewer' ? '笔录·访谈员' : '笔录·受访者'}
+                  </span>
+                  <p>{t.text}</p>
+                </div>
+                {obs && (
+                  <div className={`sim-observation-line ${i === lineIndex ? 'sim-line-active' : ''}`}>
+                    <span className="sim-transcript-role sim-role-observer">观察·情绪专员</span>
+                    <p>
+                      <strong>{obs.scene}</strong> {obs.expression}
+                      {obs.emotion ? ` · ${obs.emotion}` : ''}
+                      {obs.gapNote ? ` · 落差：${obs.gapNote}` : ''}
+                      {obs.userMindInsight ? ` · 自发：${obs.userMindInsight}` : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
           <div ref={endRef} />
         </div>
       </div>

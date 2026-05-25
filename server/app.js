@@ -65,7 +65,7 @@ export function createApp(options = {}) {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: '2mb' }));
+  app.use(express.json({ limit: '8mb' }));
 
   app.use(async (req, _res, next) => {
     const event = req.apiGateway?.event;
@@ -292,6 +292,23 @@ export function createApp(options = {}) {
     });
   }
 
+  app.post('/api/simulated-research/parse-document', async (req, res) => {
+    try {
+      const { fileName, dataBase64 } = req.body || {};
+      if (!fileName || !dataBase64) {
+        return res.status(400).json({ error: '请提供 fileName 与 dataBase64' });
+      }
+      const buffer = Buffer.from(String(dataBase64), 'base64');
+      const { extractProjectDocumentText } = await import(
+        './simulatedResearch/parseProjectDoc.js'
+      );
+      const result = await extractProjectDocumentText(buffer, fileName);
+      res.json({ ok: true, fileName, ...result });
+    } catch (err) {
+      res.status(400).json({ error: err.message || '文档解析失败' });
+    }
+  });
+
   app.post('/api/simulated-research/sync-payload', (req, res) => {
     try {
       const payload = buildSimResearchSyncPayload(req.body);
@@ -331,6 +348,7 @@ export function createApp(options = {}) {
         country,
         corpusContext,
         corpusSnippets,
+        researchMaterials,
       } = req.body;
       if (!researchTopic?.trim()) {
         return res.status(400).json({ error: '请填写调研主题' });
@@ -348,6 +366,7 @@ export function createApp(options = {}) {
         personaCount,
         country,
         corpusContext: ctx,
+        researchMaterials: researchMaterials || null,
       });
       res.json({ personas, balanceCents: req.walletCharge?.balanceCents });
     }),
@@ -356,7 +375,14 @@ export function createApp(options = {}) {
   app.post(
     '/api/simulated-research/interview',
     ...withWalletCharge('sim_interview', async (req, res) => {
-      const { persona, researchTopic, guideQuestions, country, corpusContext } = req.body;
+      const {
+        persona,
+        researchTopic,
+        guideQuestions,
+        country,
+        corpusContext,
+        researchMaterials,
+      } = req.body;
       if (!persona?.name) {
         return res.status(400).json({ error: '缺少受访者人设' });
       }
@@ -369,6 +395,7 @@ export function createApp(options = {}) {
         guideQuestions: guideQuestions || [],
         country,
         corpusContext: corpusContext || '',
+        researchMaterials: researchMaterials || null,
       });
       res.json({ interview, balanceCents: req.walletCharge?.balanceCents });
     }),
@@ -384,6 +411,7 @@ export function createApp(options = {}) {
         interviews,
         country,
         corpusSnippets,
+        researchMaterials,
       } = req.body;
       if (!researchTopic?.trim() || !personas?.length || !interviews?.length) {
         return res.status(400).json({ error: '缺少调研主题、人设或访谈记录' });
@@ -395,6 +423,7 @@ export function createApp(options = {}) {
         interviews,
         country,
         corpusSnippets: corpusSnippets || [],
+        researchMaterials: researchMaterials || null,
       });
       res.json({ report, balanceCents: req.walletCharge?.balanceCents });
     }),

@@ -11,6 +11,12 @@ import {
 import { downloadResearchPdf } from '../utils/exportResearchPdf';
 import { downloadResearchWord } from '../utils/exportResearchWord';
 import OpenPlatformPanel from './OpenPlatformPanel';
+import ResearchMaterialsStep from './ResearchMaterialsStep';
+import {
+  createEmptyMaterials,
+  slimMaterialsForApi,
+  hasAnyMaterials,
+} from '../utils/researchMaterials';
 import {
   listPersonas,
   listSessions,
@@ -22,6 +28,7 @@ import {
 } from '../storage/researchStorage';
 
 const STEPS = [
+  { id: 'materials', label: '0. 素材（可选）' },
   { id: 'setup', label: '1. 研究设定' },
   { id: 'personas', label: '2. 人设' },
   { id: 'interviews', label: '3. 模拟访谈' },
@@ -59,7 +66,8 @@ export default function SimulatedResearchPanel({
   onSyncToThreeStepReport,
   onReportGenerated,
 }) {
-  const [step, setStep] = useState('setup');
+  const [step, setStep] = useState('materials');
+  const [researchMaterials, setResearchMaterials] = useState(createEmptyMaterials);
   const [researchTopic, setResearchTopic] = useState('');
   const [audienceCriteria, setAudienceCriteria] = useState('');
   const [personaCount, setPersonaCount] = useState(3);
@@ -99,6 +107,7 @@ export default function SimulatedResearchPanel({
     .filter(Boolean);
 
   const marketId = market?.id || market?.parentId;
+  const materialsPayload = slimMaterialsForApi(researchMaterials);
 
   const toggleSource = (id) => {
     setCorpusSources((prev) =>
@@ -148,6 +157,7 @@ export default function SimulatedResearchPanel({
         personaCount,
         country: market,
         corpusSnippets: snippets,
+        researchMaterials: materialsPayload,
       });
       setPersonas(list);
       setInterviews([]);
@@ -159,6 +169,7 @@ export default function SimulatedResearchPanel({
         guideQuestions,
         corpusSources,
         corpusSnippets: snippets,
+        researchMaterials,
         personas: list,
         interviews: [],
         report: '',
@@ -184,13 +195,16 @@ export default function SimulatedResearchPanel({
     try {
       for (let i = 0; i < personas.length; i += 1) {
         const p = personas[i];
-        setProgress(`模拟访谈 (${i + 1}/${personas.length})：${p.name}…`);
+        setProgress(
+          `模拟访谈 (${i + 1}/${personas.length})：${p.name}…（笔录专员 + 表情观察专员）`,
+        );
         const interview = await runInterview({
           persona: p,
           researchTopic,
           guideQuestions: guideList,
           country: market,
           corpusContext,
+          researchMaterials: materialsPayload,
         });
         results.push(interview);
         setInterviews([...results]);
@@ -204,6 +218,7 @@ export default function SimulatedResearchPanel({
         interviews: results,
         country: market,
         corpusSnippets,
+        researchMaterials: materialsPayload,
       });
       setReport(md);
       setStep('report');
@@ -214,6 +229,7 @@ export default function SimulatedResearchPanel({
         guideQuestions,
         corpusSources,
         corpusSnippets,
+        researchMaterials,
         personas,
         interviews: results,
         report: md,
@@ -246,13 +262,15 @@ export default function SimulatedResearchPanel({
     setGuideQuestions(s.guideQuestions || DEFAULT_GUIDE.join('\n'));
     setCorpusSources(s.corpusSources || ['xiaohongshu', 'weibo', 'zhihu']);
     setCorpusSnippets(s.corpusSnippets || []);
+    setResearchMaterials(s.researchMaterials || createEmptyMaterials());
     setPersonas(s.personas || []);
     setInterviews(s.interviews || []);
     setReport(s.report || '');
     if (s.report) setStep('report');
     else if (s.interviews?.length) setStep('interviews');
     else if (s.personas?.length) setStep('personas');
-    else setStep('setup');
+    else if (s.researchTopic) setStep('setup');
+    else setStep('materials');
     setShowLibrary(false);
   };
 
@@ -283,6 +301,7 @@ export default function SimulatedResearchPanel({
         interviews,
         simReport: report,
         corpusSnippets,
+        researchMaterials: materialsPayload,
       });
       onSyncToThreeStepReport?.(payload, { autoGenerate });
     } catch (err) {
@@ -312,7 +331,8 @@ export default function SimulatedResearchPanel({
   };
 
   const resetAll = () => {
-    setStep('setup');
+    setStep('materials');
+    setResearchMaterials(createEmptyMaterials());
     setPersonas([]);
     setInterviews([]);
     setReport('');
@@ -320,6 +340,11 @@ export default function SimulatedResearchPanel({
     setSessionId(null);
     setError('');
     setProgress('');
+  };
+
+  const skipMaterials = () => {
+    setResearchMaterials({ ...createEmptyMaterials(), skipped: true });
+    setStep('setup');
   };
 
   return (
@@ -330,7 +355,7 @@ export default function SimulatedResearchPanel({
           模拟调研 · AI 人设访谈
         </h3>
         <p className="sim-research-desc">
-          参考 atypica.AI：外接小红书/微博/知乎语料 → 构建人设 → 模拟访谈回放 → 导出 PDF/Word → 一键联动右侧三步分析报告。
+          可选上传产品/UI 素材 → 外接小红书/微博/知乎语料 → 构建人设 → 双专员模拟访谈（笔录 + 表情情绪观察）→ 导出 / 联动三步分析。
           <span className="sim-flow-cost-hint">
             {' '}
             · 完整流程约 ¥{simFlowCostYuan(walletCostsYuan, personaCount)}/次
@@ -418,8 +443,28 @@ export default function SimulatedResearchPanel({
         })}
       </div>
 
+      {step === 'materials' && (
+        <ResearchMaterialsStep
+          materials={researchMaterials}
+          onChange={setResearchMaterials}
+          onSkip={skipMaterials}
+          onNext={() => {
+            setResearchMaterials((m) => ({ ...m, skipped: !hasAnyMaterials(m) }));
+            setStep('setup');
+          }}
+        />
+      )}
+
       {step === 'setup' && (
         <div className="sim-step-body">
+          {hasAnyMaterials(researchMaterials) && (
+            <p className="sim-hint sim-materials-badge">
+              已添加研究素材（产品/UI），生成人设后将按流程追问用户自发感受。
+            </p>
+          )}
+          <button type="button" className="sim-link-btn sim-back-materials" onClick={() => setStep('materials')}>
+            ← 返回修改素材
+          </button>
           <label className="sim-label">调研主题 *</label>
           <textarea
             className="sim-textarea"
@@ -545,7 +590,9 @@ export default function SimulatedResearchPanel({
 
       {(step === 'interviews' || step === 'report') && interviews.length > 0 && (
         <div className="sim-step-body">
-          <p className="sim-hint">已完成 {interviews.length} 场模拟访谈 · 可回放全过程</p>
+          <p className="sim-hint">
+            已完成 {interviews.length} 场模拟访谈 · 含访谈笔录专员与表情情绪观察专员记录 · 可回放
+          </p>
           {interviews.map((iv) => (
             <article key={iv.personaId} className="sim-interview-card">
               <div className="sim-interview-actions">
@@ -569,15 +616,32 @@ export default function SimulatedResearchPanel({
               <strong>{iv.personaName}</strong>
               <span className="sim-interview-summary">{iv.summary}</span>
               {expandedInterview === iv.personaId && (
-                <div className="sim-transcript">
-                  {(iv.transcript || []).map((t, i) => (
-                    <div key={i} className={`sim-transcript-line ${t.role}`}>
-                      <span className="sim-transcript-role">
-                        {t.role === 'interviewer' ? '访谈员' : '受访者'}
-                      </span>
-                      <p>{t.text}</p>
-                    </div>
-                  ))}
+                <div className="sim-transcript-dual">
+                  {(iv.transcript || []).map((t, i) => {
+                    const obs = (iv.observationLog || []).find(
+                      (o) => Number(o.transcriptIndex) === i,
+                    );
+                    return (
+                      <div key={i} className="sim-transcript-row">
+                        <div className={`sim-transcript-line ${t.role}`}>
+                          <span className="sim-transcript-role sim-role-transcript">
+                            {t.role === 'interviewer' ? '笔录·访谈员' : '笔录·受访者'}
+                          </span>
+                          <p>{t.text}</p>
+                        </div>
+                        {t.role === 'participant' && obs && (
+                          <div className="sim-observation-line">
+                            <span className="sim-transcript-role sim-role-observer">观察·情绪专员</span>
+                            <p>
+                              <strong>{obs.scene}</strong> {obs.expression} · {obs.emotion}
+                              {obs.gapNote ? ` · 落差：${obs.gapNote}` : ''}
+                              {obs.userMindInsight ? ` · 自发：${obs.userMindInsight}` : ''}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </article>

@@ -59,10 +59,14 @@ export function downloadResearchWord({ title, subtitle, markdown, marketLabel, i
   const interviewHtml = (interviews || [])
     .map((iv) => {
       const lines = (iv.transcript || [])
-        .map(
-          (t) =>
-            `<p><b>${t.role === 'interviewer' ? '访谈员' : '受访者'}：</b>${escapeHtml(t.text)}</p>`,
-        )
+        .map((t, idx) => {
+          const obs = (iv.observationLog || []).find((o) => Number(o.transcriptIndex) === idx);
+          let html = `<p><b>${t.role === 'interviewer' ? '笔录·访谈员' : '笔录·受访者'}：</b>${escapeHtml(t.text)}</p>`;
+          if (t.role === 'participant' && obs) {
+            html += `<p style="color:#92400e;"><b>观察·情绪专员：</b>${escapeHtml(obs.scene || '')} ${escapeHtml(obs.expression || '')} ${escapeHtml(obs.userMindInsight || obs.gapNote || '')}</p>`;
+          }
+          return html;
+        })
         .join('');
       return `<h3>访谈：${escapeHtml(iv.personaName)}</h3><p><i>${escapeHtml(iv.summary || '')}</i></p>${lines}`;
     })

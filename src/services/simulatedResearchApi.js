@@ -46,6 +46,17 @@ export async function searchCorpus({ query, marketId, sources }) {
   return post('/api/corpus/search', { query, marketId, sources }, 30000);
 }
 
+/** 解析项目框架文档（PDF / Word / PPT）为文本摘要 */
+export async function parseProjectDocument(file) {
+  const { readFileAsBase64 } = await import('../utils/researchMaterials.js');
+  const dataBase64 = await readFileAsBase64(file);
+  return post(
+    '/api/simulated-research/parse-document',
+    { fileName: file.name, dataBase64 },
+    60000,
+  );
+}
+
 export async function generatePersonas({
   researchTopic,
   audienceCriteria,
@@ -53,6 +64,7 @@ export async function generatePersonas({
   country,
   corpusSnippets,
   corpusContext,
+  researchMaterials,
 }) {
   const data = await post('/api/simulated-research/personas', {
     researchTopic,
@@ -61,6 +73,7 @@ export async function generatePersonas({
     country: serializeCountry(country),
     corpusSnippets,
     corpusContext,
+    researchMaterials,
   });
   return data.personas;
 }
@@ -71,6 +84,7 @@ export async function runInterview({
   guideQuestions,
   country,
   corpusContext,
+  researchMaterials,
 }) {
   const data = await post('/api/simulated-research/interview', {
     persona,
@@ -78,6 +92,7 @@ export async function runInterview({
     guideQuestions,
     country: serializeCountry(country),
     corpusContext,
+    researchMaterials,
   });
   return data.interview;
 }
@@ -89,6 +104,7 @@ export async function synthesizeReport({
   interviews,
   country,
   corpusSnippets,
+  researchMaterials,
 }) {
   const data = await post(
     '/api/simulated-research/report',
@@ -99,6 +115,7 @@ export async function synthesizeReport({
       interviews,
       country: serializeCountry(country),
       corpusSnippets,
+      researchMaterials,
     },
     120000,
   );

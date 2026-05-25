@@ -24,7 +24,11 @@
     "server/auth/**",
     "server/db/**",
     "server/wallet/**",
-    "server/payment/**"
+    "server/payment/**",
+    "server/simulatedResearch/**",
+    "node_modules/mammoth/**",
+    "node_modules/pdf-parse/**",
+    "node_modules/officeparser/**"
   ]
 
 [functions.api]
