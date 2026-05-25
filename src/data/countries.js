@@ -44,7 +44,7 @@ const RAW_COUNTRIES = [
       { title: 'Cross-Cultural Web Design', source: 'Nielsen Norman Group', year: '—', url: 'https://www.nngroup.com/articles/cross-cultural-design/', tag: 'UX 研究', note: '高语境文化与信息密度' },
     ],
     videos: [
-      { title: '什么是文化研究？（入门）', url: 'https://www.bilibili.com/video/BV1td4y1P7Us/////', provider: 'Bilibili', tag: '入门' },
+      { title: '什么是文化研究？（入门）', url: 'https://www.bilibili.com/video/BV1td4y1P7Us/', provider: 'Bilibili', tag: '入门' },
       { title: '伯明翰学派与当代文化研究', url: 'https://www.bilibili.com/video/BV1rr4y1S76L/', provider: 'Bilibili', tag: '理论' },
       { title: '跨文化网页设计准则', url: 'https://www.nngroup.com/articles/cross-cultural-design/', provider: 'NN/g', tag: 'UX' },
     ],
