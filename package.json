@@ -22,7 +22,11 @@
     "guardian": "node scripts/culture-link-guardian-auto.mjs",
     "guardian:check": "node scripts/culture-link-guardian.mjs",
     "guardian:audit": "node scripts/audit-all-markets.mjs",
-    "guardian:validate-urls": "node scripts/validate-curated-links.mjs"
+    "guardian:validate-urls": "node scripts/validate-curated-links.mjs",
+    "site-health": "node scripts/site-health-guardian.mjs",
+    "site-health:fix": "node scripts/site-health-guardian.mjs --apply-safe-fixes",
+    "site-health:ci": "node scripts/site-health-guardian.mjs --ci",
+    "site-health:validate": "node scripts/validate-site-health-guardian.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

@@ -1,0 +1,76 @@
+# 每 3 天巡检正式站：登录/钱包/AI/链接抽样（只读，不自动改业务数据）
+name: Site Health Guardian
+
+on:
+  schedule:
+    # 每月 1/4/7/10/13/16/19/22/25/28 日 04:00 UTC ≈ 每 3 天
+    - cron: '0 4 1,4,7,10,13,16,19,22,25,28 * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/site-health-guardian.mjs'
+      - 'scripts/lib/siteHealth*.mjs'
+      - '.github/workflows/site-health-guardian.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  site-health:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify frontend build
+        run: npm run build
+
+      - name: Site health check (production)
+        run: node scripts/site-health-guardian.mjs --ci --apply-safe-fixes
+        env:
+          SITE_URL: https://ephemeral-bubblegum-a79332.netlify.app
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+        continue-on-error: false
+
+      - name: Upload health report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-health-report
+          path: scripts/guardian-reports/site-health-latest.json
+          retention-days: 90
+
+      - name: Job summary
+        if: always()
+        run: |
+          if [ -f scripts/guardian-reports/site-health-latest.json ]; then
+            node -e "
+              const r=require('./scripts/guardian-reports/site-health-latest.json');
+              const f=r.summary?.failed?.length||0;
+              const w=r.summary?.warned?.length||0;
+              const p=r.summary?.passed?.length||0;
+              console.log('## 站点健康守护');
+              console.log('- 通过:', p, '| 警告:', w, '| 严重:', f);
+              console.log('- 策略: 不自动改 src/data / 不批量换链');
+              if (r.safeFixes?.applied?.length) {
+                console.log('- 安全修复:', JSON.stringify(r.safeFixes.applied));
+              }
+              for (const c of (r.checks||[]).filter(x=>!x.ok)) {
+                console.log('- ', c.severity==='warn'?'⚠️':'❌', c.name, ':', c.detail);
+              }
+            "
+          fi
