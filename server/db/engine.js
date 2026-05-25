@@ -98,8 +98,8 @@ function writeDbFile(data) {
 async function getBlobStore() {
   await ensureBlobsReady(getLambdaEvent());
   const { getStore } = await import('@netlify/blobs');
-  // eventual：无需 uncachedEdgeURL，适合账号/历史这类键值存储
-  return getStore({ name: BLOB_STORE, consistency: 'eventual' });
+  // strong：注册/登录须立即可读，避免「注册成功但立刻登录失败」
+  return getStore({ name: BLOB_STORE, consistency: 'strong' });
 }
 
 async function readDbBlobs() {

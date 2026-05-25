@@ -85,8 +85,19 @@ router.post('/register', async (req, res) => {
       initialBonusNote: '新用户注册赠送 ¥0.50',
     });
 
+    // Netlify Blobs 写入后短暂延迟才可读；轮询确保注册即可登录
+    let persisted = user;
+    for (let i = 0; i < 8; i += 1) {
+      const found = await findUserById(user.id);
+      if (found) {
+        persisted = found;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 120));
+    }
+
     res.json(
-      await authResponse(user, {
+      await authResponse(persisted, {
         newUserBonus:
           NEW_USER_BONUS_CENTS > 0
             ? { granted: true, amountYuan: (NEW_USER_BONUS_CENTS / 100).toFixed(2) }
@@ -107,7 +118,11 @@ router.post('/login', async (req, res) => {
     if (phoneErr) return res.status(400).json({ error: phoneErr });
     if (!password) return res.status(400).json({ error: '请输入密码' });
 
-    const user = await findUserByPhone(phone);
+    let user = await findUserByPhone(phone);
+    for (let i = 0; i < 6 && !user; i += 1) {
+      await new Promise((r) => setTimeout(r, 120));
+      user = await findUserByPhone(phone);
+    }
     if (!user || !user.passwordHash) {
       return res.status(401).json({ error: '手机号或密码错误' });
     }
