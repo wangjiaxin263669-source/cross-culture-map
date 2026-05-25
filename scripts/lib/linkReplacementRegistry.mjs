@@ -11,7 +11,7 @@ async function loadCanon() {
   const mod = await import(
     pathToFileURL(join(projectRoot, 'src', 'data', 'designerCanon.js')).href
   );
-  _canon = { CANON: mod.CANON, FOUNDATION_VIDEO: mod.FOUNDATION_VIDEO, WHY: mod.WHY };
+  _canon = { CANON: mod.CANON, WHY: mod.WHY };
   return _canon;
 }
 
@@ -51,19 +51,11 @@ const COUNTRY_CANON_PRIORITY = {
 
 export async function resolveReplacement(issue) {
   const { url, type, marketId, issue: issueKind } = issue;
-  const { CANON, FOUNDATION_VIDEO } = await loadCanon();
+  const { CANON } = await loadCanon();
 
   const direct = URL_REPLACEMENTS[url];
   if (direct?.canonKey && CANON[direct.canonKey]) {
     return { ...CANON[direct.canonKey], fixType: 'canon', reason: direct.reason };
-  }
-
-  if (type === '视频') {
-    return {
-      ...FOUNDATION_VIDEO,
-      fixType: 'foundationVideo',
-      reason: `${issueKind} → 替换为跨文化框架入门片（设计师必读）`,
-    };
   }
 
   const country = countryFromMarketId(marketId);

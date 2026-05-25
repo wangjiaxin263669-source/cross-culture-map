@@ -141,6 +141,14 @@ const TRUSTED_HOSTS =
 const NETWORK_FLAKY_HOSTS =
   /design\.google|geert-hofstede\.com|gdpr\.eu|starbucks\.com|apple\.com|roomie\.tw|smokeybear\.com|oag\.ca\.gov|bilibili\.com/i;
 
+/** B 站仅当页面明确下架/404 才算「确认失效」，网络超时不在此列 */
+export function isConfirmedBilibiliDead(url, check) {
+  if (!/bilibili\.com/i.test(url)) return false;
+  if (check.ok) return false;
+  if (check.error && check.status == null && !check.soft404) return false;
+  return check.soft404 || check.status === 404;
+}
+
 export async function fetchCheck(url, cache = new Map()) {
   if (cache.has(url)) return cache.get(url);
   const headers = {
@@ -273,6 +281,10 @@ export async function runCultureLinkAudit(options = {}) {
               '本地/防火墙可能无法访问；GitHub Actions 会再验。若为确认 404 请人工更换。',
           });
         } else {
+          const confirmedDead =
+            item.type === '视频'
+              ? isConfirmedBilibiliDead(item.url, check)
+              : !check.error || check.soft404 || (check.status && check.status >= 400);
           if (!isCi) failAccess++;
           issues.push({
             severity: isCi ? 'low' : 'critical',
@@ -284,6 +296,7 @@ export async function runCultureLinkAudit(options = {}) {
             issue: '链接不可访问',
             detail: check.error || `HTTP ${check.status}`,
             pageTitle: check.pageTitle,
+            confirmedDead,
           });
         }
       }
