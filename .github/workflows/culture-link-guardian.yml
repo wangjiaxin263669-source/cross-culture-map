@@ -1,0 +1,82 @@
+# 每周全自动：巡检 + 失效换链 + 提交（跨文化产品设计专家标准）
+name: Culture Link Guardian Auto
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/data/**'
+      - 'scripts/lib/**'
+      - 'scripts/culture-link-guardian*.mjs'
+      - '.github/workflows/culture-link-guardian.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  auto-guardian:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Auto audit and fix culture links
+        run: npm run guardian
+        continue-on-error: true
+        id: guardian
+
+      - name: Commit and push auto-fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data
+          if git diff --staged --quiet; then
+            echo "No data changes to commit"
+          else
+            git commit -m "chore(guardian): weekly auto-fix culture links [skip ci]"
+            git push
+          fi
+
+      - name: Trigger Netlify production rebuild
+        if: success()
+        env:
+          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+        run: |
+          if [ -n "$NETLIFY_BUILD_HOOK" ]; then
+            curl -fsS -X POST "$NETLIFY_BUILD_HOOK"
+            echo "Netlify rebuild triggered"
+          else
+            echo "NETLIFY_BUILD_HOOK not set; rely on Git-connected auto deploy"
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: culture-guardian-report
+          path: |
+            scripts/guardian-reports/latest.json
+            scripts/guardian-reports/auto-fix-log.json
+          retention-days: 90
+
+      - name: Fail if still broken after auto-fix
+        if: steps.guardian.outcome == 'failure'
+        run: |
+          echo "::error::全自动修复后仍有严重问题，见 Artifact"
+          exit 1

@@ -21,7 +21,7 @@ export const WHY = {
   gdpr:
     '【设计师必读】德国/欧盟用户为何需要「可读、可拒绝、可分层」的隐私 UI；合规即体验。',
   googleNbU:
-    '【设计师必读】Google「下一十亿用户」原则：低带宽、多语言、折扣驱动——印度/新兴市场的设计基准文献。',
+    '【设计师必读】新兴市场（印度/巴西等）出海 UI：低带宽、多语言、折扣与信任——下一十亿用户场景的设计基准。',
   smokey:
     '【设计师必读】美国个人主义叙事的国民级案例，与「只有你」类 CTA、极简首页同源。',
 };
@@ -83,10 +83,9 @@ export const CANON = {
     '合规 UX',
     WHY.gdpr,
   ),
-  googleNbU: article(
-    'https://design.google/library/building-for-everyone/',
-    'Design Inclusive Products — Reach a Wider Audience',
-    'Google Design',
+  googleNbU: woshipm(
+    'https://www.woshipm.com/ucd/6200498.html',
+    '全球化UI设计：小语种出海产品设计干货',
     '新兴市場',
     WHY.googleNbU,
   ),

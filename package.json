@@ -18,7 +18,11 @@
     "start:prod": "node scripts/start-prod.mjs",
     "start:server": "node server/index.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "guardian": "node scripts/culture-link-guardian-auto.mjs",
+    "guardian:check": "node scripts/culture-link-guardian.mjs",
+    "guardian:audit": "node scripts/audit-all-markets.mjs",
+    "guardian:validate-urls": "node scripts/validate-curated-links.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

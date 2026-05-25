@@ -54,7 +54,7 @@ export const COUNTRY_CURATED = {
   india: {
     references: [CANON.hofstede, CANON.googleNbU, CANON.zcoolCross],
     videos: [FOUNDATION_VIDEO],
-    caseLink: 'https://design.google/library/building-for-everyone/',
+    caseLink: 'https://www.woshipm.com/ucd/6200498.html',
     caseInsightIndex: 0,
     caseNote: '轻量、多语言、价格敏感——「下一十亿用户」设计原则对照印度故事。',
   },
@@ -87,7 +87,7 @@ export const ALL_CURATED_URLS = [
   'https://www.woshipm.com/ucd/124750.html',
   'https://www.roomie.tw/posts/71704',
   'https://gdpr.eu/cookies/',
-  'https://design.google/library/building-for-everyone/',
+  'https://www.woshipm.com/ucd/6200498.html',
   'https://smokeybear.com/en',
   'https://www.starbucks.com.cn/',
   'https://www.starbucks.com/',
