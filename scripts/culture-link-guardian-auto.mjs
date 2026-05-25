@@ -18,6 +18,8 @@ console.log('🛡️ 文化链接全自动守护（跨文化 UX 专家标准）\
 let round = 0;
 let lastResult = null;
 const fixLog = [];
+/** 本轮是否写入了 src/data（供 CI 判断是否提交） */
+export let dataFilesPatched = false;
 
 while (round < MAX_ROUNDS) {
   round++;
@@ -65,6 +67,7 @@ while (round < MAX_ROUNDS) {
     console.log('\n⚠️ 未能写入任何文件，停止\n');
     break;
   }
+  dataFilesPatched = true;
   console.log(`\n已更新 ${filesChanged.length} 个数据文件\n`);
 }
 

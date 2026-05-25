@@ -31,7 +31,7 @@ export const usaStates = [
       designLink: '【因】高个人主义 + 高宽容度 →【果】清晰隐私控制、包容性文案、可持续叙事、简洁但不冷漠的 UI。',
     },
     references: [
-      { title: 'California Consumer Privacy Act (CCPA)', source: 'California DOJ', year: '2023', url: 'https://oag.ca.gov/privacy/ccpa', tag: '合规', note: '【设计师必读】加州隐私优先于默认收集，影响 App 权限与 Cookie 设计。' },
+      { title: 'Cookies, the GDPR, and the ePrivacy Directive', source: 'GDPR.eu', year: '—', url: 'https://gdpr.eu/cookies/', tag: '合规 UX', note: '【设计师必读】与 CCPA 同属「先读懂再同意」的隐私界面范式，德国/加州项目可对照。' },
       CANON.cnUsApp,
     ],
     designInsights: [

@@ -34,8 +34,9 @@ function escapeRegExp(s) {
  */
 export async function buildFixPlan(auditResult) {
   const plan = new Map();
-  /** 仅自动修复「确认失效」；标题错位在 B 站可访问时不乱换地方纪录片 */
+  /** 仅自动修复文献/案例的确认失效；视频由人工维护，避免 CI 误伤地方纪录片 */
   const fixable = auditResult.issues.filter((i) => {
+    if (i.type === '视频') return false;
     if (i.severity === 'critical' || i.severity === 'high') return true;
     if (i.severity === 'medium' && i.issue === '链接不可访问') return true;
     return false;

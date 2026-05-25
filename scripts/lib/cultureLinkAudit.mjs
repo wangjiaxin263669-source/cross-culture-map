@@ -139,7 +139,7 @@ const TRUSTED_HOSTS =
 
 /** 境外经典源在部分网络下 fetch 会失败，不应与「确认下架」同等对待 */
 const NETWORK_FLAKY_HOSTS =
-  /design\.google|geert-hofstede\.com|gdpr\.eu|starbucks\.com|apple\.com|roomie\.tw|smokeybear\.com|oag\.ca\.gov/i;
+  /design\.google|geert-hofstede\.com|gdpr\.eu|starbucks\.com|apple\.com|roomie\.tw|smokeybear\.com|oag\.ca\.gov|bilibili\.com/i;
 
 export async function fetchCheck(url, cache = new Map()) {
   if (cache.has(url)) return cache.get(url);

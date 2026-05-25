@@ -46,6 +46,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          PATCHED=$(node -e "try{const j=require('./scripts/guardian-reports/auto-fix-log.json');process.stdout.write(j.fixLog?.some(r=>r.fixes?.length>0)?'yes':'no')}catch{process.stdout.write('no')}")
+          if [ "$PATCHED" != "yes" ]; then
+            echo "No guardian data patches; skip commit"
+            exit 0
+          fi
           git add src/data
           if git diff --staged --quiet; then
             echo "No data changes to commit"
