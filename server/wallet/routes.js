@@ -2,6 +2,9 @@ import { Router } from 'express';
 import {
   listWalletTransactions,
   findRechargeOrder,
+  findUserByPhone,
+  creditUserBalance,
+  sanitizeUser,
   createRechargeOrder,
   markRechargeOrderAwaitingConfirm,
   listRechargeOrdersForAdmin,
@@ -161,6 +164,47 @@ router.post('/admin/sms', requireRechargeAdmin, async (req, res) => {
     res.json({ ok: true, message: '短信配置已保存并生效', provider: next.provider });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+/** 管理员：按手机号赠送余额（分或元） */
+router.post('/admin/grant', requireRechargeAdmin, async (req, res) => {
+  try {
+    const phone = String(req.body?.phone || '').trim();
+    const note = String(req.body?.note || '管理员赠送').trim() || '管理员赠送';
+    let amountCents = Number(req.body?.amountCents);
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+      const yuan = Number(req.body?.amountYuan);
+      if (!Number.isFinite(yuan) || yuan <= 0) {
+        return res.status(400).json({ error: '请提供 amountYuan 或 amountCents' });
+      }
+      amountCents = Math.round(yuan * 100);
+    }
+    if (!/^1\d{10}$/.test(phone)) {
+      return res.status(400).json({ error: '请提供有效手机号' });
+    }
+    const user = await findUserByPhone(phone);
+    if (!user) {
+      return res.status(404).json({ error: '该手机号未注册或未验证' });
+    }
+    const tx = await creditUserBalance(user.id, amountCents, {
+      type: 'bonus',
+      note,
+    });
+    const safe = await sanitizeUser(await findUserByPhone(phone));
+    res.json({
+      ok: true,
+      phone,
+      amountCents,
+      amountYuan: (amountCents / 100).toFixed(2),
+      balanceCents: tx.balanceAfter,
+      balanceYuan: (tx.balanceAfter / 100).toFixed(2),
+      displayName: safe?.displayName,
+      transactionId: tx.id,
+      message: `已向 ${phone} 赠送 ¥${(amountCents / 100).toFixed(2)}，当前余额 ¥${(tx.balanceAfter / 100).toFixed(2)}`,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || '赠送失败' });
   }
 });
 
