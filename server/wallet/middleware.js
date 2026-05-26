@@ -3,8 +3,8 @@ import {
   chargeForOperation,
   refundOperation,
   InsufficientBalanceError,
-  getUserBalanceCents,
 } from './billing.js';
+import { getUserBalanceCents } from '../db/store.js';
 import { HttpError } from './httpError.js';
 
 async function walletPayloadAfterRefund(userId, refundedCents) {
