@@ -632,47 +632,56 @@ function App() {
 
       {selectedMarket && (
         <div className="info-panel">
-          <div className="info-panel-top">
-            <div className="panel-quick-nav">
+          <header className="info-panel-header">
+            <button
+              type="button"
+              className="info-panel-close"
+              onClick={closePanel}
+              aria-label="关闭面板"
+            >
+              ×
+            </button>
+
+            {selectedMarket.marketType === 'region' && selectedMarket.parentTitle && (
+              <div className="market-breadcrumb">
+                <span className="market-breadcrumb-parent">{selectedMarket.parentTitle}</span>
+                <span className="market-breadcrumb-sep">/</span>
+                <span className="market-breadcrumb-region">{selectedMarket.title}</span>
+              </div>
+            )}
+            {selectedMarket.marketType === 'country' && selectedMarket.hasRegions && (
+              <p className="info-panel-eyebrow">全国整体 · 国家级文化介绍</p>
+            )}
+
+            <h2 className="info-panel-title">{displayTitle}</h2>
+            {selectedMarket.tagline && (
+              <p className="country-tagline">{selectedMarket.tagline}</p>
+            )}
+
+            <nav className="panel-jump-strip" aria-label="跳转到功能区">
               <button
                 type="button"
-                className="panel-quick-nav-btn"
+                className="panel-jump-item panel-jump-item--sim"
                 onClick={() =>
                   simSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }
               >
-                模拟调研
+                <span className="panel-jump-label">模拟调研</span>
+                <span className="panel-jump-desc">人设 · 访谈 · 报告</span>
               </button>
               <button
                 type="button"
-                className="panel-quick-nav-btn"
+                className="panel-jump-item panel-jump-item--analysis"
                 onClick={() =>
                   threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }
               >
-                三步分析
+                <span className="panel-jump-label">三步分析</span>
+                <span className="panel-jump-desc">跨文化智能报告</span>
               </button>
-            </div>
-            <button type="button" className="close-btn" onClick={closePanel}>
-              ✕ 关闭
-            </button>
-          </div>
+            </nav>
+          </header>
 
-          {selectedMarket.marketType === 'region' && selectedMarket.parentTitle && (
-            <div className="market-breadcrumb">
-              <span className="market-breadcrumb-parent">{selectedMarket.parentTitle}</span>
-              <span className="market-breadcrumb-sep">/</span>
-              <span className="market-breadcrumb-region">{selectedMarket.title}</span>
-            </div>
-          )}
-          {selectedMarket.marketType === 'country' && selectedMarket.hasRegions && (
-            <div className="market-level-badge market-level-badge-country">全国整体 · 国家级文化介绍</div>
-          )}
-
-          <h2 className="info-panel-title">{displayTitle}</h2>
-          {selectedMarket.tagline && (
-            <p className="country-tagline">{selectedMarket.tagline}</p>
-          )}
           <p className="country-overview">{selectedMarket.overview}</p>
 
           {regionContext && (
@@ -685,11 +694,11 @@ function App() {
             />
           )}
 
-          <div style={{ width: '100%', height: '220px' }}>
+          <div className="panel-radar-chart">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedMarket.radarData}>
                 <PolarGrid stroke="rgba(255,255,255,0.15)" />
-                <PolarAngleAxis dataKey="name" tick={{ fill: '#8da4c4', fontSize: 11 }} />
+                <PolarAngleAxis dataKey="name" tick={{ fill: '#94a8be', fontSize: 12 }} />
                 <Tooltip wrapperStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                 <Radar name="维度数据" dataKey="score" stroke="#00f0ff" strokeWidth={2} fill="#00f0ff" fillOpacity={0.2} />
               </RadarChart>

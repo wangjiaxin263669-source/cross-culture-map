@@ -123,7 +123,7 @@ async function main() {
 
     // 1) 研究设定步
     await openJapanSetup(page);
-    await page.locator('.close-btn').click();
+    await page.locator('.info-panel-close, .close-btn').first().click();
     await expectExitModal(page);
     console.log('OK: 研究设定步 → Close 弹出保存');
     await page.getByRole('button', { name: '继续编辑' }).click();
@@ -131,7 +131,7 @@ async function main() {
     // 2) 人设步（mock 生成）
     await page.getByRole('button', { name: /检索语料并生成人设/ }).click();
     await page.waitForSelector('.sim-persona-card', { timeout: 15000 });
-    await page.locator('.close-btn').click();
+    await page.locator('.info-panel-close, .close-btn').first().click();
     await expectExitModal(page);
     console.log('OK: 人设步 → Close 弹出保存');
     await saveAndCloseModal(page);
@@ -147,7 +147,7 @@ async function main() {
     // 3) 访谈步（mock 一场）
     await page.getByRole('button', { name: /开始模拟访谈/ }).click();
     await page.waitForSelector('.sim-interview-card', { timeout: 20000 });
-    await page.locator('.close-btn').click();
+    await page.locator('.info-panel-close, .close-btn').first().click();
     await expectExitModal(page);
     console.log('OK: 访谈步 → Close 弹出保存');
     await saveAndCloseModal(page);
