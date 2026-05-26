@@ -1,12 +1,30 @@
 const FP_CACHE_KEY = 'cc_device_fp_v1';
 const LOCAL_ID_KEY = 'cc_device_local_id';
 
+/** 无 Web Crypto 时的稳定回退（仍输出 64 位十六进制） */
+function sha256HexFallback(text) {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text.charCodeAt(i);
+    h1 ^= c;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 ^= c ^ (i % 255);
+    h2 = Math.imul(h2, 0x01000193);
+  }
+  const part = (n) => (n >>> 0).toString(16).padStart(8, '0');
+  return (part(h1) + part(h2) + part(h1 ^ h2) + part(~h1)).padEnd(64, '0').slice(0, 64);
+}
+
 async function sha256Hex(text) {
-  const data = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+  if (typeof crypto !== 'undefined' && crypto.subtle?.digest) {
+    const data = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return sha256HexFallback(text);
 }
 
 function getOrCreateLocalId() {
@@ -64,8 +82,8 @@ async function collectDeviceSignals() {
  * 同一浏览器/设备配置下应保持稳定；清除站点数据会变化（属预期限制）。
  */
 export async function getDeviceFingerprint() {
-  if (typeof window === 'undefined' || !window.crypto?.subtle) {
-    throw new Error('当前环境无法生成设备标识，请使用最新版 Chrome / Edge / Safari');
+  if (typeof window === 'undefined') {
+    throw new Error('当前环境无法生成设备标识');
   }
 
   try {

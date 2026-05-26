@@ -5,7 +5,9 @@
 import { createHash } from 'crypto';
 
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3001';
-const DEVICE_FP = createHash('sha256').update('device-test-fixed-seed').digest('hex');
+const DEVICE_FP = createHash('sha256')
+  .update(`device-test-${Date.now()}-${Math.random()}`)
+  .digest('hex');
 
 async function req(path, body) {
   const res = await fetch(`${BASE}${path}`, {

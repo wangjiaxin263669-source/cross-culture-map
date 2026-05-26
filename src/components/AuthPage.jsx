@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { register, login, resetPassword } from '../services/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getDeviceFingerprint } from '../utils/deviceFingerprint.js';
@@ -13,6 +13,28 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deviceReady, setDeviceReady] = useState(true);
+  const [deviceError, setDeviceError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    getDeviceFingerprint()
+      .then(() => {
+        if (!cancelled) {
+          setDeviceReady(true);
+          setDeviceError('');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDeviceReady(false);
+          setDeviceError(err.message || '无法生成设备标识');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const switchMode = (next) => {
     setMode(next);
@@ -39,10 +61,23 @@ export default function AuthPage() {
         return;
       }
 
+      if (mode === 'register') {
+        if (!deviceReady) {
+          setError(deviceError || '无法识别当前设备，请刷新页面或使用 Chrome / Edge / Safari 最新版');
+          return;
+        }
+      }
+
       const data =
         mode === 'login'
           ? await login({ phone, password })
-          : await register({ nickname, phone, password, confirmPassword });
+          : await register({
+              nickname,
+              phone,
+              password,
+              confirmPassword,
+              deviceFingerprint: await getDeviceFingerprint(),
+            });
 
       if (mode === 'register') {
         const bonus = data.newUserBonus?.granted
