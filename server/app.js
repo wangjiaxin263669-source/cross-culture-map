@@ -3,7 +3,13 @@ import path from 'path';
 import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
-import { generateChatReply, generateLocalizationReport, getModelName, isConfigured } from './deepseek.js';
+import {
+  generateChatReply,
+  generateLocalizationReport,
+  getModelName,
+  isConfigured,
+  getDeepSeekModelsPublicConfig,
+} from './deepseek.js';
 import {
   generateResearchPersonas,
   runSimulatedInterview,
@@ -83,9 +89,11 @@ export function createApp(options = {}) {
   const API_DEADLINE_MS = Number(process.env.API_DEADLINE_MS || 52000);
   const SIM_RESEARCH_DEADLINE_MS = Number(process.env.SIM_RESEARCH_DEADLINE_MS || 90000);
   app.use('/api', (req, res, next) => {
-    const limit = String(req.originalUrl || req.path).includes('simulated-research')
-      ? SIM_RESEARCH_DEADLINE_MS
-      : API_DEADLINE_MS;
+    const isSim = String(req.originalUrl || req.path).includes('simulated-research');
+    const isPro = req.body?.model === 'deepseek-v4-pro';
+    const proExtra = Number(process.env.DEEPSEEK_PRO_DEADLINE_MS || 120000);
+    let limit = isSim ? SIM_RESEARCH_DEADLINE_MS : API_DEADLINE_MS;
+    if (isPro) limit = Math.max(limit, proExtra);
     const timer = setTimeout(() => {
       if (!res.headersSent) {
         res.status(504).json({
@@ -140,6 +148,7 @@ export function createApp(options = {}) {
       knowledge: getKnowledgeMeta(),
       corpus: getCorpusMeta(),
       model: getModelName(),
+      deepseekModels: getDeepSeekModelsPublicConfig(),
       mode: isServerless ? 'netlify' : isProd || hasDist ? 'production' : 'development',
       auth: {
         dbWritable: isDbWritable(),
@@ -349,6 +358,7 @@ export function createApp(options = {}) {
         corpusContext,
         corpusSnippets,
         researchMaterials,
+        model,
       } = req.body;
       if (!researchTopic?.trim()) {
         return res.status(400).json({ error: '请填写调研主题' });
@@ -367,8 +377,13 @@ export function createApp(options = {}) {
         country,
         corpusContext: ctx,
         researchMaterials: researchMaterials || null,
+        model,
       });
-      res.json({ personas, balanceCents: req.walletCharge?.balanceCents });
+      res.json({
+        personas,
+        model: getModelName(model),
+        balanceCents: req.walletCharge?.balanceCents,
+      });
     }),
   );
 
@@ -412,6 +427,7 @@ export function createApp(options = {}) {
         country,
         corpusSnippets,
         researchMaterials,
+        model,
       } = req.body;
       if (!researchTopic?.trim() || !personas?.length || !interviews?.length) {
         return res.status(400).json({ error: '缺少调研主题、人设或访谈记录' });
@@ -424,15 +440,20 @@ export function createApp(options = {}) {
         country,
         corpusSnippets: corpusSnippets || [],
         researchMaterials: researchMaterials || null,
+        model,
       });
-      res.json({ report, balanceCents: req.walletCharge?.balanceCents });
+      res.json({
+        report,
+        model: getModelName(model),
+        balanceCents: req.walletCharge?.balanceCents,
+      });
     }),
   );
 
   app.post(
     '/api/report',
     ...withWalletCharge('report', async (req, res) => {
-      const { productIdea, country } = req.body;
+      const { productIdea, country, model } = req.body;
       if (!productIdea?.trim()) {
         return res.status(400).json({ error: '请描述您的产品构想' });
       }
@@ -442,9 +463,11 @@ export function createApp(options = {}) {
       const report = await generateLocalizationReport({
         productIdea: productIdea.trim(),
         country,
+        model,
       });
       res.json({
         report,
+        model: getModelName(model),
         balanceCents: req.walletCharge?.balanceCents,
         costCents: req.walletCharge?.costCents,
       });

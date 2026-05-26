@@ -1,6 +1,11 @@
 import { getAuthHeaders } from './authApi.js';
+import { getStoredAiModel } from '../utils/aiModelStorage.js';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+function withModel(body, model) {
+  return { ...body, model: model || getStoredAiModel() };
+}
 
 function apiErrorHint(status, path = '') {
   const isReport = path.includes('/report');
@@ -99,26 +104,26 @@ export function serializeCountry(country) {
   };
 }
 
-export async function sendChatMessage({ message, history, country }) {
+export async function sendChatMessage({ message, history, country, model }) {
   const data = await request(
     '/api/chat',
-    {
+    withModel({
       message,
       history,
       country: serializeCountry(country),
-    },
+    }, model),
     { timeoutMs: 90000 },
   );
   return data.reply;
 }
 
-export async function generateReport({ productIdea, country }) {
+export async function generateReport({ productIdea, country, model }) {
   const data = await request(
     '/api/report',
-    {
+    withModel({
       productIdea,
       country: serializeCountry(country),
-    },
+    }, model),
     { timeoutMs: 120000 },
   );
   return data.report;

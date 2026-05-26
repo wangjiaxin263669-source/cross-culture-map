@@ -12,7 +12,7 @@ const INTERVIEW_MAX_TOKENS = 4096;
 const REPORT_MAX_TOKENS = 2800;
 
 /** 调用 DeepSeek 并解析 JSON，失败自动重试一次 */
-async function chatJson(messages, options, { retryHint } = {}) {
+async function chatJson(messages, options, { retryHint, model } = {}) {
   let lastErr;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -26,7 +26,7 @@ async function chatJson(messages, options, { retryHint } = {}) {
                 content: `${messages[messages.length - 1].content}\n\n【重试】${retryHint || '上次输出不是合法 JSON。仅输出一个 JSON 对象；字符串内双引号须写成 \\"；每条 text 控制在 120 字以内，勿截断。'}`,
               },
             ];
-      const content = await runChatCompletion(msgs, { ...options, jsonMode: true });
+      const content = await runChatCompletion(msgs, { ...options, jsonMode: true, model });
       return parseJsonFromLlm(content);
     } catch (err) {
       lastErr = err;
@@ -55,6 +55,7 @@ export async function generateResearchPersonas({
   country,
   corpusContext = '',
   researchMaterials = null,
+  model,
 }) {
   const market = getMarketLabel(country);
   const count = Math.min(5, Math.max(2, Number(personaCount) || 3));
@@ -101,7 +102,10 @@ ${corpusBlock}
       { role: 'user', content: user },
     ],
     { maxTokens: PERSONA_MAX_TOKENS, temperature: 0.75 },
-    { retryHint: '人设 JSON 无效。仅输出 {"personas":[...]}，姓名与背景用当地语言，字符串内引号须转义。' },
+    {
+      retryHint: '人设 JSON 无效。仅输出 {"personas":[...]}，姓名与背景用当地语言，字符串内引号须转义。',
+      model,
+    },
   );
   const personas = data.personas || data;
   if (!Array.isArray(personas) || personas.length === 0) {
@@ -123,6 +127,7 @@ export async function runSimulatedInterview({
   country,
   corpusContext = '',
   researchMaterials = null,
+  model,
 }) {
   const market = getMarketLabel(country);
   const countryCtx = country ? buildCountryContext(country) : '';
@@ -213,6 +218,7 @@ export async function synthesizeResearchReport({
   country,
   corpusSnippets = [],
   researchMaterials = null,
+  model,
 }) {
   const market = getMarketLabel(country);
   const countryCtx = country ? buildCountryContext(country) : '';
@@ -285,7 +291,7 @@ ${interviewBlock}
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
-    { maxTokens: REPORT_MAX_TOKENS, temperature: 0.5 },
+    { maxTokens: REPORT_MAX_TOKENS, temperature: 0.5, model },
   );
 
   return report.trim();

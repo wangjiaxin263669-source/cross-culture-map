@@ -1,5 +1,10 @@
 import { serializeCountry } from './aiApi.js';
 import { getAuthHeaders } from './authApi.js';
+import { getStoredAiModel } from '../utils/aiModelStorage.js';
+
+function withModel(body, model) {
+  return { ...body, model: model || getStoredAiModel() };
+}
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -65,16 +70,23 @@ export async function generatePersonas({
   corpusSnippets,
   corpusContext,
   researchMaterials,
+  model,
 }) {
-  const data = await post('/api/simulated-research/personas', {
-    researchTopic,
-    audienceCriteria,
-    personaCount,
-    country: serializeCountry(country),
-    corpusSnippets,
-    corpusContext,
-    researchMaterials,
-  });
+  const data = await post(
+    '/api/simulated-research/personas',
+    withModel(
+      {
+        researchTopic,
+        audienceCriteria,
+        personaCount,
+        country: serializeCountry(country),
+        corpusSnippets,
+        corpusContext,
+        researchMaterials,
+      },
+      model,
+    ),
+  );
   return data.personas;
 }
 
@@ -105,18 +117,22 @@ export async function synthesizeReport({
   country,
   corpusSnippets,
   researchMaterials,
+  model,
 }) {
   const data = await post(
     '/api/simulated-research/report',
-    {
-      researchTopic,
-      audienceCriteria,
-      personas,
-      interviews,
-      country: serializeCountry(country),
-      corpusSnippets,
-      researchMaterials,
-    },
+    withModel(
+      {
+        researchTopic,
+        audienceCriteria,
+        personas,
+        interviews,
+        country: serializeCountry(country),
+        corpusSnippets,
+        researchMaterials,
+      },
+      model,
+    ),
     120000,
   );
   return data.report;

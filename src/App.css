@@ -65,7 +65,8 @@ body, html, #root {
 
 .center-nav {
   display: flex;
-  gap: 40px;
+  align-items: center;
+  gap: 24px;
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -84,6 +85,40 @@ body, html, #root {
   transition: color 0.3s;
 }
 .nav-item.active, .nav-item:hover { color: #ffffff; }
+
+.ai-model-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ai-model-selector.compact .ai-model-label {
+  font-size: 9px;
+}
+.ai-model-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ai-model-select {
+  background: rgba(0, 0, 0, 0.35);
+  color: #e2e8f0;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  max-width: 160px;
+}
+.ai-model-select:focus {
+  outline: none;
+  border-color: #a78bfa;
+}
 
 .right-profile {
   display: flex;

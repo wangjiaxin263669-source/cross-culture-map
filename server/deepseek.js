@@ -1,8 +1,12 @@
 import { retrieveRelevantChunks, formatKnowledgeContext } from './knowledge.js';
 import { isServerlessRuntime, loadSkillPrompt } from './loadSkill.js';
+import {
+  resolveDeepSeekModel,
+  getDefaultDeepSeekModel,
+  getDeepSeekModelsPublicConfig,
+} from './deepseekModels.js';
 
 const API_BASE = process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com';
-const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 const CHAT_MAX_TOKENS = Number(process.env.DEEPSEEK_CHAT_MAX_TOKENS || 1800);
 const REPORT_SECTION_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_MAX_TOKENS || 1400);
 const REPORT_SINGLE_MAX_TOKENS = Number(process.env.DEEPSEEK_REPORT_SINGLE_MAX_TOKENS || 3200);
@@ -207,11 +211,16 @@ function normalizeHistory(history) {
 
 export async function runChatCompletion(
   messages,
-  { maxTokens = CHAT_MAX_TOKENS, temperature = 0.6, jsonMode = false } = {},
+  { maxTokens = CHAT_MAX_TOKENS, temperature = 0.6, jsonMode = false, model } = {},
 ) {
+  const modelId = resolveDeepSeekModel(model);
+  const isPro = modelId === 'deepseek-v4-pro';
+  const callTimeoutMs = isPro
+    ? Number(process.env.DEEPSEEK_PRO_TIMEOUT_MS || 110000)
+    : API_TIMEOUT_MS;
   const apiKey = getApiKey();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), callTimeoutMs);
 
   let res;
   try {
@@ -222,7 +231,7 @@ export async function runChatCompletion(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: modelId,
         messages,
         temperature,
         max_tokens: maxTokens,
@@ -247,6 +256,12 @@ export async function runChatCompletion(
   }
 
   if (!res.ok) {
+    const errMsg = data?.error?.message || '';
+    if (errMsg.includes('model') || errMsg.includes('Model')) {
+      throw new Error(
+        `模型「${modelId}」不可用：${errMsg}。请切换为 V4 Flash 或检查 DeepSeek 账户是否已开通该模型。`,
+      );
+    }
     throw wrapApiError(null, data);
   }
 
@@ -257,7 +272,7 @@ export async function runChatCompletion(
   return content;
 }
 
-export async function generateChatReply({ message, history = [], country = null }) {
+export async function generateChatReply({ message, history = [], country = null, model }) {
   const chunks = retrieveRelevantChunks(message, CHAT_RAG_CHUNKS);
   const knowledge = formatKnowledgeContext(chunks);
   const systemContent = buildAgentSystemPrompt({ knowledge, country, mode: 'chat' });
@@ -269,14 +284,14 @@ export async function generateChatReply({ message, history = [], country = null 
   ];
 
   try {
-    return await runChatCompletion(messages, { maxTokens: CHAT_MAX_TOKENS });
+    return await runChatCompletion(messages, { maxTokens: CHAT_MAX_TOKENS, model });
   } catch (err) {
     if (err.message?.startsWith('未配置') || err.message?.startsWith('DEEPSEEK')) throw err;
     throw wrapApiError(err);
   }
 }
 
-async function generateReportSection({ productIdea, country, section }) {
+async function generateReportSection({ productIdea, country, section, model }) {
   const query = `${productIdea} ${country.title} 本地化 UI UX 设计`;
   const chunks = retrieveRelevantChunks(query, REPORT_RAG_CHUNKS);
   const knowledge = formatKnowledgeContext(chunks);
@@ -308,11 +323,11 @@ ${productIdea}
     { role: 'user', content: userContent },
   ];
 
-  return runChatCompletion(messages, { maxTokens: REPORT_SECTION_MAX_TOKENS });
+  return runChatCompletion(messages, { maxTokens: REPORT_SECTION_MAX_TOKENS, model });
 }
 
 /** Netlify：单次调用 + 精简 SKILL，控制在 60s 内 */
-async function generateReportSingleCall({ productIdea, country }) {
+async function generateReportSingleCall({ productIdea, country, model }) {
   const query = `${productIdea} ${country.title} 本地化 UI UX 设计`;
   const chunks = retrieveRelevantChunks(query, REPORT_RAG_CHUNKS);
   const knowledge = formatKnowledgeContext(chunks);
@@ -341,22 +356,22 @@ ${productIdea}
     { role: 'user', content: userContent },
   ];
 
-  return runChatCompletion(messages, { maxTokens: REPORT_SINGLE_MAX_TOKENS });
+  return runChatCompletion(messages, { maxTokens: REPORT_SINGLE_MAX_TOKENS, model });
 }
 
 /** 本地：并行两段；Serverless：单次调用防 504 */
-export async function generateLocalizationReport({ productIdea, country }) {
+export async function generateLocalizationReport({ productIdea, country, model }) {
   if (!country) {
     throw new Error('请先在地球上选择目标国家/地区');
   }
 
   try {
     if (isServerlessRuntime()) {
-      return (await generateReportSingleCall({ productIdea, country })).trim();
+      return (await generateReportSingleCall({ productIdea, country, model })).trim();
     }
     const [analysis, strategy] = await Promise.all([
-      generateReportSection({ productIdea, country, section: 'analysis' }),
-      generateReportSection({ productIdea, country, section: 'strategy' }),
+      generateReportSection({ productIdea, country, section: 'analysis', model }),
+      generateReportSection({ productIdea, country, section: 'strategy', model }),
     ]);
     return `${analysis.trim()}\n\n${strategy.trim()}`;
   } catch (err) {
@@ -365,9 +380,11 @@ export async function generateLocalizationReport({ productIdea, country }) {
   }
 }
 
-export function getModelName() {
-  return MODEL;
+export function getModelName(model) {
+  return resolveDeepSeekModel(model);
 }
+
+export { getDeepSeekModelsPublicConfig, resolveDeepSeekModel, getDefaultDeepSeekModel };
 
 export function isConfigured() {
   return Boolean(process.env.DEEPSEEK_API_KEY?.trim());

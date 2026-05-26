@@ -17,6 +17,7 @@ import {
   slimMaterialsForApi,
   hasAnyMaterials,
 } from '../utils/researchMaterials';
+import { useAiModel } from '../context/AiModelContext';
 import {
   listPersonas,
   listSessions,
@@ -66,6 +67,7 @@ export default function SimulatedResearchPanel({
   onSyncToThreeStepReport,
   onReportGenerated,
 }) {
+  const { modelId } = useAiModel();
   const [step, setStep] = useState('materials');
   const [researchMaterials, setResearchMaterials] = useState(createEmptyMaterials);
   const [researchTopic, setResearchTopic] = useState('');
@@ -158,6 +160,7 @@ export default function SimulatedResearchPanel({
         country: market,
         corpusSnippets: snippets,
         researchMaterials: materialsPayload,
+        model: modelId,
       });
       setPersonas(list);
       setInterviews([]);
@@ -205,6 +208,7 @@ export default function SimulatedResearchPanel({
           country: market,
           corpusContext,
           researchMaterials: materialsPayload,
+          model: modelId,
         });
         results.push(interview);
         setInterviews([...results]);
@@ -219,6 +223,7 @@ export default function SimulatedResearchPanel({
         country: market,
         corpusSnippets,
         researchMaterials: materialsPayload,
+        model: modelId,
       });
       setReport(md);
       setStep('report');

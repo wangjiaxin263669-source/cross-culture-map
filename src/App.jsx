@@ -9,6 +9,8 @@ import AuthPage from './components/AuthPage';
 import HistoryDrawer from './components/HistoryDrawer';
 import RechargeModal from './components/RechargeModal';
 import { useAuth } from './context/AuthContext';
+import { useAiModel } from './context/AiModelContext';
+import AiModelSelector from './components/AiModelSelector';
 import {
   globeLabelsData,
   normalizeMarket,
@@ -228,6 +230,7 @@ function App() {
         const report = await generateReport({
           productIdea,
           country: selectedMarket,
+          model: modelId,
         });
         setAiResult(report);
         await persistAnalysisReport(report, productIdea);
@@ -248,6 +251,7 @@ function App() {
       const report = await generateReport({
         productIdea: userIdea,
         country: selectedMarket,
+        model: modelId,
       });
       setAiResult(report);
       await persistAnalysisReport(report, userIdea);
@@ -335,6 +339,7 @@ function App() {
 
         <div className="center-nav">
           <span className="nav-item active">REGION MAP</span>
+          <AiModelSelector compact />
         </div>
 
         <div className="right-profile-wrap">
@@ -559,7 +564,7 @@ function App() {
             {aiHealth && (
               <div className={`ai-status-banner ${(aiHealth.aiConfigured ?? aiHealth.geminiConfigured) ? 'ok' : ''}`}>
                 {(aiHealth.aiConfigured ?? aiHealth.geminiConfigured)
-                  ? `智能体 ${aiHealth.agent?.skill || 'cross-cultural-research'} 已就绪 · ${aiHealth.model || 'deepseek-chat'} · 知识库 ${aiHealth.knowledge?.chunkCount ?? 0} 段`
+                  ? `智能体已就绪 · 当前模型 ${currentModel?.label || modelId} · 知识库 ${aiHealth.knowledge?.chunkCount ?? 0} 段（可在顶部切换 Flash / Pro）`
                   : '请在项目根目录 .env 中设置 DEEPSEEK_API_KEY（见 .env.example）'}
               </div>
             )}
