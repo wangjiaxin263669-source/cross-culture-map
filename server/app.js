@@ -86,7 +86,9 @@ export function createApp(options = {}) {
   });
 
   /** 防止请求挂死导致 Vite/Netlify 返回 504 */
-  const API_DEADLINE_MS = Number(process.env.API_DEADLINE_MS || 52000);
+  const API_DEADLINE_MS = Number(
+    process.env.API_DEADLINE_MS || (isServerless ? 58000 : 90000),
+  );
   const SIM_RESEARCH_DEADLINE_MS = Number(process.env.SIM_RESEARCH_DEADLINE_MS || 90000);
   app.use('/api', (req, res, next) => {
     const isSim = String(req.originalUrl || req.path).includes('simulated-research');
