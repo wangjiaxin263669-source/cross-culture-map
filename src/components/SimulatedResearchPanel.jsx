@@ -68,6 +68,19 @@ function stepCostYuan(costsYuan, key) {
   return costsYuan?.[key] ?? ({ sim_personas: '0.10', sim_interview: '0.25', sim_report: '0.10' }[key]);
 }
 
+function applySimApiError(err, setError, onInsufficientBalance) {
+  setError(err.message || '请求失败');
+  if (err.code === 'INSUFFICIENT_BALANCE') onInsufficientBalance?.();
+}
+
+function getMaxReachableStepIndex({ report, interviews, personas, materialsStarted, researchTopic }) {
+  if (report) return 4;
+  if ((interviews?.length || 0) > 0) return 3;
+  if ((personas?.length || 0) > 0) return 2;
+  if (materialsStarted || researchTopic?.trim()) return 1;
+  return 0;
+}
+
 const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
   {
     market,
@@ -75,9 +88,9 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
     aiConfigured,
     walletCostsYuan,
     onSyncToThreeStepReport,
-    onReportGenerated,
     onSavedToHistory,
     onSnapshotChange,
+    onInsufficientBalance,
   },
   ref,
 ) {
@@ -282,6 +295,19 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
     setStep(nextStep);
   };
 
+  const maxReachableIdx = getMaxReachableStepIndex({
+    report,
+    interviews,
+    personas,
+    materialsStarted,
+    researchTopic,
+  });
+
+  const handleStepTabClick = (idx) => {
+    if (loading || idx > maxReachableIdx) return;
+    goToStep(STEPS[idx].id);
+  };
+
   const handleMaterialsChange = (next) => {
     setResearchMaterials(next);
     if (hasAnyMaterials(next)) setMaterialsStarted(true);
@@ -324,7 +350,7 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
         }
       }
     } catch (err) {
-      setError(err.message);
+      applySimApiError(err, setError, onInsufficientBalance);
     } finally {
       setLoading(false);
       setProgress('');
@@ -367,9 +393,12 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
       }
       setStep('interviews');
     } catch (err) {
-      setError(
-        `${err.message}${results.length ? ' · 已完成部分访谈；关闭面板时可选择「保存到历史」' : ''}`,
-      );
+      if (results.length > 0) setStep('interviews');
+      const suffix = results.length
+        ? ' · 已完成部分访谈已展示在下方；关闭面板时可选择「保存到历史」'
+        : '';
+      setError(`${err.message || '请求失败'}${suffix}`);
+      if (err.code === 'INSUFFICIENT_BALANCE') onInsufficientBalance?.();
     } finally {
       setLoading(false);
       setProgress('');
@@ -397,7 +426,6 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
       });
       setReport(md);
       setStep('report');
-      onReportGenerated?.(md, researchTopic);
       if (user) {
         try {
           await saveToHistory({ step: 'report', interviews, report: md });
@@ -406,7 +434,8 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
         }
       }
     } catch (err) {
-      setError(`${err.message} · 访谈记录仍在页面中，关闭时可保存到历史`);
+      setError(`${err.message || '请求失败'} · 访谈记录仍在页面中，关闭时可保存到历史`);
+      if (err.code === 'INSUFFICIENT_BALANCE') onInsufficientBalance?.();
     } finally {
       setLoading(false);
       setProgress('');
@@ -481,6 +510,14 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
   };
 
   const resetAll = () => {
+    const hasPaidWork =
+      personas.length > 0 || interviews.length > 0 || report || researchTopic.trim();
+    if (
+      hasPaidWork &&
+      !window.confirm('将清空当前调研的素材、人设、访谈与报告，且无法撤销。确定新建？')
+    ) {
+      return;
+    }
     setStep('materials');
     setResearchMaterials(createEmptyMaterials());
     setPersonas([]);
@@ -525,13 +562,13 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
           {showLibrary ? '收起人设库' : `人设库 (${savedPersonas.length})`}
         </button>
         <span className="sim-hint sim-history-hint">
-          退出本页时可保存进度到右上角「我的历史」
+          完整进度：关闭侧栏时保存到「我的历史 → 模拟调研」。下方「人设库」仅本机收藏，换设备不同步。
         </span>
       </div>
 
       {showLibrary && (
         <div className="sim-library-panel">
-          <h4 className="sim-library-title">已保存人设</h4>
+          <h4 className="sim-library-title">已保存人设（本机浏览器）</h4>
           {savedPersonas.length === 0 && <p className="sim-hint">暂无，可在人设卡片上点击「存入人设库」</p>}
           {savedPersonas.map((entry) => (
             <div key={entry.id} className="sim-library-item">
@@ -563,22 +600,29 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
       )}
       {modelId === 'deepseek-v4-pro' && (
         <p className="sim-hint sim-pro-hint">
-          当前为 {currentModel?.label || 'DeepSeek Pro'}：单步耗时较长，进度会自动保存到历史会话；若超时建议改用 Flash 或减少受访者人数。
+          当前为 {currentModel?.label || 'DeepSeek Pro'}：单步耗时较长。人设/报告生成成功后会写入「我的历史 → 模拟调研」；临时离开请点侧栏「关闭」并选择保存。若超时建议改用 Flash 或减少受访者人数。
         </p>
       )}
 
       <OpenPlatformPanel />
 
-      <div className="sim-step-tabs">
+      <div className="sim-step-tabs" role="tablist" aria-label="模拟调研步骤">
         {STEPS.map((s, idx) => {
           const currentIdx = STEPS.findIndex((x) => x.id === step);
+          const reachable = idx <= maxReachableIdx;
           return (
-            <span
+            <button
               key={s.id}
-              className={`sim-step-tab ${step === s.id ? 'active' : ''} ${currentIdx > idx ? 'done' : ''}`}
+              type="button"
+              role="tab"
+              aria-selected={step === s.id}
+              disabled={!reachable || loading}
+              title={reachable ? `跳转到${s.label}` : '请先完成前置步骤'}
+              className={`sim-step-tab ${step === s.id ? 'active' : ''} ${currentIdx > idx ? 'done' : ''} ${reachable ? 'clickable' : ''}`}
+              onClick={() => handleStepTabClick(idx)}
             >
               {s.label}
-            </span>
+            </button>
           );
         })}
       </div>
@@ -743,7 +787,9 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
               disabled={loading || !aiConfigured}
               onClick={handleRunInterviews}
             >
-              {loading ? progress || '进行中…' : '开始模拟访谈并生成报告 →'}
+              {loading
+                ? progress || '进行中…'
+                : `开始模拟访谈 →（¥${stepCostYuan(walletCostsYuan, 'sim_interview')}，含全部受访者）`}
             </button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { isVideoUrl } from '../data/linkPlatforms.js';
 
 function providerIcon(provider) {
@@ -12,6 +12,7 @@ function providerIcon(provider) {
 }
 
 export default function CulturalStoryPanel({ country }) {
+  const [expanded, setExpanded] = useState(false);
   if (!country) return null;
   const {
     culturalStory,
@@ -25,7 +26,19 @@ export default function CulturalStoryPanel({ country }) {
 
   return (
     <div className="culture-panel">
-      {culturalStory && (
+      <div className="culture-panel-toolbar">
+        <button
+          type="button"
+          className="culture-collapse-btn"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? '收起文化故事与参考' : '展开文化故事与参考'}
+        </button>
+      </div>
+      {!expanded && (
+        <p className="culture-collapsed-hint">已折叠，便于快速进入下方「模拟调研」与「三步分析」。</p>
+      )}
+      {expanded && culturalStory && (
         <section className="story-card">
           <h3 className="section-heading">
             <span className="section-icon">📖</span>
@@ -45,7 +58,7 @@ export default function CulturalStoryPanel({ country }) {
         </section>
       )}
 
-      {methodology && (
+      {expanded && methodology && (
         <section className="methodology-card">
           <h3 className="section-heading">
             <span className="section-icon">🔬</span>
@@ -60,7 +73,7 @@ export default function CulturalStoryPanel({ country }) {
         </section>
       )}
 
-      {references.length > 0 && (
+      {expanded && references.length > 0 && (
         <section className="references-section">
           <h3 className="section-heading">
             <span className="section-icon">📚</span>
@@ -90,7 +103,7 @@ export default function CulturalStoryPanel({ country }) {
         </section>
       )}
 
-      {videoList.length > 0 && (
+      {expanded && videoList.length > 0 && (
         <section className="video-section">
           <h3 className="section-heading">
             <span className="section-icon">🎬</span>
@@ -119,7 +132,7 @@ export default function CulturalStoryPanel({ country }) {
         </section>
       )}
 
-      {designInsights.length > 0 && (
+      {expanded && designInsights.length > 0 && (
         <section className="insights-section">
           <h3 className="section-heading">
             <span className="section-icon">💡</span>

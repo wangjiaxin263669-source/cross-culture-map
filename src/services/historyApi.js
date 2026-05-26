@@ -76,3 +76,15 @@ export async function saveSimResearchSession(payload) {
   });
   return data.session;
 }
+
+export async function deleteChatSession(id) {
+  await api(`/api/auth/history/chats/${id}`, { method: 'DELETE' });
+}
+
+export async function deleteReport(id) {
+  await api(`/api/auth/history/reports/${id}`, { method: 'DELETE' });
+}
+
+export async function deleteSimResearchSession(id) {
+  await api(`/api/auth/history/sim-sessions/${id}`, { method: 'DELETE' });
+}

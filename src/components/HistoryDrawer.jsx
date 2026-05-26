@@ -6,8 +6,34 @@ import {
   getReport,
   listSimResearchSessions,
   getSimResearchSession,
+  deleteChatSession,
+  deleteReport,
+  deleteSimResearchSession,
 } from '../services/historyApi.js';
 import { getSimStepLabel } from '../utils/simResearchDraft';
+
+function HistoryRow({ title, meta, onOpen, onDelete, deleting }) {
+  return (
+    <div className="history-item-row">
+      <button type="button" className="history-item" onClick={onOpen} disabled={deleting}>
+        <strong>{title}</strong>
+        <small>{meta}</small>
+      </button>
+      <button
+        type="button"
+        className="history-item-delete"
+        disabled={deleting}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        aria-label="删除"
+      >
+        删除
+      </button>
+    </div>
+  );
+}
 
 export default function HistoryDrawer({
   open,
@@ -16,6 +42,7 @@ export default function HistoryDrawer({
   onLoadChat,
   onLoadReport,
   onLoadSimSession,
+  onHistoryMutated,
 }) {
   const [tab, setTab] = useState('chats');
   const [chats, setChats] = useState([]);
@@ -23,6 +50,7 @@ export default function HistoryDrawer({
   const [simSessions, setSimSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
 
   const refresh = useCallback(async () => {
     if (!open) return;
@@ -47,6 +75,27 @@ export default function HistoryDrawer({
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const confirmDelete = (label) =>
+    window.confirm(`确定删除这条${label}？删除后无法恢复。`);
+
+  const handleDelete = async (kind, id) => {
+    const labels = { chat: '对话', report: '报告', sim: '模拟调研' };
+    if (!confirmDelete(labels[kind] || '记录')) return;
+    setDeletingId(id);
+    setError('');
+    try {
+      if (kind === 'chat') await deleteChatSession(id);
+      else if (kind === 'report') await deleteReport(id);
+      else await deleteSimResearchSession(id);
+      await refresh();
+      onHistoryMutated?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleOpenChat = async (id) => {
     try {
@@ -123,62 +172,48 @@ export default function HistoryDrawer({
               <p className="history-empty">暂无对话记录</p>
             ) : (
               chats.map((s) => (
-                <button
+                <HistoryRow
                   key={s.id}
-                  type="button"
-                  className="history-item"
-                  onClick={() => handleOpenChat(s.id)}
-                >
-                  <strong>{s.title}</strong>
-                  <small>
-                    {s.market?.title ? `${s.market.title} · ` : ''}
-                    {new Date(s.updatedAt).toLocaleString('zh-CN')}
-                  </small>
-                </button>
+                  title={s.title}
+                  meta={`${s.market?.title ? `${s.market.title} · ` : ''}${new Date(s.updatedAt).toLocaleString('zh-CN')}`}
+                  deleting={deletingId === s.id}
+                  onOpen={() => handleOpenChat(s.id)}
+                  onDelete={() => handleDelete('chat', s.id)}
+                />
               ))
             ))}
 
           {tab === 'sim' &&
             (simSessions.length === 0 && !loading ? (
-              <p className="history-empty">暂无模拟调研记录。退出国家面板时可选择「保存到历史」。</p>
+              <p className="history-empty">
+                暂无模拟调研记录。关闭国家侧栏时可选择「保存到历史」。
+              </p>
             ) : (
               simSessions.map((s) => (
-                <button
+                <HistoryRow
                   key={s.id}
-                  type="button"
-                  className="history-item"
-                  onClick={() => handleOpenSim(s.id)}
-                >
-                  <strong>{s.title}</strong>
-                  <small>
-                    {s.market?.title ? `${s.market.title} · ` : ''}
-                    {getSimStepLabel(s.step)}
-                    {s.personaCount ? ` · ${s.personaCount} 人设` : ''}
-                    {s.interviewCount ? ` · ${s.interviewCount} 场访谈` : ''}
-                    {' · '}
-                    {new Date(s.updatedAt).toLocaleString('zh-CN')}
-                  </small>
-                </button>
+                  title={s.title}
+                  meta={`${s.market?.title ? `${s.market.title} · ` : ''}${getSimStepLabel(s.step)}${s.personaCount ? ` · ${s.personaCount} 人设` : ''}${s.interviewCount ? ` · ${s.interviewCount} 场访谈` : ''} · ${new Date(s.updatedAt).toLocaleString('zh-CN')}`}
+                  deleting={deletingId === s.id}
+                  onOpen={() => handleOpenSim(s.id)}
+                  onDelete={() => handleDelete('sim', s.id)}
+                />
               ))
             ))}
 
           {tab === 'reports' &&
             (reports.length === 0 && !loading ? (
-              <p className="history-empty">暂无报告记录</p>
+              <p className="history-empty">暂无三步分析报告。完整模拟调研流程请见「模拟调研」标签。</p>
             ) : (
               reports.map((r) => (
-                <button
+                <HistoryRow
                   key={r.id}
-                  type="button"
-                  className="history-item"
-                  onClick={() => handleOpenReport(r.id)}
-                >
-                  <strong>{r.title}</strong>
-                  <small>
-                    {r.type === 'sim_research' ? '模拟调研 · ' : ''}
-                    {new Date(r.createdAt).toLocaleString('zh-CN')}
-                  </small>
-                </button>
+                  title={r.title}
+                  meta={`${r.type === 'sim_research' ? '（旧）模拟调研 · ' : '三步分析 · '}${new Date(r.createdAt).toLocaleString('zh-CN')}`}
+                  deleting={deletingId === r.id}
+                  onOpen={() => handleOpenReport(r.id)}
+                  onDelete={() => handleDelete('report', r.id)}
+                />
               ))
             ))}
         </div>

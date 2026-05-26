@@ -30,7 +30,9 @@ export default function SimExitConfirmModal({
         </p>
         <p className="sim-exit-topic">主题：{topicPreview}</p>
         {!loggedIn && (
-          <p className="sim-exit-warn">保存到「我的历史」需要先登录账号。</p>
+          <p className="sim-exit-warn">
+            当前未登录，无法写入云端历史。请选择「不保存，直接退出」，或登录后重新保存。
+          </p>
         )}
         {error && <p className="sim-exit-error">{error}</p>}
         <div className="sim-exit-actions">

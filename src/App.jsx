@@ -34,6 +34,7 @@ function App() {
   const { modelId, current: currentModel } = useAiModel();
   const globeEl = useRef();
   const threeStepSectionRef = useRef(null);
+  const simSectionRef = useRef(null);
   const simPanelRef = useRef(null);
   const simSnapshotRef = useRef(null);
   const pendingSimSessionRef = useRef(null);
@@ -130,15 +131,18 @@ function App() {
     });
   }, [readSimSnapshot]);
 
-  const finishClosePanel = useCallback(() => {
+  const dismissPanel = useCallback(() => {
     setSelectedMarket(null);
-    setAiResult('');
     setAiError('');
     simSnapshotRef.current = null;
     if (globeEl.current) {
       globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
     }
   }, []);
+
+  const finishClosePanel = useCallback(() => {
+    dismissPanel();
+  }, [dismissPanel]);
 
   const closeSimExitModal = useCallback((choice) => {
     setSimExit((prev) => {
@@ -190,15 +194,36 @@ function App() {
     }
   }, [user, simExit, bumpHistory, closeSimExitModal]);
 
+  const hasUnloadDraft = useCallback(() => {
+    const snap = readSimSnapshot();
+    if (snap && shouldPersistSimDraft(snap)) return true;
+    if (userIdea?.trim() && !aiResult) return true;
+    if (chatInput.trim()) return true;
+    return false;
+  }, [readSimSnapshot, userIdea, aiResult, chatInput]);
+
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (!hasUnloadDraft()) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnloadDraft]);
+
   const handleLabelClick = async (raw) => {
     const market = normalizeMarket(raw);
-    if (selectedMarket && market?.id && market.id !== selectedMarket.id) {
+    const isDifferentMarket =
+      selectedMarket && market?.id && market.id !== selectedMarket.id;
+    if (isDifferentMarket) {
       const choice = await promptSimExitSave();
       if (choice === 'cancel') return;
     }
     setSelectedMarket(market);
-    setAiResult('');
-    setAiError('');
+    if (isDifferentMarket) {
+      setAiError('');
+    }
     if (globeEl.current && market?.lat != null && market?.lng != null) {
       globeEl.current.pointOfView(
         { lat: market.lat, lng: market.lng, altitude: market.marketType === 'region' ? 1.6 : 1.9 },
@@ -215,7 +240,12 @@ function App() {
     finishClosePanel();
   };
 
-  const handleExploreMap = () => {
+  const handleExploreMap = async () => {
+    if (selectedMarket) {
+      const choice = await promptSimExitSave();
+      if (choice === 'cancel') return;
+      dismissPanel();
+    }
     if (globeEl.current) {
       globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
     }
@@ -314,9 +344,19 @@ function App() {
   };
 
   useEffect(() => {
-    if (!selectedMarket || !pendingSimSessionRef.current || !simPanelRef.current) return;
-    simPanelRef.current.loadFromHistory(pendingSimSessionRef.current);
-    pendingSimSessionRef.current = null;
+    if (!selectedMarket || !pendingSimSessionRef.current) return;
+    const session = pendingSimSessionRef.current;
+    const tryLoad = () => {
+      if (!simPanelRef.current) return false;
+      simPanelRef.current.loadFromHistory(session);
+      pendingSimSessionRef.current = null;
+      return true;
+    };
+    if (!tryLoad()) {
+      const id = requestAnimationFrame(() => tryLoad());
+      return () => cancelAnimationFrame(id);
+    }
+    return undefined;
   }, [selectedMarket]);
 
   const handleSyncFromSimResearch = async (productIdea, { autoGenerate = false } = {}) => {
@@ -441,7 +481,7 @@ function App() {
         </div>
 
         <div className="center-nav">
-          <span className="nav-item active">REGION MAP</span>
+          <span className="nav-item active">地区地图</span>
           <AiModelSelector compact />
         </div>
 
@@ -510,17 +550,17 @@ function App() {
 
       <div className="hero-section">
         <div className="live-tag">
-          <span className="dot"></span> REGION VIEW &nbsp;&nbsp;
-          <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> Live
+          <span className="dot"></span> 地区视图 &nbsp;&nbsp;
+          <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> 在线
         </div>
         <h1>跨文化<br/><span className="highlight">研究设计</span></h1>
         <p>白色标签为国家整体介绍；青色标签为省/州/县等地方故事。两者并存，可先看全国再看地区。</p>
         <div className="action-buttons">
-          <button className="btn-outline" onClick={handleExploreMap}>Explore the Map ➔</button>
+          <button className="btn-outline" onClick={handleExploreMap}>探索地图 ➔</button>
           <button className="btn-outline" onClick={() => focusParentCountry('china', 35, 105)}>中国 ➔</button>
           <button className="btn-outline" onClick={() => focusParentCountry('usa', 37, -95)}>美国 ➔</button>
           <button className="btn-outline" onClick={() => focusParentCountry('japan', 36, 138, 1.6)}>日本 ➔</button>
-          <button className="btn-outline" onClick={handleToggleChat}>Chat with AI ➔</button>
+          <button className="btn-outline" onClick={handleToggleChat}>与 AI 对话 ➔</button>
         </div>
       </div>
 
@@ -591,8 +631,29 @@ function App() {
       {selectedMarket && (
         <div className="info-panel">
           <button type="button" className="close-btn" onClick={closePanel}>
-            ✕ Close
+            ✕ 关闭
           </button>
+
+          <div className="panel-quick-nav">
+            <button
+              type="button"
+              className="panel-quick-nav-btn"
+              onClick={() =>
+                simSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            >
+              模拟调研
+            </button>
+            <button
+              type="button"
+              className="panel-quick-nav-btn"
+              onClick={() =>
+                threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            >
+              三步分析
+            </button>
+          </div>
 
           {selectedMarket.marketType === 'region' && selectedMarket.parentTitle && (
             <div className="market-breadcrumb">
@@ -647,19 +708,20 @@ function App() {
 
           <CulturalStoryPanel country={selectedMarket} />
 
-          <SimulatedResearchPanel
-            ref={simPanelRef}
-            market={selectedMarket}
-            marketTitle={displayTitle}
-            aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
-            walletCostsYuan={aiHealth?.wallet?.costsYuan}
-            onSnapshotChange={handleSimSnapshotChange}
-            onSyncToThreeStepReport={handleSyncFromSimResearch}
-            onReportGenerated={(content, topic) =>
-              persistAnalysisReport(content, topic, 'sim_research', '模拟调研')
-            }
-            onSavedToHistory={() => bumpHistory()}
-          />
+          <div ref={simSectionRef}>
+            <SimulatedResearchPanel
+              key={selectedMarket.id}
+              ref={simPanelRef}
+              market={selectedMarket}
+              marketTitle={displayTitle}
+              aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
+              walletCostsYuan={aiHealth?.wallet?.costsYuan}
+              onSnapshotChange={handleSimSnapshotChange}
+              onSyncToThreeStepReport={handleSyncFromSimResearch}
+              onSavedToHistory={() => bumpHistory()}
+              onInsufficientBalance={() => setRechargeOpen(true)}
+            />
+          </div>
 
           <div
             ref={threeStepSectionRef}
@@ -719,6 +781,7 @@ function App() {
         onLoadChat={handleLoadChatFromHistory}
         onLoadReport={handleLoadReportFromHistory}
         onLoadSimSession={handleLoadSimFromHistory}
+        onHistoryMutated={bumpHistory}
       />
 
       <RechargeModal
