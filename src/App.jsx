@@ -92,7 +92,7 @@ function App() {
       const controls = globe.controls();
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.4;
-      globe.pointOfView({ lat: 20, lng: 0, altitude: 2.2 });
+      globe.pointOfView({ lat: 22, lng: 105, altitude: 1.75 });
       return true;
     };
     if (!apply()) requestAnimationFrame(apply);
@@ -136,7 +136,7 @@ function App() {
     setAiError('');
     simSnapshotRef.current = null;
     if (globeEl.current) {
-      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
+      globeEl.current.pointOfView({ lat: 22, lng: 105, altitude: 1.75 }, 1000);
     }
   }, []);
 
@@ -247,7 +247,7 @@ function App() {
       dismissPanel();
     }
     if (globeEl.current) {
-      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
+      globeEl.current.pointOfView({ lat: 22, lng: 105, altitude: 1.75 }, 1000);
     }
   };
 
@@ -476,7 +476,7 @@ function App() {
           </div>
           <div className="brand-text">
             <h2>CROSS-CULTURE</h2>
-            <p>Design Decision Platform</p>
+            <p>跨文化研究设计平台</p>
           </div>
         </div>
 
@@ -556,11 +556,13 @@ function App() {
         <h1>跨文化<br/><span className="highlight">研究设计</span></h1>
         <p>白色标签为国家整体介绍；青色标签为省/州/县等地方故事。两者并存，可先看全国再看地区。</p>
         <div className="action-buttons">
-          <button className="btn-outline" onClick={handleExploreMap}>探索地图 ➔</button>
-          <button className="btn-outline" onClick={() => focusParentCountry('china', 35, 105)}>中国 ➔</button>
-          <button className="btn-outline" onClick={() => focusParentCountry('usa', 37, -95)}>美国 ➔</button>
-          <button className="btn-outline" onClick={() => focusParentCountry('japan', 36, 138, 1.6)}>日本 ➔</button>
-          <button className="btn-outline" onClick={handleToggleChat}>与 AI 对话 ➔</button>
+          <div className="action-buttons-row">
+            <button type="button" className="btn-outline" onClick={handleExploreMap}>探索地图 ➔</button>
+            <button type="button" className="btn-outline" onClick={() => focusParentCountry('china', 35, 105)}>中国 ➔</button>
+            <button type="button" className="btn-outline" onClick={() => focusParentCountry('usa', 37, -95)}>美国 ➔</button>
+            <button type="button" className="btn-outline" onClick={() => focusParentCountry('japan', 36, 138, 1.6)}>日本 ➔</button>
+          </div>
+          <button type="button" className="btn-outline btn-outline-secondary" onClick={handleToggleChat}>与 AI 对话 ➔</button>
         </div>
       </div>
 
@@ -630,28 +632,29 @@ function App() {
 
       {selectedMarket && (
         <div className="info-panel">
-          <button type="button" className="close-btn" onClick={closePanel}>
-            ✕ 关闭
-          </button>
-
-          <div className="panel-quick-nav">
-            <button
-              type="button"
-              className="panel-quick-nav-btn"
-              onClick={() =>
-                simSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }
-            >
-              模拟调研
-            </button>
-            <button
-              type="button"
-              className="panel-quick-nav-btn"
-              onClick={() =>
-                threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }
-            >
-              三步分析
+          <div className="info-panel-top">
+            <div className="panel-quick-nav">
+              <button
+                type="button"
+                className="panel-quick-nav-btn"
+                onClick={() =>
+                  simSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                模拟调研
+              </button>
+              <button
+                type="button"
+                className="panel-quick-nav-btn"
+                onClick={() =>
+                  threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                三步分析
+              </button>
+            </div>
+            <button type="button" className="close-btn" onClick={closePanel}>
+              ✕ 关闭
             </button>
           </div>
 
@@ -666,7 +669,7 @@ function App() {
             <div className="market-level-badge market-level-badge-country">全国整体 · 国家级文化介绍</div>
           )}
 
-          <h2>{displayTitle}</h2>
+          <h2 className="info-panel-title">{displayTitle}</h2>
           {selectedMarket.tagline && (
             <p className="country-tagline">{selectedMarket.tagline}</p>
           )}
@@ -693,16 +696,14 @@ function App() {
             </ResponsiveContainer>
           </div>
 
-          <div style={{ marginTop: '20px' }}>
-            <h3 className="panel-subheading">🎨 本地化排版偏好</h3>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#8da4c4' }}>
-                <span>UI 信息密度 (Info Density)</span>
-                <span>{selectedMarket.density}%</span>
-              </div>
-              <div className="density-track">
-                <div className="density-fill" style={{ width: `${selectedMarket.density}%` }}></div>
-              </div>
+          <div className="panel-density-block">
+            <h3 className="panel-subheading section-heading-plain">本地化排版偏好</h3>
+            <div className="panel-density-label">
+              <span>界面信息密度</span>
+              <span>{selectedMarket.density}%</span>
+            </div>
+            <div className="density-track">
+              <div className="density-fill" style={{ width: `${selectedMarket.density}%` }}></div>
             </div>
           </div>
 
@@ -726,11 +727,8 @@ function App() {
           <div
             ref={threeStepSectionRef}
             className={`three-step-section ${threeStepHighlight ? 'three-step-highlight' : ''}`}
-            style={{ marginTop: '30px' }}
           >
-            <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ✨ DeepSeek 跨文化智能分析
-            </h3>
+            <h3 className="three-step-heading section-heading-plain">DeepSeek 跨文化智能分析</h3>
             {aiHealth && (
               <div className={`ai-status-banner ${(aiHealth.aiConfigured ?? aiHealth.geminiConfigured) ? 'ok' : ''}`}>
                 {(aiHealth.aiConfigured ?? aiHealth.geminiConfigured)
@@ -739,27 +737,16 @@ function App() {
               </div>
             )}
             <textarea
+              className="three-step-textarea"
               value={userIdea}
               onChange={(e) => setUserIdea(e.target.value)}
               placeholder={`例：产品=二次元电商App；用户=18-25岁；场景=手机购物；目标=进入${selectedMarket.title}。可写当前阶段（调研/设计/开发/准备上线）…`}
-              style={{
-                width: '100%', height: '70px', borderRadius: '8px', padding: '12px',
-                boxSizing: 'border-box', background: 'rgba(0,0,0,0.4)', color: 'white',
-                border: '1px solid rgba(255,255,255,0.15)', marginBottom: '12px',
-                fontSize: '12px', resize: 'none', fontFamily: 'inherit', outline: 'none',
-              }}
             />
             <button
+              type="button"
+              className="btn-generate-primary"
               onClick={handleAiAnalysis}
               disabled={!userIdea || isGenerating}
-              style={{
-                width: '100%', padding: '12px',
-                background: isGenerating ? 'rgba(255,255,255,0.1)' : '#ffffff',
-                color: isGenerating ? '#888' : '#000000',
-                border: 'none', borderRadius: '8px',
-                cursor: isGenerating ? 'not-allowed' : 'pointer',
-                fontWeight: '600', fontSize: '13px', transition: 'all 0.3s',
-              }}
             >
               {isGenerating ? 'AI 生成报告中（约 20–40 秒，请勿关闭）…' : '生成跨文化三步分析报告 ➔'}
             </button>

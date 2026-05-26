@@ -40,10 +40,7 @@ export default function CulturalStoryPanel({ country }) {
       )}
       {expanded && culturalStory && (
         <section className="story-card">
-          <h3 className="section-heading">
-            <span className="section-icon">📖</span>
-            文化故事
-          </h3>
+          <h3 className="section-heading section-heading-plain">文化故事</h3>
           <p className="story-tagline">{country.tagline}</p>
           <h4 className="story-title">{culturalStory.title}</h4>
           {culturalStory.paragraphs?.map((para, i) => (
@@ -75,10 +72,7 @@ export default function CulturalStoryPanel({ country }) {
 
       {expanded && references.length > 0 && (
         <section className="references-section">
-          <h3 className="section-heading">
-            <span className="section-icon">📚</span>
-            文献与数据来源
-          </h3>
+          <h3 className="section-heading section-heading-plain">文献与数据来源</h3>
           <p className="section-hint">点击标题可在新标签页打开原文；标注「设计师必读」的为跨文化 UX 经典参考</p>
           <div className="references-grid">
             {references.map((ref, i) => (
@@ -105,10 +99,7 @@ export default function CulturalStoryPanel({ country }) {
 
       {expanded && videoList.length > 0 && (
         <section className="video-section">
-          <h3 className="section-heading">
-            <span className="section-icon">🎬</span>
-            视频讲解 · 点击观看
-          </h3>
+          <h3 className="section-heading section-heading-plain">视频讲解 · 点击观看</h3>
           <p className="section-hint">仅展示 B 站等可播放视频；文献请见上方卡片</p>
           <div className="video-grid">
             {videoList.map((v, i) => (
@@ -134,10 +125,7 @@ export default function CulturalStoryPanel({ country }) {
 
       {expanded && designInsights.length > 0 && (
         <section className="insights-section">
-          <h3 className="section-heading">
-            <span className="section-icon">💡</span>
-            落地设计启示
-          </h3>
+          <h3 className="section-heading section-heading-plain">落地设计启示</h3>
           <div className="insights-stack">
             {designInsights.map((tip, index) => (
               <div key={index} className="research-card insight-card">

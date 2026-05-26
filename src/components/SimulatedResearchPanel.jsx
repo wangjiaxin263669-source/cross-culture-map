@@ -541,8 +541,7 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
   return (
     <section className="sim-research-panel">
       <div className="sim-research-header">
-        <h3 className="section-heading">
-          <span className="section-icon">🎭</span>
+        <h3 className="section-heading section-heading-plain section-heading-sim">
           模拟调研 · AI 人设访谈
         </h3>
         <p className="sim-research-desc">
@@ -604,7 +603,10 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
         </p>
       )}
 
-      <OpenPlatformPanel />
+      <details className="sim-open-platform-details">
+        <summary className="sim-open-platform-summary">开放平台连接（开发者可选）</summary>
+        <OpenPlatformPanel />
+      </details>
 
       <div className="sim-step-tabs" role="tablist" aria-label="模拟调研步骤">
         {STEPS.map((s, idx) => {

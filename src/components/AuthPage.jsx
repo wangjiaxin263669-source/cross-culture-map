@@ -67,8 +67,9 @@ export default function AuthPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <h1>CROSS-CULTURE</h1>
-          <p>跨文化研究设计决策平台</p>
+          <h1>跨文化研究设计平台</h1>
+          <p className="auth-brand-en">CROSS-CULTURE</p>
+          <p>面向产品 / UX 团队的 AI 跨文化决策助手</p>
         </div>
 
         {!isReset ? (
