@@ -1,4 +1,4 @@
-import { hasAnyMaterials } from './researchMaterials';
+import { hasAnyMaterials } from './researchMaterials.js';
 
 /** 是否有可保存的模拟调研进度 */
 export function shouldPersistSimDraft({

@@ -830,14 +830,24 @@ body, html, #root {
 }
 .sim-research-desc {
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: #94a3b8;
-  margin: 0 0 14px;
+  margin: 0 0 8px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.sim-flow-cost-hint {
+.sim-research-pricing {
+  font-size: 11px;
+  line-height: 1.55;
   color: #7dd3fc;
-  white-space: nowrap;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  border-radius: 8px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .sim-step-tabs {
   display: flex;

@@ -509,13 +509,13 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
           模拟调研 · AI 人设访谈
         </h3>
         <p className="sim-research-desc">
-          可选上传产品/UI 素材 → 外接小红书/微博/知乎语料 → 构建人设 → 双专员模拟访谈（笔录 + 表情情绪观察）→ 导出 / 联动三步分析。
-          <span className="sim-flow-cost-hint">
-            {' '}
-            · 步骤 0–1 免费；人设 ¥{stepCostYuan(walletCostsYuan, 'sim_personas')} · 全部访谈 ¥
-            {stepCostYuan(walletCostsYuan, 'sim_interview')} · 报告 ¥{stepCostYuan(walletCostsYuan, 'sim_report')}{' '}
-            （合计约 ¥{simFlowCostYuan(walletCostsYuan)}）
-          </span>
+          可选上传产品/UI 素材 → 外接小红书/微博/知乎语料 → 构建人设 → 双专员模拟访谈（笔录 + 表情情绪观察）→
+          导出 / 联动三步分析。
+        </p>
+        <p className="sim-research-pricing">
+          步骤 0–1 免费 · 人设 ¥{stepCostYuan(walletCostsYuan, 'sim_personas')} · 全部访谈 ¥
+          {stepCostYuan(walletCostsYuan, 'sim_interview')} · 报告 ¥{stepCostYuan(walletCostsYuan, 'sim_report')} · 合计约 ¥
+          {simFlowCostYuan(walletCostsYuan)}
         </p>
         <button
           type="button"
