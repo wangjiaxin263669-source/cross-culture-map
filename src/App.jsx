@@ -29,6 +29,7 @@ const DEFAULT_CHAT_GREETING = {
 
 function App() {
   const { user, loading: authLoading, logout, refreshUser } = useAuth();
+  const { modelId, current: currentModel } = useAiModel();
   const globeEl = useRef();
   const threeStepSectionRef = useRef(null);
   const [selectedMarket, setSelectedMarket] = useState(null);
@@ -289,6 +290,7 @@ function App() {
         message: userText,
         history,
         country: selectedMarket,
+        model: modelId,
       });
       const withReply = [...nextMessages, { role: 'ai', text: reply }];
       setChatMessages(withReply);
