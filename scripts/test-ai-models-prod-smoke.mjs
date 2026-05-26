@@ -19,8 +19,14 @@ async function req(path, body, token, ms = 90000) {
 
 for (const model of MODELS) {
   const phone = `196${Date.now().toString().slice(-8)}`;
-  await req('/api/auth/register', { phone, password: 'T1!', confirmPassword: 'T1!' });
-  const { token } = await req('/api/auth/login', { phone, password: 'T1!' });
+  const password = 'TestModel123!';
+  await req('/api/auth/register', {
+    phone,
+    password,
+    confirmPassword: password,
+    nickname: '模型自测',
+  });
+  const { token } = await req('/api/auth/login', { phone, password });
   const chat = await req('/api/chat', { message: '一句话跨文化要点', country, model }, token);
   const report = await req(
     '/api/report',

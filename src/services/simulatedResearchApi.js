@@ -72,6 +72,8 @@ export async function generatePersonas({
   researchMaterials,
   model,
 }) {
+  const modelId = model || getStoredAiModel();
+  const timeoutMs = modelId === 'deepseek-v4-pro' ? 150000 : 90000;
   const data = await post(
     '/api/simulated-research/personas',
     withModel(
@@ -84,8 +86,9 @@ export async function generatePersonas({
         corpusContext,
         researchMaterials,
       },
-      model,
+      modelId,
     ),
+    timeoutMs,
   );
   return data.personas;
 }
@@ -97,16 +100,28 @@ export async function runInterview({
   country,
   corpusContext,
   researchMaterials,
+  model,
+  batchId,
 }) {
-  const data = await post('/api/simulated-research/interview', {
-    persona,
-    researchTopic,
-    guideQuestions,
-    country: serializeCountry(country),
-    corpusContext,
-    researchMaterials,
-  });
-  return data.interview;
+  const modelId = model || getStoredAiModel();
+  const timeoutMs = modelId === 'deepseek-v4-pro' ? 150000 : 90000;
+  const data = await post(
+    '/api/simulated-research/interview',
+    withModel(
+      {
+        persona,
+        researchTopic,
+        guideQuestions,
+        country: serializeCountry(country),
+        corpusContext,
+        researchMaterials,
+        batchId,
+      },
+      modelId,
+    ),
+    timeoutMs,
+  );
+  return { interview: data.interview, batchId: data.batchId };
 }
 
 export async function synthesizeReport({
@@ -119,6 +134,8 @@ export async function synthesizeReport({
   researchMaterials,
   model,
 }) {
+  const modelId = model || getStoredAiModel();
+  const timeoutMs = modelId === 'deepseek-v4-pro' ? 150000 : 120000;
   const data = await post(
     '/api/simulated-research/report',
     withModel(
@@ -131,9 +148,9 @@ export async function synthesizeReport({
         corpusSnippets,
         researchMaterials,
       },
-      model,
+      modelId,
     ),
-    120000,
+    timeoutMs,
   );
   return data.report;
 }

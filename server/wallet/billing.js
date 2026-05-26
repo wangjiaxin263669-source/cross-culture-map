@@ -26,7 +26,7 @@ export async function chargeForOperation(userId, operation, meta = {}) {
   const costCents = getCostCents(operation);
   const balanceBefore = await getUserBalanceCents(userId);
 
-  /** 模拟调研：访谈/报告已含在人设扣费中，0 元不再走扣款 */
+  /** 0 元计费项跳过扣款 */
   if (costCents <= 0) {
     return {
       costCents: 0,

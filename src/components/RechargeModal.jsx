@@ -114,8 +114,16 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
           {payStep === 'select' && (
             <>
               <p className="recharge-hint">
-                对话约 ¥{costs.chat || '0.02'}/次，三步报告约 ¥{costs.report || '0.10'}/次，模拟 AI 访谈完整流程约 ¥
-                {costs.sim_personas || '0.35'}/次。
+                对话约 ¥{costs.chat || '0.02'}/次，三步报告约 ¥{costs.report || '0.10'}/次，模拟调研（人设 ¥
+                {costs.sim_personas || '0.10'} + 访谈 ¥{costs.sim_interview || '0.25'} + 报告 ¥
+                {costs.sim_report || '0.10'}）约 ¥
+                {config?.wallet?.simStepPricingYuan?.total ||
+                  (
+                    Number(costs.sim_personas || 0.1) +
+                    Number(costs.sim_interview || 0.25) +
+                    Number(costs.sim_report || 0.1)
+                  ).toFixed(2)}
+                /次。
                 {wechatQrMode ? ' 微信扫码付款。' : ''}
               </p>
               {mockMode && (
