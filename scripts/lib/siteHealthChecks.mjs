@@ -10,6 +10,7 @@ import {
   MAX_CURATED_LINK_SAMPLES,
   AI_TIMEOUT_MS,
 } from './siteHealthConfig.mjs';
+import { testDeviceFingerprint } from './testDeviceFp.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '../..');
@@ -92,10 +93,17 @@ export async function checkAuthFlow(base) {
   const phone = `139${String(Date.now()).slice(-8)}`;
   const password = 'GuardianTest1!';
   const displayName = '健康守护测试';
+  const deviceFingerprint = testDeviceFingerprint(phone);
 
   const reg = await httpJson(base, '/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ displayName, phone, password, confirmPassword: password }),
+    body: JSON.stringify({
+      displayName,
+      phone,
+      password,
+      confirmPassword: password,
+      deviceFingerprint,
+    }),
   });
   if (reg.status !== 200) {
     return {
@@ -132,7 +140,13 @@ export async function checkAuthFlow(base) {
 
   const dup = await httpJson(base, '/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ displayName, phone, password, confirmPassword: password }),
+    body: JSON.stringify({
+      displayName,
+      phone,
+      password,
+      confirmPassword: password,
+      deviceFingerprint,
+    }),
   });
 
   return {

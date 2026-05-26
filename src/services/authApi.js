@@ -36,7 +36,13 @@ async function authFetch(path, options = {}) {
   return data;
 }
 
-export async function register({ nickname, phone, password, confirmPassword }) {
+export async function register({
+  nickname,
+  phone,
+  password,
+  confirmPassword,
+  deviceFingerprint,
+}) {
   const data = await authFetch('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify({
@@ -45,6 +51,7 @@ export async function register({ nickname, phone, password, confirmPassword }) {
       phone,
       password,
       confirmPassword,
+      deviceFingerprint,
     }),
   });
   setToken(data.token);

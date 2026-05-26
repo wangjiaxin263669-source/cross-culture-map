@@ -3,6 +3,8 @@
  * 用法: node scripts/smoke-test.mjs [localApiUrl] [prodApiUrl]
  * 默认 local=http://localhost:3001 prod=https://ephemeral-bubblegum-a79332.netlify.app
  */
+import { testDeviceFingerprint } from './lib/testDeviceFp.mjs';
+
 async function resolveLocalBase() {
   if (process.argv[2]) return process.argv[2];
   for (const port of [3001, 3002]) {
@@ -64,10 +66,17 @@ async function testAuth(label, base) {
   const phone = `139${String(Date.now()).slice(-8)}`;
   const password = 'TestSmoke1!';
   const displayName = '冒烟测试';
+  const deviceFingerprint = testDeviceFingerprint(phone);
 
   const reg = await req(base, '/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ displayName, phone, password, confirmPassword: password }),
+    body: JSON.stringify({
+      displayName,
+      phone,
+      password,
+      confirmPassword: password,
+      deviceFingerprint,
+    }),
   });
   if (reg.status !== 200) {
     log('❌', `${label} register`, reg.body?.error || `HTTP ${reg.status}`);

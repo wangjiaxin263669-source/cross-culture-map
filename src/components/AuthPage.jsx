@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { register, login, resetPassword } from '../services/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getDeviceFingerprint } from '../utils/deviceFingerprint.js';
 
 export default function AuthPage() {
   const { loginSuccess, authNotice } = useAuth();
@@ -178,7 +179,7 @@ export default function AuthPage() {
         <p className="auth-footer-hint">
           {isReset
             ? '仅需已注册的手机号即可重置密码，请妥善保管新密码。'
-            : '一个手机号仅可注册一个账号。'}
+            : '一个手机号、一台设备各仅可注册一个账号（通过浏览器设备特征识别，无需营业执照）。'}
         </p>
       </div>
     </div>

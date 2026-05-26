@@ -25,6 +25,11 @@ import { hashPassword, verifyPassword, validatePassword } from './password.js';
 import { NEW_USER_BONUS_CENTS } from '../wallet/config.js';
 import { tryGrantDailyLoginBonus } from '../wallet/dailyBonus.js';
 import { normalizePhone, validatePhone } from './phone.js';
+import {
+  normalizeDeviceFingerprint,
+  isDeviceLimitEnabled,
+} from './device.js';
+import { findDeviceRegistration, bindDeviceToUser } from '../db/store.js';
 
 const router = Router();
 
@@ -73,6 +78,22 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: '该手机号已被注册' });
     }
 
+    const deviceFingerprint = normalizeDeviceFingerprint(req.body.deviceFingerprint);
+    if (isDeviceLimitEnabled()) {
+      if (!deviceFingerprint) {
+        return res.status(400).json({
+          error: '无法识别当前设备，请刷新页面后重试，或使用最新版浏览器',
+        });
+      }
+      const deviceTaken = await findDeviceRegistration(deviceFingerprint);
+      if (deviceTaken) {
+        return res.status(403).json({
+          error: '本设备已注册过账号，请直接登录。每个设备仅可注册一个账号。',
+          code: 'DEVICE_ALREADY_REGISTERED',
+        });
+      }
+    }
+
     let username = uniqueUsernameForPhone(phone);
     if (await findUserByUsername(username)) {
       username = `${username}_${Date.now().toString(36).slice(-4)}`;
@@ -88,6 +109,10 @@ router.post('/register', async (req, res) => {
       initialBalanceCents: NEW_USER_BONUS_CENTS,
       initialBonusNote: '新用户注册赠送 ¥0.50',
     });
+
+    if (isDeviceLimitEnabled() && deviceFingerprint) {
+      await bindDeviceToUser(deviceFingerprint, user.id);
+    }
 
     // Netlify Blobs 写入后短暂延迟才可读；轮询确保注册即可登录
     let persisted = user;

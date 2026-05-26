@@ -132,6 +132,39 @@ export async function updateUserPasswordByPhone(phone, passwordHash) {
   });
 }
 
+export async function findDeviceRegistration(fingerprintHash) {
+  const db = await readDb();
+  const key = String(fingerprintHash || '').trim().toLowerCase();
+  return (
+    db.deviceRegistrations?.find((d) => d.fingerprintHash === key) || null
+  );
+}
+
+/** 注册成功后绑定设备（一设备一账号） */
+export async function bindDeviceToUser(fingerprintHash, userId) {
+  const fp = String(fingerprintHash || '').trim().toLowerCase();
+  if (!fp) throw new Error('设备标识无效');
+
+  return runDbUpdate((db) => {
+    if (!Array.isArray(db.deviceRegistrations)) {
+      db.deviceRegistrations = [];
+    }
+    const existing = db.deviceRegistrations.find((d) => d.fingerprintHash === fp);
+    if (existing && existing.userId !== userId) {
+      throw new Error('本设备已注册过其他账号');
+    }
+    if (existing) return existing;
+
+    const row = {
+      fingerprintHash: fp,
+      userId,
+      createdAt: new Date().toISOString(),
+    };
+    db.deviceRegistrations.push(row);
+    return row;
+  });
+}
+
 export async function createUserByPhone(phone, { initialBalanceCents = 0, initialBonusNote } = {}) {
   const suffix = phone.slice(-4);
   let username = `u${suffix}`;

@@ -17,6 +17,7 @@ export const EMPTY_DB = {
   smsSettings: null,
   simInterviewBatches: [],
   simResearchSessions: [],
+  deviceRegistrations: [],
 };
 
 const BLOB_STORE = 'cross-culture-platform';
@@ -37,6 +38,7 @@ function normalizeDb(raw) {
     smsSettings: raw.smsSettings || null,
     simInterviewBatches: raw.simInterviewBatches || [],
     simResearchSessions: raw.simResearchSessions || [],
+    deviceRegistrations: raw.deviceRegistrations || [],
   };
 }
 
