@@ -1,5 +1,6 @@
 import { getAuthHeaders } from './authApi.js';
 import { getStoredAiModel } from '../utils/aiModelStorage.js';
+import { formatWalletApiError } from '../utils/walletError.js';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -63,7 +64,10 @@ async function request(path, body, { timeoutMs = 90000 } = {}) {
       err.status = 402;
       throw err;
     }
-    throw new Error(data.error || apiErrorHint(res.status, path));
+    const err = new Error(formatWalletApiError(data, apiErrorHint(res.status, path)));
+    if (data.refunded) err.refunded = true;
+    if (data.balanceCents != null) err.balanceCents = data.balanceCents;
+    throw err;
   }
   return data;
 }

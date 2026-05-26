@@ -1,6 +1,7 @@
 import { serializeCountry } from './aiApi.js';
 import { getAuthHeaders } from './authApi.js';
 import { getStoredAiModel } from '../utils/aiModelStorage.js';
+import { formatWalletApiError } from '../utils/walletError.js';
 
 function withModel(body, model) {
   return { ...body, model: model || getStoredAiModel() };
@@ -42,7 +43,10 @@ async function post(path, body, timeoutMs = 90000) {
       err.status = 402;
       throw err;
     }
-    throw new Error(data.error || `请求失败 (${res.status})`);
+    const err = new Error(formatWalletApiError(data, `请求失败 (${res.status})`));
+    if (data.refunded) err.refunded = true;
+    if (data.balanceCents != null) err.balanceCents = data.balanceCents;
+    throw err;
   }
   return data;
 }

@@ -380,6 +380,7 @@ function App() {
         setAiError(err.message || '报告生成失败');
       } finally {
         setIsGenerating(false);
+        refreshUser();
       }
     }
   };

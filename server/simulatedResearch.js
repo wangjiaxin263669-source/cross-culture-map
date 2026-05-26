@@ -294,7 +294,11 @@ ${interviewBlock}
     { maxTokens: REPORT_MAX_TOKENS, temperature: 0.5, model },
   );
 
-  return report.trim();
+  const trimmed = report.trim();
+  if (!trimmed || trimmed.length < 80) {
+    throw new Error('调研报告生成失败或内容过短，请重试');
+  }
+  return trimmed;
 }
 
 /** 供三步分析报告联动的摘要 */

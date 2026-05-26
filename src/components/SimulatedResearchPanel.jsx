@@ -94,7 +94,7 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
   },
   ref,
 ) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { modelId, current: currentModel } = useAiModel();
   const [step, setStep] = useState('materials');
   const [researchMaterials, setResearchMaterials] = useState(createEmptyMaterials);
@@ -354,6 +354,7 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
     } finally {
       setLoading(false);
       setProgress('');
+      refreshUser();
     }
   };
 
@@ -402,6 +403,7 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
     } finally {
       setLoading(false);
       setProgress('');
+      refreshUser();
     }
   };
 
@@ -439,6 +441,7 @@ const SimulatedResearchPanel = forwardRef(function SimulatedResearchPanel(
     } finally {
       setLoading(false);
       setProgress('');
+      refreshUser();
     }
   };
 

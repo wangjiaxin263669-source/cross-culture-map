@@ -41,13 +41,11 @@ import { isDbWritable } from './db/store.js';
 import { getStorageBackend } from './db/engine.js';
 import { ensureBlobsReady } from './db/blobContext.js';
 import walletRoutes from './wallet/routes.js';
-import { withWalletCharge } from './wallet/middleware.js';
+import { withWalletCharge, createSimInterviewRefundGuard } from './wallet/middleware.js';
+import { badRequest } from './wallet/httpError.js';
 import { getWalletPublicConfig } from './wallet/config.js';
 import { requireAuth } from './auth/middleware.js';
-import {
-  ensureSimInterviewBatchPaid,
-  refundSimInterviewBatch,
-} from './wallet/simInterviewBilling.js';
+import { ensureSimInterviewBatchPaid } from './wallet/simInterviewBilling.js';
 import { InsufficientBalanceError } from './wallet/billing.js';
 import { getUserBalanceCents } from './db/store.js';
 import { getPaymentPublicConfig } from './payment/index.js';
@@ -338,11 +336,10 @@ export function createApp(options = {}) {
 
   app.post(
     '/api/chat',
-    ...withWalletCharge('chat', async (req, res) => {
+    ...withWalletCharge(
+      'chat',
+      async (req, res) => {
       const { message, history = [], country = null } = req.body;
-      if (!message?.trim()) {
-        return res.status(400).json({ error: '消息不能为空' });
-      }
       const reply = await generateChatReply({
         message: message.trim(),
         history,
@@ -353,12 +350,20 @@ export function createApp(options = {}) {
         balanceCents: req.walletCharge?.balanceCents,
         costCents: req.walletCharge?.costCents,
       });
-    }),
+    },
+      {
+        beforeCharge: (req) => {
+          if (!req.body?.message?.trim()) throw badRequest('消息不能为空');
+        },
+      },
+    ),
   );
 
   app.post(
     '/api/simulated-research/personas',
-    ...withWalletCharge('sim_personas', async (req, res) => {
+    ...withWalletCharge(
+      'sim_personas',
+      async (req, res) => {
       const {
         researchTopic,
         audienceCriteria,
@@ -369,12 +374,6 @@ export function createApp(options = {}) {
         researchMaterials,
         model,
       } = req.body;
-      if (!researchTopic?.trim()) {
-        return res.status(400).json({ error: '请填写调研主题' });
-      }
-      if (!country) {
-        return res.status(400).json({ error: '请先在地球上选择目标国家/地区' });
-      }
       let ctx = corpusContext;
       if (!ctx && corpusSnippets?.length) {
         ctx = formatCorpusForPrompt(corpusSnippets);
@@ -393,11 +392,18 @@ export function createApp(options = {}) {
         model: getModelName(model),
         balanceCents: req.walletCharge?.balanceCents,
       });
-    }),
+    },
+      {
+        beforeCharge: (req) => {
+          if (!req.body?.researchTopic?.trim()) throw badRequest('请填写调研主题');
+          if (!req.body?.country) throw badRequest('请先在地球上选择目标国家/地区');
+        },
+      },
+    ),
   );
 
   app.post('/api/simulated-research/interview', requireAuth, async (req, res) => {
-    let batchMeta = null;
+    const guard = createSimInterviewRefundGuard(req, res);
     try {
       const {
         persona,
@@ -410,12 +416,13 @@ export function createApp(options = {}) {
         batchId,
       } = req.body;
       if (!persona?.name) {
-        return res.status(400).json({ error: '缺少受访者人设' });
+        return guard.fail(400, '缺少受访者人设');
       }
       if (!researchTopic?.trim()) {
-        return res.status(400).json({ error: '请填写调研主题' });
+        return guard.fail(400, '请填写调研主题');
       }
-      batchMeta = await ensureSimInterviewBatchPaid(req.user.id, batchId);
+      const batchMeta = await ensureSimInterviewBatchPaid(req.user.id, batchId);
+      guard.attachBatch(batchMeta);
       const interview = await runSimulatedInterview({
         persona,
         researchTopic: researchTopic.trim(),
@@ -426,6 +433,7 @@ export function createApp(options = {}) {
         model,
       });
       const balanceCents = await getUserBalanceCents(req.user.id);
+      guard.success();
       res.json({
         interview,
         batchId: batchMeta.batchId,
@@ -434,31 +442,23 @@ export function createApp(options = {}) {
         chargedCents: batchMeta.charged?.costCents ?? 0,
       });
     } catch (err) {
-      if (batchMeta && !batchMeta.reused && batchMeta.charged?.costCents) {
-        try {
-          await refundSimInterviewBatch(req.user.id, batchMeta.batchId);
-        } catch {
-          /* ignore */
-        }
-      }
       if (err instanceof InsufficientBalanceError || err.statusCode === 402) {
-        return res.status(402).json({
-          error: err.message,
+        return guard.fail(402, err.message, {
+          code: 'INSUFFICIENT_BALANCE',
           balanceCents: err.balanceCents,
           costCents: err.costCents,
-          code: 'INSUFFICIENT_BALANCE',
         });
       }
       console.error('[sim_interview]', err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: err.message || '模拟访谈失败' });
-      }
+      return guard.fail(500, err.message || '模拟访谈失败');
     }
   });
 
   app.post(
     '/api/simulated-research/report',
-    ...withWalletCharge('sim_report', async (req, res) => {
+    ...withWalletCharge(
+      'sim_report',
+      async (req, res) => {
       const {
         researchTopic,
         audienceCriteria,
@@ -469,9 +469,6 @@ export function createApp(options = {}) {
         researchMaterials,
         model,
       } = req.body;
-      if (!researchTopic?.trim() || !personas?.length || !interviews?.length) {
-        return res.status(400).json({ error: '缺少调研主题、人设或访谈记录' });
-      }
       const report = await synthesizeResearchReport({
         researchTopic: researchTopic.trim(),
         audienceCriteria: audienceCriteria?.trim() || '',
@@ -505,13 +502,23 @@ export function createApp(options = {}) {
         country,
         model,
       });
+      if (!report?.trim() || report.trim().length < 80) {
+        throw new Error('报告生成失败或内容过短，请重试');
+      }
       res.json({
         report,
         model: getModelName(model),
         balanceCents: req.walletCharge?.balanceCents,
         costCents: req.walletCharge?.costCents,
       });
-    }),
+    },
+      {
+        beforeCharge: (req) => {
+          if (!req.body?.productIdea?.trim()) throw badRequest('请描述您的产品构想');
+          if (!req.body?.country) throw badRequest('请先选择目标国家');
+        },
+      },
+    ),
   );
 
   if (shouldServeWeb) {
