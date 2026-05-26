@@ -19,7 +19,9 @@ import {
   getCountryById,
 } from './data/markets';
 import { sendChatMessage, generateReport, checkAiHealth } from './services/aiApi';
-import { saveChatSession, saveReport } from './services/historyApi';
+import { saveChatSession, saveReport, saveSimResearchSession } from './services/historyApi';
+import { shouldPersistSimDraft } from './utils/simResearchDraft';
+import SimExitConfirmModal from './components/SimExitConfirmModal';
 import './App.css';
 
 const DEFAULT_CHAT_GREETING = {
@@ -32,6 +34,12 @@ function App() {
   const { modelId, current: currentModel } = useAiModel();
   const globeEl = useRef();
   const threeStepSectionRef = useRef(null);
+  const simPanelRef = useRef(null);
+  const simSnapshotRef = useRef(null);
+  const pendingSimSessionRef = useRef(null);
+  const [simExit, setSimExit] = useState(null);
+  const [simExitSaving, setSimExitSaving] = useState(false);
+  const [simExitError, setSimExitError] = useState('');
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [threeStepHighlight, setThreeStepHighlight] = useState(false);
 
@@ -99,8 +107,95 @@ function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatLoading]);
 
-  const handleLabelClick = (raw) => {
+  const bumpHistory = useCallback(() => {
+    setHistoryRefreshKey((k) => k + 1);
+  }, []);
+
+  const handleSimSnapshotChange = useCallback((snapshot) => {
+    simSnapshotRef.current = snapshot;
+  }, []);
+
+  const readSimSnapshot = useCallback(() => {
+    return simPanelRef.current?.getSnapshot?.() || simSnapshotRef.current || null;
+  }, []);
+
+  const promptSimExitSave = useCallback(() => {
+    const snap = readSimSnapshot();
+    if (!snap || !shouldPersistSimDraft(snap)) {
+      return Promise.resolve('discard');
+    }
+    return new Promise((resolve) => {
+      setSimExitError('');
+      setSimExit({ snap, resolve });
+    });
+  }, [readSimSnapshot]);
+
+  const finishClosePanel = useCallback(() => {
+    setSelectedMarket(null);
+    setAiResult('');
+    setAiError('');
+    simSnapshotRef.current = null;
+    if (globeEl.current) {
+      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
+    }
+  }, []);
+
+  const closeSimExitModal = useCallback((choice) => {
+    setSimExit((prev) => {
+      prev?.resolve?.(choice);
+      return null;
+    });
+    setSimExitSaving(false);
+    setSimExitError('');
+  }, []);
+
+  const handleSimExitSave = useCallback(async () => {
+    if (!user) {
+      setSimExitError('请先登录后再保存到「我的历史」');
+      return;
+    }
+    const snap = simExit?.snap;
+    if (!snap) return;
+    setSimExitSaving(true);
+    setSimExitError('');
+    try {
+      const title =
+        snap.researchTopic?.trim().slice(0, 48) ||
+        `${snap.marketTitle || '跨文化'} · 模拟调研`;
+      const session = await saveSimResearchSession({
+        id: snap.historySessionId || undefined,
+        title,
+        market: snap.marketId ? { id: snap.marketId, title: snap.marketTitle } : null,
+        step: snap.step,
+        researchTopic: snap.researchTopic,
+        audienceCriteria: snap.audienceCriteria,
+        guideQuestions: snap.guideQuestions,
+        corpusSources: snap.corpusSources,
+        corpusSnippets: snap.corpusSnippets,
+        researchMaterials: snap.researchMaterials,
+        personas: snap.personas,
+        interviews: snap.interviews,
+        report: snap.report,
+        interviewBatchId: snap.interviewBatchId,
+        personaCount: snap.personaCount,
+        modelId: snap.modelId,
+        materialsStarted: snap.materialsStarted,
+      });
+      simPanelRef.current?.notifyHistorySaved?.(session.id);
+      bumpHistory();
+      closeSimExitModal('save');
+    } catch (err) {
+      setSimExitError(err.message || '保存失败，请稍后重试');
+      setSimExitSaving(false);
+    }
+  }, [user, simExit, bumpHistory, closeSimExitModal]);
+
+  const handleLabelClick = async (raw) => {
     const market = normalizeMarket(raw);
+    if (selectedMarket && market?.id && market.id !== selectedMarket.id) {
+      const choice = await promptSimExitSave();
+      if (choice === 'cancel') return;
+    }
     setSelectedMarket(market);
     setAiResult('');
     setAiError('');
@@ -112,13 +207,12 @@ function App() {
     }
   };
 
-  const closePanel = () => {
-    setSelectedMarket(null);
-    setAiResult('');
-    setAiError('');
-    if (globeEl.current) {
-      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1000);
-    }
+  const closePanel = async (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const choice = await promptSimExitSave();
+    if (choice === 'cancel') return;
+    finishClosePanel();
   };
 
   const handleExploreMap = () => {
@@ -136,10 +230,6 @@ function App() {
       handleLabelClick(country);
     }
   };
-
-  const bumpHistory = useCallback(() => {
-    setHistoryRefreshKey((k) => k + 1);
-  }, []);
 
   const persistChat = useCallback(
     async (messages, sessionId = chatSessionId) => {
@@ -217,6 +307,17 @@ function App() {
     setAiError('');
     threeStepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const handleLoadSimFromHistory = (session) => {
+    pendingSimSessionRef.current = session;
+    restoreMarketFromMeta(session.market);
+  };
+
+  useEffect(() => {
+    if (!selectedMarket || !pendingSimSessionRef.current || !simPanelRef.current) return;
+    simPanelRef.current.loadFromHistory(pendingSimSessionRef.current);
+    pendingSimSessionRef.current = null;
+  }, [selectedMarket]);
 
   const handleSyncFromSimResearch = async (productIdea, { autoGenerate = false } = {}) => {
     setUserIdea(productIdea);
@@ -489,7 +590,9 @@ function App() {
 
       {selectedMarket && (
         <div className="info-panel">
-          <button className="close-btn" onClick={closePanel}>✕ Close</button>
+          <button type="button" className="close-btn" onClick={closePanel}>
+            ✕ Close
+          </button>
 
           {selectedMarket.marketType === 'region' && selectedMarket.parentTitle && (
             <div className="market-breadcrumb">
@@ -545,14 +648,17 @@ function App() {
           <CulturalStoryPanel country={selectedMarket} />
 
           <SimulatedResearchPanel
+            ref={simPanelRef}
             market={selectedMarket}
             marketTitle={displayTitle}
             aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
             walletCostsYuan={aiHealth?.wallet?.costsYuan}
+            onSnapshotChange={handleSimSnapshotChange}
             onSyncToThreeStepReport={handleSyncFromSimResearch}
             onReportGenerated={(content, topic) =>
               persistAnalysisReport(content, topic, 'sim_research', '模拟调研')
             }
+            onSavedToHistory={() => bumpHistory()}
           />
 
           <div
@@ -612,6 +718,7 @@ function App() {
         onClose={() => setHistoryOpen(false)}
         onLoadChat={handleLoadChatFromHistory}
         onLoadReport={handleLoadReportFromHistory}
+        onLoadSimSession={handleLoadSimFromHistory}
       />
 
       <RechargeModal
@@ -619,6 +726,18 @@ function App() {
         onClose={() => setRechargeOpen(false)}
         balanceYuan={user.balanceYuan}
         onSuccess={() => refreshUser()}
+      />
+
+      <SimExitConfirmModal
+        open={Boolean(simExit)}
+        step={simExit?.snap?.step}
+        researchTopic={simExit?.snap?.researchTopic}
+        loggedIn={Boolean(user)}
+        saving={simExitSaving}
+        error={simExitError}
+        onSave={handleSimExitSave}
+        onDiscard={() => closeSimExitModal('discard')}
+        onCancel={() => closeSimExitModal('cancel')}
       />
     </div>
   );

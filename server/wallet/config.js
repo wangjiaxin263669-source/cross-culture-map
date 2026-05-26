@@ -9,11 +9,12 @@ export const WALLET_COSTS = {
   /** 跨文化研究专家 · DeepSeek 对话，默认 ¥0.02/次 */
   chat: centsFromEnv('WALLET_CHAT_COST_CENTS', 2),
   report: centsFromEnv('WALLET_REPORT_COST_CENTS', 10),
-  /** 模拟调研 · 完整流程（语料检索+人设+多场访谈+报告），默认 ¥0.35/次 */
-  sim_personas: centsFromEnv('WALLET_SIM_PERSONAS_COST_CENTS', 35),
-  /** 已含在人设扣费中，默认不再重复扣费 */
-  sim_interview: centsFromEnv('WALLET_SIM_INTERVIEW_COST_CENTS', 0),
-  sim_report: centsFromEnv('WALLET_SIM_REPORT_COST_CENTS', 0),
+  /** 模拟调研 · 第2步 人设，默认 ¥0.10 */
+  sim_personas: centsFromEnv('WALLET_SIM_PERSONAS_COST_CENTS', 10),
+  /** 模拟调研 · 第3步 全部模拟访谈（一场 batch 只扣一次），默认 ¥0.25 */
+  sim_interview: centsFromEnv('WALLET_SIM_INTERVIEW_COST_CENTS', 25),
+  /** 模拟调研 · 第4步 调研报告，默认 ¥0.10 */
+  sim_report: centsFromEnv('WALLET_SIM_REPORT_COST_CENTS', 10),
 };
 
 /** 新用户注册赠送，默认 0.5 元 */
@@ -55,5 +56,13 @@ export function getWalletPublicConfig() {
     dailyLoginBonusYuan: formatYuan(DAILY_LOGIN_BONUS_CENTS),
     dailyLoginBonusExpiresAtMidnight: true,
     dailyLoginBonusNote: '每日登录赠送当日有效，次日零点（北京时间）未使用部分自动清零',
+    simStepPricingYuan: {
+      personas: formatYuan(WALLET_COSTS.sim_personas),
+      interviews: formatYuan(WALLET_COSTS.sim_interview),
+      report: formatYuan(WALLET_COSTS.sim_report),
+      total: formatYuan(
+        WALLET_COSTS.sim_personas + WALLET_COSTS.sim_interview + WALLET_COSTS.sim_report,
+      ),
+    },
   };
 }

@@ -1299,6 +1299,85 @@ body, html, #root {
   padding: 6px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
+.sim-draft-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.sim-draft-restore-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #a5f3fc;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 8px;
+}
+.sim-storage-warn {
+  color: #fbbf24;
+  margin-bottom: 8px;
+}
+.sim-history-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
+.sim-exit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.sim-exit-dialog {
+  width: min(400px, 100%);
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(12, 18, 32, 0.98);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.sim-exit-dialog h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #fff;
+}
+.sim-exit-desc,
+.sim-exit-topic {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+.sim-exit-warn,
+.sim-exit-error {
+  margin: 8px 0;
+  font-size: 12px;
+  color: #fbbf24;
+}
+.sim-exit-error {
+  color: #f87171;
+}
+.sim-exit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
 .sim-library-actions {
   display: flex;
   gap: 8px;

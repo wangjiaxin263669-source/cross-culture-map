@@ -428,3 +428,99 @@ export async function deleteReport(userId, reportId) {
     db.reports = db.reports.filter((r) => !(r.id === reportId && r.userId === userId));
   });
 }
+
+function simSessionMeta(session) {
+  const {
+    researchMaterials,
+    personas,
+    interviews,
+    report,
+    corpusSnippets,
+    guideQuestions,
+    ...meta
+  } = session;
+  return {
+    ...meta,
+    personaCount: personas?.length || session.personaCount || 0,
+    interviewCount: interviews?.length || 0,
+    hasReport: Boolean(report),
+  };
+}
+
+export async function listSimResearchSessions(userId, limit = 50) {
+  const db = await readDb();
+  return (db.simResearchSessions || [])
+    .filter((s) => s.userId === userId)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+    .slice(0, limit)
+    .map(simSessionMeta);
+}
+
+export async function getSimResearchSession(userId, sessionId) {
+  const db = await readDb();
+  return (
+    (db.simResearchSessions || []).find((x) => x.id === sessionId && x.userId === userId) || null
+  );
+}
+
+export async function saveSimResearchSession(userId, payload) {
+  return runDbUpdate((db) => {
+    db.simResearchSessions = db.simResearchSessions || [];
+    const now = new Date().toISOString();
+    let session = payload.id
+      ? db.simResearchSessions.find((s) => s.id === payload.id && s.userId === userId)
+      : null;
+
+    const body = {
+      step: payload.step || 'materials',
+      researchTopic: payload.researchTopic || '',
+      audienceCriteria: payload.audienceCriteria || '',
+      guideQuestions: payload.guideQuestions || '',
+      corpusSources: payload.corpusSources || [],
+      corpusSnippets: payload.corpusSnippets || [],
+      researchMaterials: payload.researchMaterials || null,
+      personas: payload.personas || [],
+      interviews: payload.interviews || [],
+      report: payload.report || '',
+      interviewBatchId: payload.interviewBatchId || null,
+      personaCount: payload.personaCount ?? 3,
+      modelId: payload.modelId || null,
+      materialsStarted: Boolean(payload.materialsStarted),
+      market: payload.market || null,
+    };
+
+    if (session) {
+      session.title = payload.title || session.title;
+      session.market = body.market ?? session.market;
+      Object.assign(session, body);
+      session.updatedAt = now;
+    } else {
+      session = {
+        id: randomUUID(),
+        userId,
+        title: payload.title || '模拟调研',
+        market: body.market,
+        ...body,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.simResearchSessions.push(session);
+    }
+
+    if (db.simResearchSessions.length > 100) {
+      db.simResearchSessions = db.simResearchSessions
+        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+        .slice(0, 100);
+    }
+
+    return session;
+  });
+}
+
+export async function deleteSimResearchSession(userId, sessionId) {
+  return runDbUpdate((db) => {
+    db.simResearchSessions = (db.simResearchSessions || []).filter(
+      (s) => !(s.id === sessionId && s.userId === userId),
+    );
+  });
+}

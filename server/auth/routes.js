@@ -14,6 +14,10 @@ import {
   getReport,
   saveReport,
   deleteReport,
+  listSimResearchSessions,
+  getSimResearchSession,
+  saveSimResearchSession,
+  deleteSimResearchSession,
 } from '../db/store.js';
 import { signToken } from './jwt.js';
 import { requireAuth } from './middleware.js';
@@ -216,6 +220,30 @@ router.post('/history/reports', requireAuth, async (req, res) => {
 
 router.delete('/history/reports/:id', requireAuth, async (req, res) => {
   await deleteReport(req.user.id, req.params.id);
+  res.json({ ok: true });
+});
+
+router.get('/history/sim-sessions', requireAuth, async (req, res) => {
+  res.json({ sessions: await listSimResearchSessions(req.user.id) });
+});
+
+router.get('/history/sim-sessions/:id', requireAuth, async (req, res) => {
+  const session = await getSimResearchSession(req.user.id, req.params.id);
+  if (!session) return res.status(404).json({ error: '模拟调研记录不存在' });
+  res.json({ session });
+});
+
+router.post('/history/sim-sessions', requireAuth, async (req, res) => {
+  try {
+    const session = await saveSimResearchSession(req.user.id, req.body);
+    res.json({ session });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/history/sim-sessions/:id', requireAuth, async (req, res) => {
+  await deleteSimResearchSession(req.user.id, req.params.id);
   res.json({ ok: true });
 });
 

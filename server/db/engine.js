@@ -15,6 +15,8 @@ export const EMPTY_DB = {
   walletTransactions: [],
   otpRecords: [],
   smsSettings: null,
+  simInterviewBatches: [],
+  simResearchSessions: [],
 };
 
 const BLOB_STORE = 'cross-culture-platform';
@@ -33,6 +35,8 @@ function normalizeDb(raw) {
     walletTransactions: raw.walletTransactions || [],
     otpRecords: raw.otpRecords || [],
     smsSettings: raw.smsSettings || null,
+    simInterviewBatches: raw.simInterviewBatches || [],
+    simResearchSessions: raw.simResearchSessions || [],
   };
 }
 

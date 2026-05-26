@@ -6,6 +6,8 @@ const EMPTY_DB = {
   reports: [],
   rechargeOrders: [],
   walletTransactions: [],
+  simResearchSessions: [],
+  simInterviewBatches: [],
 };
 
 let sqlClient = null;
@@ -31,6 +33,8 @@ function normalizeDb(raw) {
     reports: raw.reports || [],
     rechargeOrders: raw.rechargeOrders || [],
     walletTransactions: raw.walletTransactions || [],
+    simResearchSessions: raw.simResearchSessions || [],
+    simInterviewBatches: raw.simInterviewBatches || [],
   };
 }
 

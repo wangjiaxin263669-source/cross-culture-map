@@ -58,3 +58,21 @@ export async function saveReport(payload) {
   });
   return data.report;
 }
+
+export async function listSimResearchSessions() {
+  const data = await api('/api/auth/history/sim-sessions');
+  return data.sessions || [];
+}
+
+export async function getSimResearchSession(id) {
+  const data = await api(`/api/auth/history/sim-sessions/${id}`);
+  return data.session;
+}
+
+export async function saveSimResearchSession(payload) {
+  const data = await api('/api/auth/history/sim-sessions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return data.session;
+}

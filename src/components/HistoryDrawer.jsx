@@ -4,7 +4,10 @@ import {
   getChatSession,
   listReports,
   getReport,
+  listSimResearchSessions,
+  getSimResearchSession,
 } from '../services/historyApi.js';
+import { getSimStepLabel } from '../utils/simResearchDraft';
 
 export default function HistoryDrawer({
   open,
@@ -12,10 +15,12 @@ export default function HistoryDrawer({
   onClose,
   onLoadChat,
   onLoadReport,
+  onLoadSimSession,
 }) {
   const [tab, setTab] = useState('chats');
   const [chats, setChats] = useState([]);
   const [reports, setReports] = useState([]);
+  const [simSessions, setSimSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,9 +29,14 @@ export default function HistoryDrawer({
     setLoading(true);
     setError('');
     try {
-      const [c, r] = await Promise.all([listChatSessions(), listReports()]);
+      const [c, r, sim] = await Promise.all([
+        listChatSessions(),
+        listReports(),
+        listSimResearchSessions(),
+      ]);
       setChats(c);
       setReports(r);
+      setSimSessions(sim);
     } catch (err) {
       setError(err.message || '加载失败');
     } finally {
@@ -58,6 +68,16 @@ export default function HistoryDrawer({
     }
   };
 
+  const handleOpenSim = async (id) => {
+    try {
+      const session = await getSimResearchSession(id);
+      onLoadSimSession?.(session);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -77,6 +97,13 @@ export default function HistoryDrawer({
             onClick={() => setTab('chats')}
           >
             对话 ({chats.length})
+          </button>
+          <button
+            type="button"
+            className={tab === 'sim' ? 'active' : ''}
+            onClick={() => setTab('sim')}
+          >
+            模拟调研 ({simSessions.length})
           </button>
           <button
             type="button"
@@ -105,6 +132,30 @@ export default function HistoryDrawer({
                   <strong>{s.title}</strong>
                   <small>
                     {s.market?.title ? `${s.market.title} · ` : ''}
+                    {new Date(s.updatedAt).toLocaleString('zh-CN')}
+                  </small>
+                </button>
+              ))
+            ))}
+
+          {tab === 'sim' &&
+            (simSessions.length === 0 && !loading ? (
+              <p className="history-empty">暂无模拟调研记录。退出国家面板时可选择「保存到历史」。</p>
+            ) : (
+              simSessions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className="history-item"
+                  onClick={() => handleOpenSim(s.id)}
+                >
+                  <strong>{s.title}</strong>
+                  <small>
+                    {s.market?.title ? `${s.market.title} · ` : ''}
+                    {getSimStepLabel(s.step)}
+                    {s.personaCount ? ` · ${s.personaCount} 人设` : ''}
+                    {s.interviewCount ? ` · ${s.interviewCount} 场访谈` : ''}
+                    {' · '}
                     {new Date(s.updatedAt).toLocaleString('zh-CN')}
                   </small>
                 </button>

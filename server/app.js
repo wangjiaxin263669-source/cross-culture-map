@@ -43,6 +43,13 @@ import { ensureBlobsReady } from './db/blobContext.js';
 import walletRoutes from './wallet/routes.js';
 import { withWalletCharge } from './wallet/middleware.js';
 import { getWalletPublicConfig } from './wallet/config.js';
+import { requireAuth } from './auth/middleware.js';
+import {
+  ensureSimInterviewBatchPaid,
+  refundSimInterviewBatch,
+} from './wallet/simInterviewBilling.js';
+import { InsufficientBalanceError } from './wallet/billing.js';
+import { getUserBalanceCents } from './db/store.js';
 import { getPaymentPublicConfig } from './payment/index.js';
 
 const serverDir = getServerDir();
@@ -389,9 +396,9 @@ export function createApp(options = {}) {
     }),
   );
 
-  app.post(
-    '/api/simulated-research/interview',
-    ...withWalletCharge('sim_interview', async (req, res) => {
+  app.post('/api/simulated-research/interview', requireAuth, async (req, res) => {
+    let batchMeta = null;
+    try {
       const {
         persona,
         researchTopic,
@@ -399,6 +406,8 @@ export function createApp(options = {}) {
         country,
         corpusContext,
         researchMaterials,
+        model,
+        batchId,
       } = req.body;
       if (!persona?.name) {
         return res.status(400).json({ error: '缺少受访者人设' });
@@ -406,6 +415,7 @@ export function createApp(options = {}) {
       if (!researchTopic?.trim()) {
         return res.status(400).json({ error: '请填写调研主题' });
       }
+      batchMeta = await ensureSimInterviewBatchPaid(req.user.id, batchId);
       const interview = await runSimulatedInterview({
         persona,
         researchTopic: researchTopic.trim(),
@@ -413,10 +423,38 @@ export function createApp(options = {}) {
         country,
         corpusContext: corpusContext || '',
         researchMaterials: researchMaterials || null,
+        model,
       });
-      res.json({ interview, balanceCents: req.walletCharge?.balanceCents });
-    }),
-  );
+      const balanceCents = await getUserBalanceCents(req.user.id);
+      res.json({
+        interview,
+        batchId: batchMeta.batchId,
+        model: getModelName(model),
+        balanceCents,
+        chargedCents: batchMeta.charged?.costCents ?? 0,
+      });
+    } catch (err) {
+      if (batchMeta && !batchMeta.reused && batchMeta.charged?.costCents) {
+        try {
+          await refundSimInterviewBatch(req.user.id, batchMeta.batchId);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (err instanceof InsufficientBalanceError || err.statusCode === 402) {
+        return res.status(402).json({
+          error: err.message,
+          balanceCents: err.balanceCents,
+          costCents: err.costCents,
+          code: 'INSUFFICIENT_BALANCE',
+        });
+      }
+      console.error('[sim_interview]', err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: err.message || '模拟访谈失败' });
+      }
+    }
+  });
 
   app.post(
     '/api/simulated-research/report',
