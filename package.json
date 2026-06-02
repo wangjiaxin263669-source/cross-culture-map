@@ -11,7 +11,7 @@
     "dev:client:wait": "node scripts/write-vite-proxy.mjs && vite",
     "dev:client": "vite",
     "dev:server": "node scripts/dev-server.mjs",
-    "build": "vite build",
+    "build": "node scripts/copy-credit-admin.mjs && vite build",
     "build:knowledge": "node server/scripts/build-knowledge.mjs",
     "predeploy": "node scripts/predeploy.mjs",
     "deploy:final": "node scripts/predeploy.mjs && npm run build",

@@ -1,0 +1,31 @@
+# 手动部署 credit-admin 为独立 Netlify 站点（可选）
+name: Deploy Credit Admin Site
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy credit-admin folder
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          CREDIT_ADMIN_SITE_ID: ${{ secrets.CREDIT_ADMIN_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "请先在 GitHub Secrets 配置 NETLIFY_AUTH_TOKEN"
+            exit 1
+          fi
+          npm install -g netlify-cli@17.38.1
+          if [ -n "$CREDIT_ADMIN_SITE_ID" ]; then
+            netlify deploy --prod --dir=credit-admin --site="$CREDIT_ADMIN_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
+          else
+            netlify deploy --prod --dir=credit-admin --auth="$NETLIFY_AUTH_TOKEN"
+          fi
