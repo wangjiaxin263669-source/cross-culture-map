@@ -22,6 +22,7 @@ export const EMPTY_DB = {
 
 const BLOB_STORE = 'cross-culture-platform';
 const BLOB_KEY = 'platform-db';
+const PHONE_INDEX_PREFIX = 'user-phone:';
 const FILE_NAME = 'platform-db.json';
 
 let writeQueue = Promise.resolve();
@@ -101,42 +102,117 @@ function writeDbFile(data) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-async function getBlobStore() {
-  await ensureBlobsReady(getLambdaEvent());
-  const { getStore } = await import('@netlify/blobs');
-  // eventual + auth 路由内读重试（strong 需 uncachedEdgeURL，线上未配会报错）
-  return getStore({ name: BLOB_STORE, consistency: 'eventual' });
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-async function readDbBlobs() {
-  const store = await getBlobStore();
+/** @param {{ strong?: boolean }} [opts] */
+async function getBlobStore(opts = {}) {
+  await ensureBlobsReady(getLambdaEvent());
+  const { getStore } = await import('@netlify/blobs');
+  const wantStrong = opts.strong !== false && isLambda();
+  try {
+    return getStore({
+      name: BLOB_STORE,
+      consistency: wantStrong ? 'strong' : 'eventual',
+    });
+  } catch (err) {
+    if (wantStrong) {
+      console.warn('[db] blobs strong unavailable, fallback eventual:', err.message);
+      return getStore({ name: BLOB_STORE, consistency: 'eventual' });
+    }
+    throw err;
+  }
+}
+
+/** @param {{ strong?: boolean }} [opts] */
+async function readDbBlobs(opts = {}) {
+  const store = await getBlobStore(opts);
   const data = await store.get(BLOB_KEY, { type: 'json' });
   return normalizeDb(data);
 }
 
-async function writeDbBlobs(data) {
-  const store = await getBlobStore();
+async function writeDbBlobs(data, opts = {}) {
+  const store = await getBlobStore(opts);
   await store.setJSON(BLOB_KEY, data);
 }
 
-export async function readDb() {
+/** 手机号独立索引：跨 Lambda / 最终一致主库下仍可登录 */
+export async function writeUserPhoneIndex(user) {
+  if (!isLambda() && useFileStorage()) return;
+  if (!user?.phone || !user.phoneVerified) return;
+  try {
+    const store = await getBlobStore({ strong: true });
+    await store.setJSON(`${PHONE_INDEX_PREFIX}${user.phone}`, {
+      id: user.id,
+      username: user.username,
+      usernameLower: user.usernameLower,
+      displayName: user.displayName,
+      phone: user.phone,
+      phoneVerified: true,
+      passwordHash: user.passwordHash,
+      balanceCents: user.balanceCents ?? 0,
+      dailyBonusExpirableCents: user.dailyBonusExpirableCents ?? 0,
+      createdAt: user.createdAt,
+    });
+  } catch (err) {
+    console.warn('[db] phone index write:', err.message);
+  }
+}
+
+export async function readUserPhoneIndex(phone) {
+  if (!phone) return null;
+  if (!isLambda() && useFileStorage()) return null;
+  try {
+    const store = await getBlobStore({ strong: true });
+    const row = await store.get(`${PHONE_INDEX_PREFIX}${phone}`, { type: 'json' });
+    return row && row.phoneVerified ? row : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 读库（auth 等关键路径用 strong + 重试，避免跨设备登录读不到刚注册用户）
+ * @param {{ strong?: boolean, retries?: number }} [opts]
+ */
+export async function readDb(opts = {}) {
   if (useFileStorage()) return readDbFile();
 
   if (usePostgres() && hasPostgresUrl()) {
     try {
-      return await readDbPostgres();
+      let data = await readDbPostgres();
+      if ((data.users?.length || 0) === 0 && (isLambda() || useNetlifyBlobs())) {
+        try {
+          const legacy = await readDbBlobs({ strong: true });
+          if ((legacy.users?.length || 0) > 0) {
+            await writeDbPostgres(legacy);
+            data = legacy;
+            console.log('[db] migrated netlify-blobs → postgres, users:', legacy.users.length);
+          }
+        } catch (err) {
+          console.warn('[db] blobs→postgres migration skipped:', err.message);
+        }
+      }
+      return data;
     } catch (err) {
       console.warn('[db] postgres unavailable, fallback blobs:', err.message);
     }
   }
 
   if (useNetlifyBlobs() || isLambda()) {
-    try {
-      return await readDbBlobs();
-    } catch (err) {
-      console.warn('[db] blobs read empty start:', err.message);
-      return structuredClone(EMPTY_DB);
+    const retries = opts.retries ?? (opts.strong ? 5 : 1);
+    let lastErr;
+    for (let i = 0; i < retries; i += 1) {
+      try {
+        return await readDbBlobs({ strong: opts.strong !== false });
+      } catch (err) {
+        lastErr = err;
+        if (i < retries - 1) await sleep(80 * (i + 1));
+      }
     }
+    console.warn('[db] blobs read empty start:', lastErr?.message);
+    return structuredClone(EMPTY_DB);
   }
 
   return readDbFile();
@@ -158,10 +234,18 @@ async function persistDb(data) {
   }
 
   let lastErr;
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; i < 5; i += 1) {
     try {
       await ensureBlobsReady(getLambdaEvent());
-      await writeDbBlobs(data);
+      await writeDbBlobs(data, { strong: true });
+      if (isLambda()) {
+        await sleep(60 + i * 80);
+        const verify = await readDbBlobs({ strong: true });
+        if ((verify.users?.length || 0) >= (data.users?.length || 0)) {
+          return;
+        }
+        throw new Error('blobs write verify mismatch');
+      }
       return;
     } catch (err) {
       lastErr = err;
@@ -186,12 +270,52 @@ export async function writeDb(data) {
 export async function runDbUpdate(mutator) {
   let result;
   const run = async () => {
-    const db = await readDb();
-    result = await mutator(db);
-    await persistDb(db);
-    return result;
+    const maxAttempts = isLambda() ? 6 : 1;
+    let lastErr;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const db = await readDb({ strong: isLambda(), retries: 3 });
+        result = await mutator(db);
+        await persistDb(db);
+        return result;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < maxAttempts - 1 && isLambda()) {
+          await sleep(120 * (attempt + 1));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr || new Error('数据更新失败');
   };
   writeQueue = writeQueue.then(run, run);
   await writeQueue;
   return result;
+}
+
+/** 登录/找回密码：跨 Lambda 实例读取用户，带退避重试 */
+export async function waitForUserByPhone(phone, { maxAttempts = 20, intervalMs = 250 } = {}) {
+  const key = String(phone).trim();
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const db = await readDb({ strong: true, retries: 3 });
+    const user = db.users.find((u) => u.phone === key && u.phoneVerified) || null;
+    if (user) return user;
+    const indexed = await readUserPhoneIndex(key);
+    if (indexed) return indexed;
+    if (i < maxAttempts - 1) await sleep(intervalMs);
+  }
+  return null;
+}
+
+export async function waitForUserById(userId, { maxAttempts = 12, intervalMs = 150 } = {}) {
+  const id = String(userId || '').trim();
+  if (!id) return null;
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const db = await readDb({ strong: true, retries: 3 });
+    const user = db.users.find((u) => u.id === id) || null;
+    if (user) return user;
+    if (i < maxAttempts - 1) await sleep(intervalMs);
+  }
+  return null;
 }

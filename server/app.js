@@ -160,6 +160,10 @@ export function createApp(options = {}) {
       auth: {
         dbWritable: isDbWritable(),
         storage: getStorageBackend(),
+        storageNote:
+          getStorageBackend() === 'netlify-blobs'
+            ? '建议在 Netlify 安装 Netlify DB（免费 Neon）以获得跨设备稳定账号同步'
+            : null,
         blobsContext: Boolean(process.env.NETLIFY_BLOBS_CONTEXT),
         siteId: Boolean(process.env.SITE_ID || process.env.NETLIFY_SITE_ID),
         authMode: 'phone_password',

@@ -30,6 +30,7 @@ import {
   isDeviceLimitEnabled,
 } from './device.js';
 import { findDeviceRegistration, bindDeviceToUser } from '../db/store.js';
+import { waitForUserByPhone, waitForUserById, writeUserPhoneIndex } from '../db/engine.js';
 
 const router = Router();
 
@@ -114,15 +115,18 @@ router.post('/register', async (req, res) => {
       await bindDeviceToUser(deviceFingerprint, user.id);
     }
 
-    // Netlify Blobs 写入后短暂延迟才可读；轮询确保注册即可登录
-    let persisted = user;
-    for (let i = 0; i < 8; i += 1) {
-      const found = await findUserById(user.id);
-      if (found) {
-        persisted = found;
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 120));
+    await writeUserPhoneIndex(user);
+
+    // 写入后强一致读回，确保其他设备/浏览器可登录
+    let persisted = await waitForUserById(user.id, { maxAttempts: 16, intervalMs: 200 });
+    if (!persisted) {
+      persisted = await waitForUserByPhone(phone, { maxAttempts: 8, intervalMs: 200 });
+    }
+    if (!persisted) {
+      return res.status(503).json({
+        error: '账号已创建但云端同步较慢，请等待 10 秒后使用同一手机号登录',
+        code: 'AUTH_SYNC_PENDING',
+      });
     }
 
     res.json(
@@ -147,11 +151,7 @@ router.post('/login', async (req, res) => {
     if (phoneErr) return res.status(400).json({ error: phoneErr });
     if (!password) return res.status(400).json({ error: '请输入密码' });
 
-    let user = await findUserByPhone(phone);
-    for (let i = 0; i < 6 && !user; i += 1) {
-      await new Promise((r) => setTimeout(r, 120));
-      user = await findUserByPhone(phone);
-    }
+    const user = await waitForUserByPhone(phone, { maxAttempts: 24, intervalMs: 250 });
     if (!user || !user.passwordHash) {
       return res.status(401).json({ error: '手机号或密码错误' });
     }
@@ -180,13 +180,15 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: '两次输入的密码不一致' });
     }
 
-    const existing = await findUserByPhone(phone);
+    const existing = await waitForUserByPhone(phone, { maxAttempts: 12, intervalMs: 200 });
     if (!existing) {
       return res.status(404).json({ error: '该手机号未注册' });
     }
 
     const passwordHash = await hashPassword(password);
     await updateUserPasswordByPhone(phone, passwordHash);
+    const updated = await waitForUserByPhone(phone, { maxAttempts: 8, intervalMs: 150 });
+    if (updated) await writeUserPhoneIndex(updated);
     res.json({ ok: true, message: '密码已重置，请使用新密码登录' });
   } catch (err) {
     res.status(400).json({ error: err.message || '重置失败' });
