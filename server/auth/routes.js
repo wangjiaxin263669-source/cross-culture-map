@@ -115,7 +115,14 @@ router.post('/register', async (req, res) => {
       await bindDeviceToUser(deviceFingerprint, user.id);
     }
 
-    await writeUserPhoneIndex(user);
+    let fullRecord = await findUserById(user.id);
+    for (let i = 0; i < 10 && !fullRecord?.passwordHash; i += 1) {
+      await new Promise((r) => setTimeout(r, 100));
+      fullRecord = await findUserById(user.id);
+    }
+    if (fullRecord?.passwordHash) {
+      await writeUserPhoneIndex(fullRecord);
+    }
 
     // 写入后强一致读回，确保其他设备/浏览器可登录
     let persisted = await waitForUserById(user.id, { maxAttempts: 16, intervalMs: 200 });
@@ -189,8 +196,10 @@ router.post('/reset-password', async (req, res) => {
 
     const passwordHash = await hashPassword(password);
     await updateUserPasswordByPhone(phone, passwordHash);
-    const updated = await waitForUserByPhone(phone, { maxAttempts: 8, intervalMs: 150 });
-    if (updated) await writeUserPhoneIndex(updated);
+    const updated = await findUserById(
+      (await waitForUserByPhone(phone, { maxAttempts: 8, intervalMs: 150 }))?.id,
+    );
+    if (updated?.passwordHash) await writeUserPhoneIndex(updated);
     res.json({ ok: true, message: '密码已重置，请使用新密码登录' });
   } catch (err) {
     res.status(400).json({ error: err.message || '重置失败' });
