@@ -1,6 +1,8 @@
 /** 充值入账管理员密钥校验 */
+import { getRechargeAdminSecret } from './adminSecret.js';
+
 export function requireRechargeAdmin(req, res, next) {
-  const secret = process.env.RECHARGE_ADMIN_SECRET?.trim();
+  const secret = getRechargeAdminSecret();
   if (!secret) {
     return res.status(503).json({ error: '未配置 RECHARGE_ADMIN_SECRET，无法操作入账' });
   }

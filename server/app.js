@@ -49,6 +49,7 @@ import { ensureSimInterviewBatchPaid } from './wallet/simInterviewBilling.js';
 import { InsufficientBalanceError } from './wallet/billing.js';
 import { getUserBalanceCents } from './db/store.js';
 import { getPaymentPublicConfig } from './payment/index.js';
+import { getRechargeAdminSecret } from './wallet/adminSecret.js';
 
 const serverDir = getServerDir();
 dotenv.config({ path: path.join(serverDir, '..', '.env') });
@@ -170,7 +171,7 @@ export function createApp(options = {}) {
       },
       wallet: getWalletPublicConfig(),
       payment: getPaymentPublicConfig(),
-      adminGrantConfigured: Boolean(process.env.RECHARGE_ADMIN_SECRET?.trim()),
+      adminGrantConfigured: Boolean(getRechargeAdminSecret()),
     });
   });
 
