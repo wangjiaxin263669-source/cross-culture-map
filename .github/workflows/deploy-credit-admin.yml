@@ -17,10 +17,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Build admin static site
-        run: node scripts/build-credit-admin.mjs
-
-      - name: Deploy to hidden Netlify site
+      - name: Deploy hidden admin site (Netlify API, non-interactive)
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           CREDIT_ADMIN_SITE_ID: ${{ secrets.CREDIT_ADMIN_SITE_ID }}
@@ -29,9 +26,4 @@ jobs:
             echo "请先在 GitHub Secrets 配置 NETLIFY_AUTH_TOKEN"
             exit 1
           fi
-          npm install -g netlify-cli@17.38.1
-          if [ -n "$CREDIT_ADMIN_SITE_ID" ]; then
-            netlify deploy --prod --dir=credit-admin/dist --site="$CREDIT_ADMIN_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
-          else
-            netlify deploy --prod --dir=credit-admin/dist --auth="$NETLIFY_AUTH_TOKEN"
-          fi
+          node scripts/deploy-credit-admin.mjs
