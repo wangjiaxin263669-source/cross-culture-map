@@ -796,6 +796,7 @@ function App() {
           open={rechargeOpen}
           onClose={() => setRechargeOpen(false)}
           balanceYuan={user.balanceYuan}
+          userPhone={user.phone || ''}
           onSuccess={() => refreshUser()}
         />
       </Suspense>

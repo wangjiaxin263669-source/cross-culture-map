@@ -200,6 +200,7 @@ export async function sanitizeUser(user) {
   safe.phoneBound = Boolean(user.phone && user.phoneVerified);
   safe.requiresPhoneBinding = false;
   if (user.phone && user.phoneVerified) {
+    safe.phone = user.phone;
     safe.phoneMasked = `${user.phone.slice(0, 3)}****${user.phone.slice(7)}`;
   } else {
     safe.phoneMasked = null;
@@ -291,7 +292,14 @@ export async function listWalletTransactions(userId, limit = 30) {
     .slice(0, limit);
 }
 
-export async function createRechargeOrder({ userId, packageId, amountCents, bonusCents, payChannel }) {
+export async function createRechargeOrder({
+  userId,
+  packageId,
+  amountCents,
+  bonusCents,
+  payChannel,
+  transferRemark = '',
+}) {
   const db = await readDb();
   const order = {
     id: randomUUID(),
@@ -301,6 +309,7 @@ export async function createRechargeOrder({ userId, packageId, amountCents, bonu
     bonusCents: bonusCents || 0,
     totalCreditCents: amountCents + (bonusCents || 0),
     payChannel: payChannel || 'unknown',
+    transferRemark: transferRemark || '',
     status: 'pending',
     providerTradeNo: null,
     createdAt: new Date().toISOString(),

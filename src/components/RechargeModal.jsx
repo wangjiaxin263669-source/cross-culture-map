@@ -5,9 +5,10 @@ import {
   submitRechargePaid,
 } from '../services/walletApi.js';
 
-export default function RechargeModal({ open, onClose, balanceYuan, onSuccess }) {
+export default function RechargeModal({ open, onClose, balanceYuan, userPhone = '', onSuccess }) {
   const [config, setConfig] = useState(null);
   const [packageId, setPackageId] = useState('p10');
+  const [transferRemark, setTransferRemark] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -20,6 +21,7 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
     setMessage('');
     setPayStep('select');
     setPayInfo(null);
+    setTransferRemark(userPhone || '');
     fetchWalletConfig()
       .then((data) => {
         setConfig(data);
@@ -28,7 +30,7 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
         }
       })
       .catch((err) => setError(err.message));
-  }, [open]);
+  }, [open, userPhone]);
 
   if (!open) return null;
 
@@ -38,11 +40,16 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
   const wechatQrMode = config?.payment?.wechatQrMode;
 
   const handleCreateOrder = async () => {
+    const remark = transferRemark.trim();
+    if (!remark) {
+      setError('请填写转账备注（建议填写注册手机号）');
+      return;
+    }
     setLoading(true);
     setError('');
     setMessage('');
     try {
-      const result = await createRechargeOrder(packageId, 'wxpay');
+      const result = await createRechargeOrder(packageId, 'wxpay', remark);
       if (result.mock) {
         setMessage(result.message || '充值成功');
         onSuccess?.(result);
@@ -85,7 +92,7 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
   const copyRemark = () => {
     if (payInfo?.payRemark) {
       navigator.clipboard?.writeText(payInfo.payRemark);
-      setMessage('备注码已复制');
+      setMessage('备注已复制');
     }
   };
 
@@ -142,6 +149,19 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
                   </button>
                 ))}
               </div>
+              <label className="recharge-remark-field">
+                <span>转账备注（您的账号）</span>
+                <input
+                  type="text"
+                  className="recharge-remark-input"
+                  value={transferRemark}
+                  onChange={(e) => setTransferRemark(e.target.value)}
+                  placeholder="建议填写注册手机号，便于管理员核对入账"
+                  maxLength={32}
+                  autoComplete="tel"
+                />
+              </label>
+              <p className="recharge-remark-hint">微信转账时请在备注栏填写上方账号，管理员据此入账</p>
             </>
           )}
 
@@ -160,7 +180,7 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
                 </button>
                 <small> 复制</small>
               </p>
-              <p className="recharge-pay-tip">付款后点击下方按钮，核实到账后余额更新</p>
+              <p className="recharge-pay-tip">付款时备注请填写上方账号，完成后点击下方按钮</p>
             </div>
           )}
 
@@ -180,7 +200,7 @@ export default function RechargeModal({ open, onClose, balanceYuan, onSuccess })
               <button
                 type="button"
                 className="recharge-submit"
-                disabled={loading || !packageId}
+                disabled={loading || !packageId || !transferRemark.trim()}
                 onClick={handleCreateOrder}
               >
                 {loading ? '处理中…' : mockMode ? '确认充值' : wechatQrMode ? '下一步' : '去支付'}

@@ -39,18 +39,19 @@ export function createWechatQrPayment({ req, order }) {
     throw new Error('未配置 WECHAT_PAY_QR_URL（请上传微信收款码到 public/wechat-pay-qr.png）');
   }
   const amountYuan = (order.amountCents / 100).toFixed(2);
+  const payRemark = order.transferRemark?.trim() || buildPayRemark(order.id);
   return {
     mode: 'wechat_qr',
     payUrl: null,
     qrImageUrl: resolveQrImageUrl(req),
     orderId: order.id,
-    payRemark: buildPayRemark(order.id),
+    payRemark,
     amountYuan,
     totalCreditYuan: (order.totalCreditCents / 100).toFixed(2),
     ownerName: cfg.ownerName,
     instructions: [
       `请使用微信扫一扫，支付 ¥${amountYuan}`,
-      `转账备注请填写：${buildPayRemark(order.id)}（必填）`,
+      `转账备注请填写您的账号：${payRemark}（必填，便于管理员核对）`,
       '支付完成后点击「我已完成转账」，核实到账后余额将更新',
     ],
   };

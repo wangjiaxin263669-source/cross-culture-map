@@ -36,10 +36,10 @@ export async function fetchBalance() {
   return api('/api/wallet/balance');
 }
 
-export async function createRechargeOrder(packageId, payType = 'wxpay') {
+export async function createRechargeOrder(packageId, payType = 'wxpay', transferRemark = '') {
   return api('/api/wallet/recharge/create', {
     method: 'POST',
-    body: JSON.stringify({ packageId, payType }),
+    body: JSON.stringify({ packageId, payType, transferRemark }),
   });
 }
 

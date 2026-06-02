@@ -3,6 +3,7 @@ import {
   listWalletTransactions,
   findRechargeOrder,
   findUserByPhone,
+  findUserById,
   creditUserBalance,
   sanitizeUser,
   createRechargeOrder,
@@ -14,6 +15,7 @@ import {
 } from '../db/store.js';
 import { waitForUserByPhone } from '../db/engine.js';
 import { requireRechargeAdmin } from './admin.js';
+import { normalizeTransferRemark } from './transferRemark.js';
 import { requireAuth } from '../auth/middleware.js';
 import { getWalletPublicConfig, RECHARGE_PACKAGES } from './config.js';
 import { getWalletSnapshot } from './billing.js';
@@ -43,11 +45,13 @@ router.get('/transactions', requireAuth, async (req, res) => {
 
 router.post('/recharge/create', requireAuth, async (req, res) => {
   try {
-    const { packageId, payType = 'alipay' } = req.body;
+    const { packageId, payType = 'alipay', transferRemark } = req.body;
     const pkg = RECHARGE_PACKAGES.find((p) => p.id === packageId);
     if (!pkg) {
       return res.status(400).json({ error: '无效的充值档位' });
     }
+
+    const remark = normalizeTransferRemark(transferRemark, req.user.phone);
 
     const order = await createRechargeOrder({
       userId: req.user.id,
@@ -55,6 +59,7 @@ router.post('/recharge/create', requireAuth, async (req, res) => {
       amountCents: pkg.amountCents,
       bonusCents: pkg.bonusCents,
       payChannel: payType,
+      transferRemark: remark,
     });
 
     const payment = await createPayment({ req, order, payType });
@@ -212,7 +217,19 @@ router.post('/admin/grant', requireRechargeAdmin, async (req, res) => {
 /** 管理员：待核实充值列表 */
 router.get('/recharge/admin/pending', requireRechargeAdmin, async (_req, res) => {
   const orders = await listRechargeOrdersForAdmin('all_pending');
-  res.json({ orders });
+  const enriched = await Promise.all(
+    orders.map(async (o) => {
+      const user = await findUserById(o.userId);
+      return {
+        ...o,
+        userPhone: user?.phone || '',
+        displayName: user?.displayName || '',
+        amountYuan: (o.amountCents / 100).toFixed(2),
+        transferRemark: o.transferRemark || user?.phone || '',
+      };
+    }),
+  );
+  res.json({ orders: enriched });
 });
 
 /** 管理员：确认入账（核对微信收款后调用） */

@@ -7,12 +7,13 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
+import { getRechargeAdminSecret, getAdminSecretCharCodes } from '../server/wallet/adminSecret.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const ADMIN_DIR = path.join(ROOT, 'credit-admin');
 const MAIN_SITE = process.env.MAIN_SITE_URL || 'https://ephemeral-bubblegum-a79332.netlify.app';
-const ADMIN_SECRET = process.env.RECHARGE_ADMIN_SECRET || 'CcMapProdAdmin_7f3e9a2b';
+const ADMIN_SECRET = process.env.RECHARGE_ADMIN_SECRET || getRechargeAdminSecret();
 const SITE_NAME = process.env.CREDIT_ADMIN_SITE_NAME || 'cross-culture-credit-admin';
 
 function readNetlifyToken() {
@@ -92,8 +93,29 @@ function buildFileDigests(dir, base = dir, files = []) {
   return files;
 }
 
+function prepareAdminDeployDir() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-credit-admin-'));
+  for (const name of fs.readdirSync(ADMIN_DIR)) {
+    const src = path.join(ADMIN_DIR, name);
+    const dest = path.join(tmp, name);
+    if (fs.statSync(src).isDirectory()) {
+      fs.cpSync(src, dest, { recursive: true });
+      continue;
+    }
+    if (name === 'index.html') {
+      let html = fs.readFileSync(src, 'utf8');
+      html = html.replace('__ADMIN_SECRET_CODES__', JSON.stringify(getAdminSecretCharCodes()));
+      fs.writeFileSync(dest, html, 'utf8');
+    } else {
+      fs.copyFileSync(src, dest);
+    }
+  }
+  return tmp;
+}
+
 async function deployAdminSite(token, siteId) {
-  const files = buildFileDigests(ADMIN_DIR);
+  const deployDir = prepareAdminDeployDir();
+  const files = buildFileDigests(deployDir);
   const deploy = await netlifyFetch(token, `/sites/${siteId}/deploys`, {
     method: 'POST',
     body: JSON.stringify({ files: Object.fromEntries(files.map((f) => [f.path, f.sha])) }),
@@ -218,7 +240,7 @@ async function main() {
   console.log('\n========================================');
   console.log('管理员充值站:', url);
   console.log('主站平台:   ', MAIN_SITE);
-  console.log('密钥: 与 RECHARGE_ADMIN_SECRET 一致（已在页面填写）');
+  console.log('管理员页已内置密钥，无需手动填写');
   console.log('联动测试: 通过');
   console.log('========================================\n');
 }

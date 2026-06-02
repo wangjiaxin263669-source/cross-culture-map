@@ -3,11 +3,12 @@
  * 用法：node scripts/test-credit-admin-linkage.mjs
  */
 import { createHash } from 'crypto';
+import { getRechargeAdminSecret } from '../server/wallet/adminSecret.js';
 
 const MAIN = process.env.MAIN_SITE_URL || 'https://ephemeral-bubblegum-a79332.netlify.app';
 const ADMIN_PAGE =
   process.env.ADMIN_PAGE_URL || `${MAIN.replace(/\/$/, '')}/admin-credits/`;
-const SECRET = process.env.RECHARGE_ADMIN_SECRET || 'CcMapProdAdmin_7f3e9a2b';
+const SECRET = process.env.RECHARGE_ADMIN_SECRET || getRechargeAdminSecret();
 const phone = process.env.TEST_PHONE || `186${String(Date.now()).slice(-8)}`;
 const password = 'Test123456';
 

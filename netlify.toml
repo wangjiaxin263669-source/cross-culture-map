@@ -11,12 +11,10 @@
   NEW_USER_BONUS_CENTS = "50"
   DAILY_LOGIN_BONUS_CENTS = "6"
   DEEPSEEK_MODEL = "deepseek-v4-flash"
-  RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
   FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
 
 # 运行时（Functions）可读；仅 build.environment 时 Lambda 可能拿不到
 [context.production.environment]
-  RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
   PAYMENT_PROVIDER = "wechat_qr"
   FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
 
@@ -43,7 +41,6 @@
   timeout = 60
 
 [functions.api.environment]
-  RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
   PAYMENT_PROVIDER = "wechat_qr"
   FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
   NEW_USER_BONUS_CENTS = "50"
