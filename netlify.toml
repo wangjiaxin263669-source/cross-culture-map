@@ -14,6 +14,12 @@
   RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
   FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
 
+# 运行时（Functions）可读；仅 build.environment 时 Lambda 可能拿不到
+[context.production.environment]
+  RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
+  PAYMENT_PROVIDER = "wechat_qr"
+  FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
@@ -41,6 +47,12 @@
   to = "/.netlify/functions/api"
   status = 200
   force = true
+
+# 管理员充值静态页（先于 SPA 回退）
+[[redirects]]
+  from = "/admin-credits"
+  to = "/admin-credits/index.html"
+  status = 200
 
 [[redirects]]
   from = "/*"
