@@ -1,4 +1,4 @@
-# 手动部署 credit-admin 为独立 Netlify 站点（可选）
+# 手动部署 credit-admin 为独立隐藏 Netlify 站点
 name: Deploy Credit Admin Site
 
 on:
@@ -13,8 +13,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Deploy credit-admin folder
+      - name: Build admin static site
+        run: node scripts/build-credit-admin.mjs
+
+      - name: Deploy to hidden Netlify site
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           CREDIT_ADMIN_SITE_ID: ${{ secrets.CREDIT_ADMIN_SITE_ID }}
@@ -25,7 +31,7 @@ jobs:
           fi
           npm install -g netlify-cli@17.38.1
           if [ -n "$CREDIT_ADMIN_SITE_ID" ]; then
-            netlify deploy --prod --dir=credit-admin --site="$CREDIT_ADMIN_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
+            netlify deploy --prod --dir=credit-admin/dist --site="$CREDIT_ADMIN_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
           else
-            netlify deploy --prod --dir=credit-admin --auth="$NETLIFY_AUTH_TOKEN"
+            netlify deploy --prod --dir=credit-admin/dist --auth="$NETLIFY_AUTH_TOKEN"
           fi

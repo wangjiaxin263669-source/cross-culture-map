@@ -1,42 +1,55 @@
-# 管理员积分充值站
+# 管理员积分充值站（独立隐藏站点）
 
-## 已部署地址（与主站联动）
+管理员充值页**不再**挂在主站 `/admin-credits/`，避免学生猜到 URL。  
+单独部署为一个 Netlify 小站，只有你知道地址，自行收藏即可。
 
 | 站点 | 地址 |
 |------|------|
-| **主站（用户平台）** | https://ephemeral-bubblegum-a79332.netlify.app |
-| **管理员充值页** | https://ephemeral-bubblegum-a79332.netlify.app/admin-credits/ |
+| **主站（学生平台）** | https://ephemeral-bubblegum-a79332.netlify.app |
+| **管理员充值页** | 独立 Netlify 地址（部署后获得，见下方） |
 
-管理员页随主站一起发布，**独立 URL、不在学生导航里出现**；调用主站同一套 `/api/wallet/admin/grant` 接口。
+## 首次部署（只需一次）
 
-## 使用步骤
+### 方式 A：本机部署
 
-1. 打开 **管理员充值页**（建议收藏，勿公开给学生）
-2. **主站 API** 默认已填当前站点（同域自动识别）
-3. 输入用户在主站注册的 **11 位手机号**
-4. 输入 **金额（元）** → 确认充值
+```powershell
+npx netlify-cli login
+npm run build:credit-admin
+node scripts/deploy-credit-admin.mjs
+```
 
-充值成功后，用户回到主站刷新即可看到右上角余额增加。
+脚本会创建/更新独立站点（默认名称 `cc-credits-private`，可在 Netlify 控制台改名），并输出 **仅你可见的 URL**。请收藏，勿发给学生。
+
+### 方式 B：GitHub Actions
+
+1. 在 GitHub 仓库 **Settings → Secrets** 配置 `NETLIFY_AUTH_TOKEN`
+2. （推荐）配置 `CREDIT_ADMIN_SITE_ID` 固定到同一隐藏站点
+3. **Actions → Deploy Credit Admin Site → Run workflow**
+
+## 日常使用
+
+1. 打开你收藏的 **独立管理员 URL**
+2. 输入用户在主站注册的 **11 位手机号**
+3. 输入 **金额（元）** → 确认充值
 
 用户通过微信扫码充值时，会在转账备注里填写自己的账号（通常为注册手机号），请据此核对后再入账。
 
-## 验证联动
+## 验证 API 联动
 
 ```bash
 node scripts/test-credit-admin-linkage.mjs
 ```
 
-## 可选：完全独立的第二个 Netlify 站点
+若已部署隐藏站，可额外验证页面：
 
-若希望域名与主站完全不同：
+```bash
+$env:ADMIN_PAGE_URL="https://你的隐藏站.netlify.app/"
+node scripts/test-credit-admin-linkage.mjs
+```
 
-1. 本机执行 `npx netlify-cli login`
-2. `node scripts/deploy-credit-admin.mjs`（会创建 `cross-culture-credit-admin` 站点）
+## 安全说明
 
-或在 GitHub Actions 手动运行 **Deploy Credit Admin Site**（需配置 `NETLIFY_AUTH_TOKEN`）。
-
-## 安全
-
-- 管理员密钥已内置，页面无需手动填写
-- 请勿将 `/admin-credits/` 链接分享给学员
-- 本地覆盖密钥：在 `server/wallet/admin-secret.local` 写入（已 gitignore）
+- 主站学生入口**没有**管理员充值链接
+- 页面含 `noindex`，搜索引擎不会收录
+- 管理员密钥已内置，无需手填
+- 请勿把隐藏站 URL 分享给学生或写在公开文档里

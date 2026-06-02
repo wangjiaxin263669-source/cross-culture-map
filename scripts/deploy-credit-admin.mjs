@@ -7,14 +7,16 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
-import { getRechargeAdminSecret, getAdminSecretCharCodes } from '../server/wallet/adminSecret.js';
+import { getRechargeAdminSecret } from '../server/wallet/adminSecret.js';
+import { spawnSync } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const ADMIN_DIR = path.join(ROOT, 'credit-admin');
+const DEPLOY_DIR = path.join(ROOT, 'credit-admin', 'dist');
 const MAIN_SITE = process.env.MAIN_SITE_URL || 'https://ephemeral-bubblegum-a79332.netlify.app';
 const ADMIN_SECRET = process.env.RECHARGE_ADMIN_SECRET || getRechargeAdminSecret();
-const SITE_NAME = process.env.CREDIT_ADMIN_SITE_NAME || 'cross-culture-credit-admin';
+const SITE_NAME = process.env.CREDIT_ADMIN_SITE_NAME || 'cc-credits-private';
+const SITE_ID = process.env.CREDIT_ADMIN_SITE_ID?.trim();
 
 function readNetlifyToken() {
   if (process.env.NETLIFY_AUTH_TOKEN?.trim()) {
@@ -59,9 +61,17 @@ async function netlifyFetch(token, pathSuffix, options = {}) {
 }
 
 async function findOrCreateSite(token) {
+  if (SITE_ID) {
+    const site = await netlifyFetch(token, `/sites/${SITE_ID}`);
+    console.log('OK: 使用指定站点', site.name, site.ssl_url || site.url);
+    return site;
+  }
   const sites = await netlifyFetch(token, '/sites?filter=all&per_page=100');
   let site = sites.find(
-    (s) => s.name === SITE_NAME || s.custom_domain?.includes('credit-admin'),
+    (s) =>
+      s.name === SITE_NAME ||
+      s.name === 'cross-culture-credit-admin' ||
+      s.custom_domain?.includes('credit-admin'),
   );
   if (site) {
     console.log('OK: 已有管理员站点', site.name, site.ssl_url || site.url);
@@ -93,29 +103,22 @@ function buildFileDigests(dir, base = dir, files = []) {
   return files;
 }
 
-function prepareAdminDeployDir() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-credit-admin-'));
-  for (const name of fs.readdirSync(ADMIN_DIR)) {
-    const src = path.join(ADMIN_DIR, name);
-    const dest = path.join(tmp, name);
-    if (fs.statSync(src).isDirectory()) {
-      fs.cpSync(src, dest, { recursive: true });
-      continue;
-    }
-    if (name === 'index.html') {
-      let html = fs.readFileSync(src, 'utf8');
-      html = html.replace('__ADMIN_SECRET_CODES__', JSON.stringify(getAdminSecretCharCodes()));
-      fs.writeFileSync(dest, html, 'utf8');
-    } else {
-      fs.copyFileSync(src, dest);
-    }
+function buildAdminDist() {
+  const result = spawnSync(process.execPath, ['scripts/build-credit-admin.mjs'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    throw new Error('build-credit-admin 失败');
   }
-  return tmp;
+  if (!fs.existsSync(path.join(DEPLOY_DIR, 'index.html'))) {
+    throw new Error('缺少 credit-admin/dist/index.html');
+  }
 }
 
 async function deployAdminSite(token, siteId) {
-  const deployDir = prepareAdminDeployDir();
-  const files = buildFileDigests(deployDir);
+  buildAdminDist();
+  const files = buildFileDigests(DEPLOY_DIR);
   const deploy = await netlifyFetch(token, `/sites/${siteId}/deploys`, {
     method: 'POST',
     body: JSON.stringify({ files: Object.fromEntries(files.map((f) => [f.path, f.sha])) }),
@@ -231,7 +234,7 @@ async function main() {
   console.log('\n联动测试手机号:', phone);
   await verifyGrantLink(phone);
 
-  const statePath = path.join(ADMIN_DIR, '.deploy-state.json');
+  const statePath = path.join(ROOT, 'credit-admin', '.deploy-state.json');
   fs.writeFileSync(
     statePath,
     JSON.stringify({ adminUrl: url, mainSite: MAIN_SITE, deployedAt: new Date().toISOString() }, null, 2),

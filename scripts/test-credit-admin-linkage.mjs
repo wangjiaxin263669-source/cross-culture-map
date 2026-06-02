@@ -6,8 +6,7 @@ import { createHash } from 'crypto';
 import { getRechargeAdminSecret } from '../server/wallet/adminSecret.js';
 
 const MAIN = process.env.MAIN_SITE_URL || 'https://ephemeral-bubblegum-a79332.netlify.app';
-const ADMIN_PAGE =
-  process.env.ADMIN_PAGE_URL || `${MAIN.replace(/\/$/, '')}/admin-credits/`;
+const ADMIN_PAGE = process.env.ADMIN_PAGE_URL || '';
 const SECRET = process.env.RECHARGE_ADMIN_SECRET || getRechargeAdminSecret();
 const phone = process.env.TEST_PHONE || `186${String(Date.now()).slice(-8)}`;
 const password = 'Test123456';
@@ -42,15 +41,19 @@ async function registerOrLogin() {
 
 async function main() {
   console.log('主站 API:', MAIN);
-  console.log('管理员页:', ADMIN_PAGE);
+  if (ADMIN_PAGE) console.log('管理员页:', ADMIN_PAGE);
   console.log('测试手机:', phone);
 
-  const pageRes = await fetch(ADMIN_PAGE);
-  const html = await pageRes.text();
-  if (!pageRes.ok || !html.includes('管理员 · 积分充值')) {
-    throw new Error(`管理员页面不可访问 (${pageRes.status})`);
+  if (ADMIN_PAGE) {
+    const pageRes = await fetch(ADMIN_PAGE);
+    const html = await pageRes.text();
+    if (!pageRes.ok || !html.includes('管理员 · 积分充值')) {
+      throw new Error(`管理员页面不可访问 (${pageRes.status})`);
+    }
+    console.log('OK: 管理员充值页可打开');
+  } else {
+    console.log('跳过管理员页检查（请设置 ADMIN_PAGE_URL 验证隐藏站）');
   }
-  console.log('OK: 管理员充值页可打开');
 
   const token = await registerOrLogin();
   const balBefore = await fetch(`${MAIN}/api/wallet/balance`, {

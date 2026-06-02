@@ -52,12 +52,6 @@
   status = 200
   force = true
 
-# 管理员充值静态页（先于 SPA 回退）
-[[redirects]]
-  from = "/admin-credits"
-  to = "/admin-credits/index.html"
-  status = 200
-
 [[redirects]]
   from = "/*"
   to = "/index.html"

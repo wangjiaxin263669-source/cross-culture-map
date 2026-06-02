@@ -40,4 +40,4 @@
 
 ## 管理员积分充值小站
 
-见 [`credit-admin/README.md`](../credit-admin/README.md) — 单独部署，不影响主站学生入口。
+见 [`credit-admin/README.md`](../credit-admin/README.md) — **独立隐藏站点**，不挂在主站 URL 上。

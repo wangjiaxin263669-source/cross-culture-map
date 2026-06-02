@@ -1,5 +1,5 @@
 /**
- * 构建前：将管理员充值页复制到 public/admin-credits，并注入内置密钥（非明文）
+ * 构建独立管理员充值站（不发布到主站 public/）
  */
 import fs from 'fs';
 import path from 'path';
@@ -8,22 +8,40 @@ import { getAdminSecretCharCodes } from '../server/wallet/adminSecret.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = path.join(root, 'credit-admin', 'index.html');
-const destDir = path.join(root, 'public', 'admin-credits');
+const destDir = path.join(root, 'credit-admin', 'dist');
 const dest = path.join(destDir, 'index.html');
 
 if (!fs.existsSync(src)) {
-  console.warn('[copy-credit-admin] 源文件不存在，跳过');
-  process.exit(0);
+  console.error('[build-credit-admin] 源文件不存在:', src);
+  process.exit(1);
 }
 
 let html = fs.readFileSync(src, 'utf8');
 const codes = getAdminSecretCharCodes();
 if (!html.includes('__ADMIN_SECRET_CODES__')) {
-  console.warn('[copy-credit-admin] 模板缺少 __ADMIN_SECRET_CODES__ 占位符');
+  console.error('[build-credit-admin] 模板缺少 __ADMIN_SECRET_CODES__ 占位符');
   process.exit(1);
 }
 html = html.replace('__ADMIN_SECRET_CODES__', JSON.stringify(codes));
 
 fs.mkdirSync(destDir, { recursive: true });
 fs.writeFileSync(dest, html, 'utf8');
-console.log('[copy-credit-admin] → public/admin-credits/index.html');
+
+fs.writeFileSync(
+  path.join(destDir, '_headers'),
+  `/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store
+`,
+  'utf8',
+);
+
+fs.writeFileSync(
+  path.join(destDir, 'robots.txt'),
+  `User-agent: *
+Disallow: /
+`,
+  'utf8',
+);
+
+console.log('[build-credit-admin] → credit-admin/dist/');

@@ -1,4 +1,10 @@
+# 独立隐藏站点：与主站分离部署，勿连接学生可见的主站 Git 自动发布
 [build]
-  publish = "."
+  command = "node ../scripts/build-credit-admin.mjs"
+  publish = "dist"
 
-# 纯静态页，无 build
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
