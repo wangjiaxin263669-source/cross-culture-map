@@ -170,6 +170,7 @@ export function createApp(options = {}) {
       },
       wallet: getWalletPublicConfig(),
       payment: getPaymentPublicConfig(),
+      adminGrantConfigured: Boolean(process.env.RECHARGE_ADMIN_SECRET?.trim()),
     });
   });
 

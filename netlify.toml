@@ -42,6 +42,13 @@
   # 报告生成需调用 DeepSeek，尽量拉长（Pro 最高 60s；超时会在前端显示 502/504）
   timeout = 60
 
+[functions.api.environment]
+  RECHARGE_ADMIN_SECRET = "CcMapProdAdmin_7f3e9a2b"
+  PAYMENT_PROVIDER = "wechat_qr"
+  FRONTEND_URL = "https://ephemeral-bubblegum-a79332.netlify.app"
+  NEW_USER_BONUS_CENTS = "50"
+  DAILY_LOGIN_BONUS_CENTS = "6"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api"
