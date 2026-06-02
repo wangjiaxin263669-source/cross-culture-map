@@ -1861,6 +1861,17 @@ body, html, #root {
   color: #8da4c4;
   font-size: 14px;
 }
+.chunk-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: #7a92ad;
+  font-size: 13px;
+}
+.globe-wrapper .chunk-loading {
+  min-height: 100%;
+}
 .auth-card {
   width: 100%;
   max-width: 400px;

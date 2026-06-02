@@ -1,13 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Globe from 'react-globe.gl';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import ReportMarkdown from './components/ReportMarkdown';
 import CulturalStoryPanel from './components/CulturalStoryPanel';
 import RegionPicker from './components/RegionPicker';
-import SimulatedResearchPanel from './components/SimulatedResearchPanel';
 import AuthPage from './components/AuthPage';
-import HistoryDrawer from './components/HistoryDrawer';
-import RechargeModal from './components/RechargeModal';
 import { useAuth } from './context/AuthContext';
 import { useAiModel } from './context/AiModelContext';
 import AiModelSelector from './components/AiModelSelector';
@@ -23,6 +18,20 @@ import { saveChatSession, saveReport, saveSimResearchSession } from './services/
 import { shouldPersistSimDraft } from './utils/simResearchDraft';
 import SimExitConfirmModal from './components/SimExitConfirmModal';
 import './App.css';
+
+const GlobeScene = lazy(() => import('./components/GlobeScene.jsx'));
+const MarketRadarChart = lazy(() => import('./components/MarketRadarChart.jsx'));
+const SimulatedResearchPanel = lazy(() => import('./components/SimulatedResearchPanel.jsx'));
+const HistoryDrawer = lazy(() => import('./components/HistoryDrawer.jsx'));
+const RechargeModal = lazy(() => import('./components/RechargeModal.jsx'));
+
+function ChunkFallback({ label = '加载中…' }) {
+  return (
+    <div className="chunk-loading" aria-busy="true">
+      {label}
+    </div>
+  );
+}
 
 const DEFAULT_CHAT_GREETING = {
   role: 'ai',
@@ -99,10 +108,19 @@ function App() {
   }, []);
 
   useEffect(() => {
-    checkAiHealth()
-      .then(setAiHealth)
-      .catch(() => setAiHealth({ aiConfigured: false }));
-  }, []);
+    if (!user) return undefined;
+    const run = () => {
+      checkAiHealth()
+        .then(setAiHealth)
+        .catch(() => setAiHealth({ aiConfigured: false }));
+    };
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(run, { timeout: 2500 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = setTimeout(run, 400);
+    return () => clearTimeout(t);
+  }, [user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -614,21 +632,14 @@ function App() {
       )}
 
       <div className="globe-wrapper globe-layer">
-        <Globe
-          ref={globeEl}
-          onGlobeReady={handleGlobeReady}
-          globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
-          backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
-          labelsData={globeLabelsData}
-          labelLat={(d) => d.lat}
-          labelLng={(d) => d.lng}
-          labelText={(d) => d.label}
-          labelSize={(d) => (d.marketType === 'region' ? 1.35 : d.hasRegions ? 2 : 1.8)}
-          labelDotRadius={(d) => (d.marketType === 'region' ? 0.45 : d.hasRegions ? 0.75 : 0.6)}
-          labelColor={(d) => (d.marketType === 'region' ? '#7ee8fa' : d.hasRegions ? '#ffd966' : 'white')}
-          labelResolution={2}
-          onLabelClick={handleLabelClick}
-        />
+        <Suspense fallback={<ChunkFallback label="地球加载中…" />}>
+          <GlobeScene
+            ref={globeEl}
+            onGlobeReady={handleGlobeReady}
+            labelsData={globeLabelsData}
+            onLabelClick={handleLabelClick}
+          />
+        </Suspense>
       </div>
 
       {selectedMarket && (
@@ -696,14 +707,9 @@ function App() {
           )}
 
           <div className="panel-radar-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedMarket.radarData}>
-                <PolarGrid stroke="rgba(255,255,255,0.15)" />
-                <PolarAngleAxis dataKey="name" tick={{ fill: '#94a8be', fontSize: 12 }} />
-                <Tooltip wrapperStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                <Radar name="维度数据" dataKey="score" stroke="#00f0ff" strokeWidth={2} fill="#00f0ff" fillOpacity={0.2} />
-              </RadarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<ChunkFallback label="图表加载中…" />}>
+              <MarketRadarChart data={selectedMarket.radarData} />
+            </Suspense>
           </div>
 
           <div className="panel-density-block">
@@ -720,18 +726,20 @@ function App() {
           <CulturalStoryPanel country={selectedMarket} />
 
           <div ref={simSectionRef}>
-            <SimulatedResearchPanel
-              key={selectedMarket.id}
-              ref={simPanelRef}
-              market={selectedMarket}
-              marketTitle={displayTitle}
-              aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
-              walletCostsYuan={aiHealth?.wallet?.costsYuan}
-              onSnapshotChange={handleSimSnapshotChange}
-              onSyncToThreeStepReport={handleSyncFromSimResearch}
-              onSavedToHistory={() => bumpHistory()}
-              onInsufficientBalance={() => setRechargeOpen(true)}
-            />
+            <Suspense fallback={<ChunkFallback label="模拟调研加载中…" />}>
+              <SimulatedResearchPanel
+                key={selectedMarket.id}
+                ref={simPanelRef}
+                market={selectedMarket}
+                marketTitle={displayTitle}
+                aiConfigured={Boolean(aiHealth?.aiConfigured ?? aiHealth?.geminiConfigured)}
+                walletCostsYuan={aiHealth?.wallet?.costsYuan}
+                onSnapshotChange={handleSimSnapshotChange}
+                onSyncToThreeStepReport={handleSyncFromSimResearch}
+                onSavedToHistory={() => bumpHistory()}
+                onInsufficientBalance={() => setRechargeOpen(true)}
+              />
+            </Suspense>
           </div>
 
           <div
@@ -771,22 +779,26 @@ function App() {
         </div>
       )}
 
-      <HistoryDrawer
-        open={historyOpen}
-        refreshKey={historyRefreshKey}
-        onClose={() => setHistoryOpen(false)}
-        onLoadChat={handleLoadChatFromHistory}
-        onLoadReport={handleLoadReportFromHistory}
-        onLoadSimSession={handleLoadSimFromHistory}
-        onHistoryMutated={bumpHistory}
-      />
+      <Suspense fallback={null}>
+        <HistoryDrawer
+          open={historyOpen}
+          refreshKey={historyRefreshKey}
+          onClose={() => setHistoryOpen(false)}
+          onLoadChat={handleLoadChatFromHistory}
+          onLoadReport={handleLoadReportFromHistory}
+          onLoadSimSession={handleLoadSimFromHistory}
+          onHistoryMutated={bumpHistory}
+        />
+      </Suspense>
 
-      <RechargeModal
-        open={rechargeOpen}
-        onClose={() => setRechargeOpen(false)}
-        balanceYuan={user.balanceYuan}
-        onSuccess={() => refreshUser()}
-      />
+      <Suspense fallback={null}>
+        <RechargeModal
+          open={rechargeOpen}
+          onClose={() => setRechargeOpen(false)}
+          balanceYuan={user.balanceYuan}
+          onSuccess={() => refreshUser()}
+        />
+      </Suspense>
 
       <SimExitConfirmModal
         open={Boolean(simExit)}

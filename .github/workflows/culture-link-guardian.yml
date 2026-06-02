@@ -1,33 +1,18 @@
-# 每周全自动：巡检 + 失效换链 + 提交（跨文化产品设计专家标准）
-name: Culture Link Guardian Auto
+# 半自动：仅手动运行；巡检文化链接，不自动 commit / 不自动部署 Netlify
+name: Culture Link Guardian (Manual)
 
 on:
-  schedule:
-    - cron: '0 3 * * 1'
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'src/data/**'
-      - 'scripts/lib/**'
-      - 'scripts/culture-link-guardian*.mjs'
-      - '.github/workflows/culture-link-guardian.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  auto-guardian:
-    if: >-
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      !contains(github.event.head_commit.message, '[skip ci]')
+  audit-only:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -35,42 +20,9 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      - name: Auto audit and fix culture links
-        run: npm run guardian
+      - run: npm run guardian:check
         env:
           CI: true
-        id: guardian
-
-      - name: Commit and push auto-fixes
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          PATCHED=$(node -e "try{const j=require('./scripts/guardian-reports/auto-fix-log.json');process.stdout.write(j.fixLog?.some(r=>r.fixes?.length>0)?'yes':'no')}catch{process.stdout.write('no')}")
-          if [ "$PATCHED" != "yes" ]; then
-            echo "No guardian data patches; skip commit"
-            exit 0
-          fi
-          git add src/data
-          if git diff --staged --quiet; then
-            echo "No data changes to commit"
-          else
-            git commit -m "chore(guardian): weekly auto-fix culture links [skip ci]"
-            git push
-          fi
-
-      - name: Trigger Netlify production rebuild
-        if: success()
-        env:
-          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
-        run: |
-          if [ -n "$NETLIFY_BUILD_HOOK" ]; then
-            curl -fsS -X POST "$NETLIFY_BUILD_HOOK"
-            echo "Netlify rebuild triggered"
-          else
-            echo "NETLIFY_BUILD_HOOK not set; rely on Git-connected auto deploy"
-          fi
 
       - name: Upload report
         if: always()
@@ -79,5 +31,5 @@ jobs:
           name: culture-guardian-report
           path: |
             scripts/guardian-reports/latest.json
-            scripts/guardian-reports/auto-fix-log.json
           retention-days: 90
+          if-no-files-found: ignore

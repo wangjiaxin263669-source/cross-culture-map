@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CROSS-CULTURE · 管理员积分充值</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0e17;
+        --card: rgba(12, 18, 32, 0.95);
+        --border: rgba(255, 255, 255, 0.1);
+        --accent: #00c9b7;
+        --text: #e8eef7;
+        --muted: #8da4c4;
+        --err: #ff8a8a;
+        --ok: #6ee7b7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Segoe UI', 'Noto Sans SC', sans-serif;
+        background: radial-gradient(ellipse at 50% 0%, #1a2a4a 0%, var(--bg) 55%);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 28px 24px;
+      }
+      h1 { margin: 0 0 6px; font-size: 20px; }
+      .sub { margin: 0 0 20px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+      label { display: block; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text);
+        font-size: 15px;
+      }
+      button {
+        width: 100%;
+        margin-top: 8px;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #041018;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: wait; }
+      .msg { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+      .msg.err { background: rgba(255, 80, 80, 0.12); color: var(--err); }
+      .msg.ok { background: rgba(0, 201, 183, 0.12); color: var(--ok); }
+      .hint { margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+      code { font-size: 11px; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>管理员 · 积分充值</h1>
+      <p class="sub">
+        为 <a href="https://ephemeral-bubblegum-a79332.netlify.app" target="_blank" rel="noopener">跨文化研究设计平台</a>
+        已注册账号充值 AI 使用余额（仅管理者使用，请勿公开此页）。
+      </p>
+
+      <form id="form">
+        <label>
+          主站 API 地址
+          <input id="apiBase" type="url" required value="https://ephemeral-bubblegum-a79332.netlify.app" />
+        </label>
+        <label>
+          管理员密钥
+          <input id="secret" type="password" required placeholder="与主站 RECHARGE_ADMIN_SECRET 一致" autocomplete="off" />
+        </label>
+        <label>
+          用户手机号（11 位）
+          <input id="phone" type="tel" required pattern="1[3-9]\d{9}" placeholder="主站注册手机号" />
+        </label>
+        <label>
+          充值金额（元）
+          <input id="amountYuan" type="number" required min="0.01" step="0.01" placeholder="例如 10" />
+        </label>
+        <label>
+          备注（可选）
+          <input id="note" type="text" placeholder="管理员测试充值" />
+        </label>
+        <button type="submit" id="submitBtn">确认充值</button>
+      </form>
+
+      <div id="msg" class="msg" hidden></div>
+      <p class="hint">
+        密钥仅保存在本浏览器 sessionStorage，不会上传到其他服务器。<br />
+        部署：将 <code>credit-admin</code> 文件夹单独发布为一个 Netlify 站点（与主站分离，避免学生看到入口）。
+      </p>
+    </div>
+
+    <script>
+      const STORAGE_KEY = 'cc_admin_grant_cfg';
+      const apiBaseEl = document.getElementById('apiBase');
+      const secretEl = document.getElementById('secret');
+      const msgEl = document.getElementById('msg');
+      const form = document.getElementById('form');
+      const submitBtn = document.getElementById('submitBtn');
+
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+        if (saved.apiBase) apiBaseEl.value = saved.apiBase;
+        if (saved.secret) secretEl.value = saved.secret;
+      } catch { /* ignore */ }
+
+      function showMsg(text, ok) {
+        msgEl.hidden = false;
+        msgEl.className = 'msg ' + (ok ? 'ok' : 'err');
+        msgEl.textContent = text;
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const apiBase = apiBaseEl.value.replace(/\/$/, '');
+        const secret = secretEl.value.trim();
+        const phone = document.getElementById('phone').value.replace(/\D/g, '').slice(0, 11);
+        const amountYuan = Number(document.getElementById('amountYuan').value);
+        const note = document.getElementById('note').value.trim() || '管理员赠送';
+
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ apiBase, secret }));
+
+        if (!/^1[3-9]\d{9}$/.test(phone)) {
+          showMsg('请输入有效的 11 位手机号', false);
+          return;
+        }
+        if (!Number.isFinite(amountYuan) || amountYuan <= 0) {
+          showMsg('请输入有效金额', false);
+          return;
+        }
+
+        submitBtn.disabled = true;
+        msgEl.hidden = true;
+        try {
+          const res = await fetch(`${apiBase}/api/wallet/admin/grant`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Secret': secret,
+            },
+            body: JSON.stringify({ phone, amountYuan, note }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `请求失败 (${res.status})`);
+          showMsg(data.message || `充值成功，当前余额 ¥${data.balanceYuan}`, true);
+        } catch (err) {
+          showMsg(err.message || '充值失败', false);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -12,6 +12,7 @@ import {
   getSmsPlatformSettings,
   saveSmsPlatformSettings,
 } from '../db/store.js';
+import { waitForUserByPhone } from '../db/engine.js';
 import { requireRechargeAdmin } from './admin.js';
 import { requireAuth } from '../auth/middleware.js';
 import { getWalletPublicConfig, RECHARGE_PACKAGES } from './config.js';
@@ -183,7 +184,7 @@ router.post('/admin/grant', requireRechargeAdmin, async (req, res) => {
     if (!/^1\d{10}$/.test(phone)) {
       return res.status(400).json({ error: '请提供有效手机号' });
     }
-    const user = await findUserByPhone(phone);
+    const user = await waitForUserByPhone(phone, { maxAttempts: 12, intervalMs: 200 });
     if (!user) {
       return res.status(404).json({ error: '该手机号未注册或未验证' });
     }

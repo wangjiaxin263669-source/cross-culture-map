@@ -21,6 +21,17 @@ function needsInfrastructureRecovery(report) {
 }
 
 async function triggerNetlifyRebuild(env) {
+  const allowed =
+    env.ALLOW_NETLIFY_AUTO_DEPLOY === 'true' ||
+    env.ALLOW_NETLIFY_AUTO_DEPLOY === '1';
+  if (!allowed) {
+    return {
+      ok: false,
+      via: 'disabled',
+      reason: '半自动模式：未设置 ALLOW_NETLIFY_AUTO_DEPLOY=true，跳过 Netlify 重建',
+    };
+  }
+
   if (env.NETLIFY_BUILD_HOOK) {
     const res = await fetch(env.NETLIFY_BUILD_HOOK, {
       method: 'POST',

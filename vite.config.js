@@ -8,7 +8,24 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-globe.gl', 'recharts'],
+    include: ['react', 'react-dom'],
+  },
+  build: {
+    target: 'es2020',
+    modulePreload: { polyfill: false },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('react-globe.gl') || id.includes('three-globe') || /[\\/]three[\\/]/.test(id)) {
+            return 'globe-vendor';
+          }
+          if (id.includes('recharts') || id.includes('d3-')) return 'charts-vendor';
+          if (id.includes('react-dom') || id.includes('react/')) return 'react-vendor';
+          return 'vendor';
+        },
+      },
+    },
   },
   server: {
     port: 5173,

@@ -1,15 +1,10 @@
-# 全自动站点托管：每 3 天巡检+安全修复（不改 src/data，不提交代码）
-name: Site Health Guardian Auto
+# 半自动：每 3 天巡检正式站，仅报告；不自动触发 Netlify 重建
+name: Site Health Guardian (Semi-Auto)
 
 on:
   schedule:
     - cron: '0 4 1,4,7,10,13,16,19,22,25,28 * *'
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/site-health-guardian.mjs'
-      - 'scripts/lib/siteHealth*.mjs'
-      - '.github/workflows/site-health-guardian.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  auto-host:
+  check-only:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -33,12 +28,19 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Full auto site health (check + fix + recheck)
+      - name: Site health check (no auto deploy)
         run: node scripts/site-health-guardian.mjs --ci --quiet
         env:
           CI: true
           SITE_URL: https://ephemeral-bubblegum-a79332.netlify.app
+          ALLOW_NETLIFY_AUTO_DEPLOY: 'false'
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: 6c06b462-2090-44e3-8234-e6d929d01674
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-health-report
+          path: scripts/guardian-reports/site-health-latest.json
+          retention-days: 30
+          if-no-files-found: ignore

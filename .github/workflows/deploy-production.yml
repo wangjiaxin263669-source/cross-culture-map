@@ -1,0 +1,52 @@
+# 半自动：仅在你手动点击「Run workflow」时触发 Netlify 正式站重建
+name: Deploy Production (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '输入 DEPLOY 确认发布到 ephemeral-bubblegum-a79332.netlify.app'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: inputs.confirm == 'DEPLOY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Trigger Netlify production rebuild
+        env:
+          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: 6c06b462-2090-44e3-8234-e6d929d01674
+        run: |
+          if [ -n "$NETLIFY_BUILD_HOOK" ]; then
+            curl -fsS -X POST "$NETLIFY_BUILD_HOOK"
+            echo "Netlify rebuild triggered via build hook"
+          elif [ -n "$NETLIFY_AUTH_TOKEN" ]; then
+            curl -fsS -X POST "https://api.netlify.com/api/v1/sites/${NETLIFY_SITE_ID}/builds" \
+              -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{}'
+            echo "Netlify rebuild triggered via API"
+          else
+            echo "未配置 NETLIFY_BUILD_HOOK / NETLIFY_AUTH_TOKEN，请在 Netlify 控制台手动 Deploy site"
+            exit 1
+          fi
+
+  rejected:
+    if: inputs.confirm != 'DEPLOY'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "未输入 DEPLOY，已取消发布"

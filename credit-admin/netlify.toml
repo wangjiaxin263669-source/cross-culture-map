@@ -1,0 +1,4 @@
+[build]
+  publish = "."
+
+# 纯静态页，无 build
