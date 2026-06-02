@@ -160,6 +160,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: '手机号或密码错误' });
     }
 
+    await writeUserPhoneIndex(user);
+
     res.json(await loginUserRecord(user));
   } catch (err) {
     res.status(500).json({ error: err.message });
