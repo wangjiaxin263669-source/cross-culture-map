@@ -13,6 +13,7 @@
     "dev:server": "node scripts/dev-server.mjs",
     "build": "vite build",
     "build:credit-admin": "node scripts/build-credit-admin.mjs",
+    "deploy:staging": "node scripts/deploy-staging.mjs",
     "build:knowledge": "node server/scripts/build-knowledge.mjs",
     "predeploy": "node scripts/predeploy.mjs",
     "deploy:final": "node scripts/predeploy.mjs && npm run build",

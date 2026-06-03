@@ -1,0 +1,52 @@
+# 视觉测试版部署（手动触发，不影响正式站）
+name: Deploy Staging (Design Preview)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '要部署的分支'
+        required: false
+        default: 'staging/design-v2'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build staging bundle
+        run: npm run build
+        env:
+          VITE_STAGING: 'true'
+          VITE_APP_ENV: staging
+
+      - name: Deploy to preview Netlify site
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          STAGING_SITE_ID: ${{ secrets.STAGING_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "请配置 NETLIFY_AUTH_TOKEN"
+            exit 1
+          fi
+          npm install -g netlify-cli@17.38.1
+          if [ -n "$STAGING_SITE_ID" ]; then
+            netlify deploy --prod --dir=dist --site="$STAGING_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
+          else
+            netlify deploy --prod --dir=dist --site=cross-culture-design-preview --auth="$NETLIFY_AUTH_TOKEN" || \
+            netlify deploy --prod --dir=dist --auth="$NETLIFY_AUTH_TOKEN"
+          fi

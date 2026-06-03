@@ -18,6 +18,7 @@ import { saveChatSession, saveReport, saveSimResearchSession } from './services/
 import { shouldPersistSimDraft } from './utils/simResearchDraft';
 import SimExitConfirmModal from './components/SimExitConfirmModal';
 import './App.css';
+import './styles/premium-v2.css';
 
 const GlobeScene = lazy(() => import('./components/GlobeScene.jsx'));
 const MarketRadarChart = lazy(() => import('./components/MarketRadarChart.jsx'));
@@ -478,14 +479,26 @@ function App() {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
-
   const avatarLetter = (user.displayName || user.username || '?').charAt(0).toUpperCase();
+  const isStaging = import.meta.env.VITE_STAGING === 'true';
+  const stagingRibbon = isStaging ? (
+    <div className="staging-ribbon" role="status">
+      视觉测试版 · 非正式环境
+    </div>
+  ) : null;
+
+  if (!user) {
+    return (
+      <>
+        {stagingRibbon}
+        <AuthPage />
+      </>
+    );
+  }
 
   return (
     <div className="app-container">
+      {stagingRibbon}
       <div className="bg-gradient-mask"></div>
 
       <div className="top-bar">

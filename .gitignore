@@ -16,6 +16,7 @@ dist
 dist-ssr
 credit-admin/dist
 credit-admin/.deploy-state.json
+.staging-deploy-state.json
 *.local
 
 # Editor directories and files

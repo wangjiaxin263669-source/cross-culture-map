@@ -18,7 +18,9 @@ const GlobeScene = forwardRef(function GlobeScene(
       labelText={(d) => d.label}
       labelSize={(d) => (d.marketType === 'region' ? 1.35 : d.hasRegions ? 2 : 1.8)}
       labelDotRadius={(d) => (d.marketType === 'region' ? 0.45 : d.hasRegions ? 0.75 : 0.6)}
-      labelColor={(d) => (d.marketType === 'region' ? '#7ee8fa' : d.hasRegions ? '#ffd966' : 'white')}
+      labelColor={(d) =>
+        d.marketType === 'region' ? '#b8c5d6' : d.hasRegions ? '#c9b896' : '#f5f3ef'
+      }
       labelResolution={2}
       onLabelClick={onLabelClick}
     />
