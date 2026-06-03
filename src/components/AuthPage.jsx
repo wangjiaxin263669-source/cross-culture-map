@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { register, login, resetPassword } from '../services/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getDeviceFingerprint } from '../utils/deviceFingerprint.js';
+import BrandLogo from './BrandLogo.jsx';
+import AuthBackground from './AuthBackground.jsx';
+
+function AuthField({ label, children }) {
+  return (
+    <label className="auth-field">
+      <span className="auth-field-label">{label}</span>
+      <div className="auth-field-control">
+        {children}
+        <span className="auth-field-line" aria-hidden="true" />
+      </div>
+    </label>
+  );
+}
 
 export default function AuthPage() {
   const { loginSuccess, authNotice } = useAuth();
@@ -101,119 +115,134 @@ export default function AuthPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <h1>跨文化研究设计平台</h1>
-          <p className="auth-brand-en">CROSS-CULTURE</p>
-          <p>面向产品 / UX 团队的 AI 跨文化决策助手</p>
+      <AuthBackground />
+
+      <div className="auth-shell">
+        <div className="auth-card">
+          <header className="auth-header auth-reveal auth-reveal--1">
+            <BrandLogo variant="auth-compact" />
+          </header>
+
+          {!isReset ? (
+            <div className="auth-tabs auth-reveal auth-reveal--2">
+              <div
+                className="auth-tabs-inner"
+                data-active={mode === 'register' ? 'register' : 'login'}
+              >
+                <span className="auth-tabs-glider" aria-hidden="true" />
+                <button
+                  type="button"
+                  className={mode === 'login' ? 'active' : ''}
+                  onClick={() => switchMode('login')}
+                >
+                  登录
+                </button>
+                <button
+                  type="button"
+                  className={mode === 'register' ? 'active' : ''}
+                  onClick={() => switchMode('register')}
+                >
+                  注册
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="auth-reset-head auth-reveal auth-reveal--2">
+              <h2>找回密码</h2>
+              <p>输入注册时使用的手机号，设置新密码后即可登录</p>
+            </div>
+          )}
+
+          <form className="auth-form-layout auth-reveal auth-reveal--3" onSubmit={handleSubmit} key={mode}>
+            <div className="auth-card-scroll">
+              <div className="auth-form">
+                {mode === 'register' && (
+                  <AuthField label="昵称">
+                    <input
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      placeholder="1–20 个字符"
+                      autoComplete="nickname"
+                      required
+                    />
+                  </AuthField>
+                )}
+
+                <AuthField label="手机号">
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                    placeholder="11 位中国大陆手机号"
+                    autoComplete="tel"
+                    required
+                  />
+                </AuthField>
+
+                <AuthField label={isReset ? '新密码' : '密码'}>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="至少 6 位"
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    required
+                  />
+                </AuthField>
+
+                {(mode === 'register' || isReset) && (
+                  <AuthField label="确认密码">
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="再次输入密码"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </AuthField>
+                )}
+
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    className="auth-forgot-link"
+                    onClick={() => switchMode('reset')}
+                  >
+                    忘记密码？
+                  </button>
+                )}
+
+                {success && <div className="auth-success">{success}</div>}
+                {!success && authNotice && !error && mode !== 'reset' && (
+                  <div className="auth-hint-msg">{authNotice}</div>
+                )}
+                {error && <div className="auth-error">{error}</div>}
+              </div>
+
+              {isReset && (
+                <button type="button" className="auth-link-btn" onClick={() => switchMode('login')}>
+                  返回登录
+                </button>
+              )}
+
+              {isReset && (
+                <p className="auth-footer-hint">仅需已注册的手机号即可重置密码，请妥善保管新密码。</p>
+              )}
+            </div>
+
+            <div className="auth-card-footer">
+              <button
+                type="submit"
+                className={`auth-submit${loading ? ' is-loading' : ''}`}
+                disabled={loading || Boolean(success)}
+              >
+                <span className="auth-submit-text">{submitLabel}</span>
+                <span className="auth-submit-shimmer" aria-hidden="true" />
+              </button>
+            </div>
+          </form>
         </div>
-
-        {!isReset ? (
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={mode === 'login' ? 'active' : ''}
-              onClick={() => switchMode('login')}
-            >
-              登录
-            </button>
-            <button
-              type="button"
-              className={mode === 'register' ? 'active' : ''}
-              onClick={() => switchMode('register')}
-            >
-              注册
-            </button>
-          </div>
-        ) : (
-          <div className="auth-reset-head">
-            <h2>找回密码</h2>
-            <p>输入注册时使用的手机号，设置新密码后即可登录</p>
-          </div>
-        )}
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {mode === 'register' && (
-            <label>
-              <span>昵称</span>
-              <input
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="1–20 个字符"
-                autoComplete="nickname"
-                required
-              />
-            </label>
-          )}
-
-          <label>
-            <span>手机号</span>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
-              placeholder="11 位中国大陆手机号"
-              autoComplete="tel"
-              required
-            />
-          </label>
-
-          <label>
-            <span>{isReset ? '新密码' : '密码'}</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="至少 6 位"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              required
-            />
-          </label>
-
-          {(mode === 'register' || isReset) && (
-            <label>
-              <span>确认密码</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="再次输入密码"
-                autoComplete="new-password"
-                required
-              />
-            </label>
-          )}
-
-          {mode === 'login' && (
-            <button
-              type="button"
-              className="auth-forgot-link"
-              onClick={() => switchMode('reset')}
-            >
-              忘记密码？
-            </button>
-          )}
-
-          {success && <div className="auth-success">{success}</div>}
-          {!success && authNotice && !error && mode !== 'reset' && (
-            <div className="auth-hint-msg">{authNotice}</div>
-          )}
-          {error && <div className="auth-error">{error}</div>}
-
-          <button type="submit" className="auth-submit" disabled={loading || Boolean(success)}>
-            {submitLabel}
-          </button>
-        </form>
-
-        {isReset && (
-          <button type="button" className="auth-link-btn" onClick={() => switchMode('login')}>
-            返回登录
-          </button>
-        )}
-
-        {isReset && (
-          <p className="auth-footer-hint">仅需已注册的手机号即可重置密码，请妥善保管新密码。</p>
-        )}
       </div>
     </div>
   );

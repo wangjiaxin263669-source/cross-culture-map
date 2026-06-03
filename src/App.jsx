@@ -5,6 +5,7 @@ import RegionPicker from './components/RegionPicker';
 import AuthPage from './components/AuthPage';
 import { useAuth } from './context/AuthContext';
 import { useAiModel } from './context/AiModelContext';
+import BrandLogo from './components/BrandLogo';
 import AiModelSelector from './components/AiModelSelector';
 import {
   globeLabelsData,
@@ -17,8 +18,11 @@ import { sendChatMessage, generateReport, checkAiHealth } from './services/aiApi
 import { saveChatSession, saveReport, saveSimResearchSession } from './services/historyApi';
 import { shouldPersistSimDraft } from './utils/simResearchDraft';
 import SimExitConfirmModal from './components/SimExitConfirmModal';
+import MapAmbient from './components/MapAmbient';
 import './App.css';
 import './styles/premium-v2.css';
+import './styles/map-motion.css';
+import './styles/auth-premium.css';
 
 const GlobeScene = lazy(() => import('./components/GlobeScene.jsx'));
 const MarketRadarChart = lazy(() => import('./components/MarketRadarChart.jsx'));
@@ -501,18 +505,11 @@ function App() {
   return (
     <div className="app-container">
       {stagingRibbon}
+      <MapAmbient />
       <div className="bg-gradient-mask"></div>
 
       <div className="top-bar">
-        <div className="brand-logo">
-          <div className="logo-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          </div>
-          <div className="brand-text">
-            <h2>CROSS-CULTURE</h2>
-            <p>跨文化研究设计平台</p>
-          </div>
-        </div>
+        <BrandLogo />
 
         <div className="center-nav">
           <span className="nav-item active">地区地图</span>
@@ -583,20 +580,20 @@ function App() {
       </div>
 
       <div className="hero-section">
-        <div className="live-tag">
+        <div className="live-tag map-hero-in map-hero-in--1">
           <span className="dot"></span> 地区视图 &nbsp;&nbsp;
-          <span className="dot" style={{ background: '#fff', boxShadow: 'none' }}></span> 在线
+          <span className="dot dot--muted"></span> 在线
         </div>
-        <h1>跨文化<br/><span className="highlight">研究设计</span></h1>
-        <p>白色标签为国家整体介绍；青色标签为省/州/县等地方故事。两者并存，可先看全国再看地区。</p>
-        <div className="action-buttons">
+        <h1 className="map-hero-in map-hero-in--2">跨文化<br/><span className="highlight">研究设计</span></h1>
+        <p className="map-hero-in map-hero-in--3">国家标签展示全国文化概览，地区标签呈现省/州/县等地方差异。先看整体，再深入区域。</p>
+        <div className="action-buttons map-hero-in map-hero-in--4">
           <div className="action-buttons-row">
             <button type="button" className="btn-outline" onClick={handleExploreMap}>探索地图 ➔</button>
             <button type="button" className="btn-outline" onClick={() => focusParentCountry('china', 35, 105)}>中国 ➔</button>
             <button type="button" className="btn-outline" onClick={() => focusParentCountry('usa', 37, -95)}>美国 ➔</button>
             <button type="button" className="btn-outline" onClick={() => focusParentCountry('japan', 36, 138, 1.6)}>日本 ➔</button>
           </div>
-          <button type="button" className="btn-outline btn-outline-secondary" onClick={handleToggleChat}>与 AI 对话 ➔</button>
+          <button type="button" className="btn-outline btn-outline-secondary map-hero-in map-hero-in--5" onClick={handleToggleChat}>与 AI 对话 ➔</button>
         </div>
       </div>
 
@@ -652,6 +649,7 @@ function App() {
             ref={globeEl}
             onGlobeReady={handleGlobeReady}
             labelsData={globeLabelsData}
+            selectedMarket={selectedMarket}
             onLabelClick={handleLabelClick}
           />
         </Suspense>

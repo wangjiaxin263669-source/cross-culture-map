@@ -19,7 +19,7 @@ export default function RegionPicker({
   return (
     <div className="region-picker">
       <p className="region-picker-hint">
-        📍 先读 <strong>{parentCountry.title}</strong> 全国整体介绍，再点下方各{unit}查看地方差异；白色大标签为国家，青色小标签为{unit}。
+        先阅读 <strong>{parentCountry.title}</strong> 全国概览，再选择下方{unit}查看区域差异；高亮标签表示当前选中项。
       </p>
       <div className="region-chips">
         <button

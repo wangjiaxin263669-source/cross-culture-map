@@ -14,6 +14,8 @@
     "build": "vite build",
     "build:credit-admin": "node scripts/build-credit-admin.mjs",
     "dev:staging": "node scripts/run-staging-dev.mjs",
+    "globe:textures": "node scripts/download-globe-textures.mjs",
+    "verify:globe": "node scripts/verify-globe-browser.mjs",
     "preview:staging": "node scripts/run-staging-preview.mjs",
     "build:knowledge": "node server/scripts/build-knowledge.mjs",
     "predeploy": "node scripts/predeploy.mjs",

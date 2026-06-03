@@ -2210,6 +2210,11 @@ body, html, #root {
   position: absolute;
   inset: 0;
   z-index: 0;
+  background: radial-gradient(ellipse 85% 70% at 58% 45%, #0a1018 0%, #030508 100%);
+}
+
+.globe-wrapper canvas {
+  outline: none;
 }
 .chat-header-actions {
   display: flex;
