@@ -471,21 +471,21 @@ function App() {
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="auth-page">
-        <div className="auth-loading">加载中…</div>
-      </div>
-    );
-  }
-
-  const avatarLetter = (user.displayName || user.username || '?').charAt(0).toUpperCase();
   const isStaging = import.meta.env.VITE_STAGING === 'true';
   const stagingRibbon = isStaging ? (
     <div className="staging-ribbon" role="status">
       视觉测试版 · 非正式环境
     </div>
   ) : null;
+
+  if (authLoading) {
+    return (
+      <div className="auth-page">
+        {stagingRibbon}
+        <div className="auth-loading">加载中…</div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -495,6 +495,8 @@ function App() {
       </>
     );
   }
+
+  const avatarLetter = (user.displayName || user.username || '?').charAt(0).toUpperCase();
 
   return (
     <div className="app-container">
