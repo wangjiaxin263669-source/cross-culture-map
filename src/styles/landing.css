@@ -80,10 +80,9 @@ html:has(.auth-page) #root {
   margin: 0 auto;
   padding: 22px var(--landing-gutter);
   isolation: isolate;
-  transition: padding 0.35s var(--ease-out-expo);
 }
 
-/* 中性暗底 · 无框线容器，仅滚动后出现底部分割 */
+/* 中性暗底 · 滚动只改视觉，不改 padding（避免高度变化导致 scroll 抖动） */
 .landing-header::before {
   content: '';
   position: absolute;
@@ -100,11 +99,6 @@ html:has(.auth-page) #root {
   transition:
     background 0.35s var(--ease-out-expo),
     border-color 0.35s var(--ease-out-expo);
-}
-
-.landing-header--scrolled {
-  padding-top: 14px;
-  padding-bottom: 14px;
 }
 
 .landing-header--scrolled::before {
@@ -1150,8 +1144,4 @@ html:has(.landing-page) .staging-ribbon {
 
 html:has(.landing-page) .landing-header {
   padding-top: 30px;
-}
-
-html:has(.landing-page) .landing-header--scrolled {
-  padding-top: 16px;
 }

@@ -36,7 +36,12 @@ export function useLandingMotion(pageRef) {
     }
 
     const onScroll = () => {
-      setHeaderScrolled(window.scrollY > 20);
+      const y = window.scrollY;
+      setHeaderScrolled((prev) => {
+        if (!prev && y > 48) return true;
+        if (prev && y < 8) return false;
+        return prev;
+      });
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });

@@ -47,9 +47,10 @@ const JOURNEY = [
   { label: '形成决策', text: '输出三步分析报告，指导界面、内容与产品策略' },
 ];
 
+const LANDING_HEADER_OFFSET = 96;
+
 function getHeaderOffset() {
-  const header = document.querySelector('.landing-header');
-  return header ? header.getBoundingClientRect().height + 20 : 96;
+  return LANDING_HEADER_OFFSET;
 }
 
 export default function LandingPage({ onLogin, onRegister }) {
