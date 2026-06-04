@@ -17,9 +17,9 @@ function AuthField({ label, children }) {
   );
 }
 
-export default function AuthPage() {
+export default function AuthPage({ initialMode = 'login', onBack, onGuestModeChange }) {
   const { loginSuccess, authNotice } = useAuth();
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(initialMode);
   const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +29,15 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [deviceReady, setDeviceReady] = useState(true);
   const [deviceError, setDeviceError] = useState('');
+
+  useEffect(() => {
+    setMode(initialMode);
+    setError('');
+    setSuccess('');
+    setPassword('');
+    setConfirmPassword('');
+    if (initialMode === 'login') setNickname('');
+  }, [initialMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +66,9 @@ export default function AuthPage() {
     if (next === 'login') {
       setPassword('');
       setConfirmPassword('');
+    }
+    if (next === 'login' || next === 'register') {
+      onGuestModeChange?.(next);
     }
   };
 
@@ -120,6 +132,11 @@ export default function AuthPage() {
       <div className="auth-shell">
         <div className="auth-card">
           <header className="auth-header auth-reveal auth-reveal--1">
+            {onBack && (
+              <button type="button" className="auth-back-btn" onClick={onBack}>
+                <span aria-hidden="true">←</span> 返回首页
+              </button>
+            )}
             <BrandLogo variant="auth-compact" />
           </header>
 

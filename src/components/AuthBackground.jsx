@@ -6,7 +6,7 @@ const CHAMPAGNE = '212, 196, 168';
  * 登录页全屏黑色背景 · 高端互动视觉
  * 鼠标聚光 + 星座粒子 + 大型经纬线球体 + 流光
  */
-export default function AuthBackground() {
+export default function AuthBackground({ scopeClass = 'auth-page' }) {
   const canvasRef = useRef(null);
   const ripplesRef = useRef([]);
 
@@ -14,7 +14,7 @@ export default function AuthBackground() {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
-    const page = canvas.closest('.auth-page');
+    const page = canvas.closest(`.${scopeClass}`);
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const ctx = canvas.getContext('2d');
     if (!ctx) return undefined;
@@ -247,7 +247,7 @@ export default function AuthBackground() {
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMove);
     };
-  }, []);
+  }, [scopeClass]);
 
   return (
     <div className="auth-ambient" aria-hidden="true">

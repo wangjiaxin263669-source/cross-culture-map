@@ -3,6 +3,7 @@ import ReportMarkdown from './components/ReportMarkdown';
 import CulturalStoryPanel from './components/CulturalStoryPanel';
 import RegionPicker from './components/RegionPicker';
 import AuthPage from './components/AuthPage';
+import LandingPage from './components/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { useAiModel } from './context/AiModelContext';
 import BrandLogo from './components/BrandLogo';
@@ -19,10 +20,12 @@ import { saveChatSession, saveReport, saveSimResearchSession } from './services/
 import { shouldPersistSimDraft } from './utils/simResearchDraft';
 import SimExitConfirmModal from './components/SimExitConfirmModal';
 import MapAmbient from './components/MapAmbient';
+import { useGuestNavigation } from './hooks/useGuestNavigation';
 import './App.css';
 import './styles/premium-v2.css';
 import './styles/map-motion.css';
 import './styles/auth-premium.css';
+import './styles/landing.css';
 
 const GlobeScene = lazy(() => import('./components/GlobeScene.jsx'));
 const MarketRadarChart = lazy(() => import('./components/MarketRadarChart.jsx'));
@@ -55,6 +58,7 @@ function App() {
   const [simExit, setSimExit] = useState(null);
   const [simExitSaving, setSimExitSaving] = useState(false);
   const [simExitError, setSimExitError] = useState('');
+  const { guestView, navigateGuest } = useGuestNavigation(Boolean(user));
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [threeStepHighlight, setThreeStepHighlight] = useState(false);
 
@@ -492,10 +496,25 @@ function App() {
   }
 
   if (!user) {
+    if (guestView === 'landing') {
+      return (
+        <>
+          {stagingRibbon}
+          <LandingPage
+            onLogin={() => navigateGuest('login')}
+            onRegister={() => navigateGuest('register')}
+          />
+        </>
+      );
+    }
     return (
       <>
         {stagingRibbon}
-        <AuthPage />
+        <AuthPage
+          initialMode={guestView === 'register' ? 'register' : 'login'}
+          onBack={() => navigateGuest('landing')}
+          onGuestModeChange={(mode) => navigateGuest(mode, { replace: true })}
+        />
       </>
     );
   }
